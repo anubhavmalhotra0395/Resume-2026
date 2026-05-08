@@ -4282,18 +4282,25 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
           const roadY = -1.17;
           bikeRoot.position.set(-13.05, roadY - minY + 0.01, -2.5);
 
-          // Keep the bike in its original GLB colors/materials.
+          // Apply a painted look (red body, dark accents for wheels/frame parts).
           bikeRoot.traverse((o) => {
             if (!o.isMesh) return;
             o.castShadow = false;
             o.receiveShadow = false;
-            const mats = Array.isArray(o.material) ? o.material : [o.material];
-            for (const mat of mats) {
-              if (!mat) continue;
-              if (typeof mat.roughness === "number") mat.roughness = Math.min(0.9, mat.roughness + 0.04);
-              if (typeof mat.metalness === "number") mat.metalness = Math.min(0.65, mat.metalness);
-              mat.needsUpdate = true;
-            }
+            const name = (o.name || "").toLowerCase();
+            const matName = (o.material?.name || "").toLowerCase();
+            const isDarkPart =
+              /wheel|tire|tyre|seat|frame|engine|exhaust|pipe|chain|fork|handle|grip|mirror|black/.test(name) ||
+              /wheel|tire|tyre|seat|frame|engine|exhaust|pipe|chain|fork|handle|grip|mirror|black|rubber/.test(matName);
+            const isMetalPart =
+              /chrome|metal|silver|spoke|rim|bolt|screw/.test(name) ||
+              /chrome|metal|silver|spoke|rim|bolt|screw/.test(matName);
+            const newMat = new THREE.MeshStandardMaterial({
+              color: isDarkPart ? 0x1a1a1a : isMetalPart ? 0xb8bcc4 : 0xc8302f,
+              roughness: isMetalPart ? 0.28 : isDarkPart ? 0.78 : 0.45,
+              metalness: isMetalPart ? 0.85 : isDarkPart ? 0.18 : 0.35,
+            });
+            o.material = newMat;
           });
 
           outside.add(bikeRoot);
