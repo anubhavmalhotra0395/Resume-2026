@@ -2758,6 +2758,20 @@ async function submitSharedPassword() {
     sharedTab = 'about';
     status.textContent = `Access granted. Password hash: ${hash}`;
     renderSharedUI();
+    pass.blur();
+    monitorInputFocused = false;
+    monitorUiRefitBlockedUntil = performance.now() + 700;
+    setTimeout(() => {
+      if (
+        (mode === "monitor" || mode === "monitor-enter") &&
+        typeof fitUiToMonitorScreen === "function" &&
+        canRefitMonitorUi()
+      ) {
+        requestMonitorUiFit();
+        fitUiToMonitorScreen();
+        monitorUiNeedsFit = false;
+      }
+    }, 760);
     return;
   }
   status.textContent = `Wrong password. Hash: ${hash}`;
@@ -5065,6 +5079,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let lastMonitorUiRect = null;
   let monitorInputFocused = false;
   let monitorUiRefitBlockedUntil = 0;
+  let monitorUiNeedsFit = true;
   let chelseaFootballCache = null;
   let chelseaFootballError = null;
   function clearMobileControlKeys() {
@@ -5585,6 +5600,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       document.body.classList.remove("room-mode");
       if (typeof window.resetSharedComputerLock === "function") window.resetSharedComputerLock();
       startMonitorBoot();
+      requestMonitorUiFit();
       if (appWrapper) {
         appWrapper.style.transform = "none";
       }
@@ -5603,6 +5619,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       document.body.classList.add("room-mode");
       setMonitorBooting(true);
       beginMonitorEnterAnimation(1200);
+      requestMonitorUiFit();
       if (appWrapper) {
         appWrapper.style.transform = "none";
       }
@@ -5970,6 +5987,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function canRefitMonitorUi() {
     return !monitorInputFocused && performance.now() >= monitorUiRefitBlockedUntil;
   }
+  function requestMonitorUiFit() {
+    monitorUiNeedsFit = true;
+  }
 
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
@@ -6076,6 +6096,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     applyRendererPixelRatio();
     renderer.setSize(window.innerWidth, window.innerHeight);
     updateMobileControlsVisibility();
+    requestMonitorUiFit();
   }
   window.addEventListener('resize', onResize);
   document.addEventListener("focusin", (e) => {
@@ -6110,6 +6131,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         monitorUiRefitBlockedUntil = Math.max(monitorUiRefitBlockedUntil, performance.now() + 700);
         setTimeout(() => {
           if (canRefitMonitorUi() && (mode === "monitor" || mode === "monitor-enter")) {
+            requestMonitorUiFit();
             fitUiToMonitorScreen();
           }
         }, 720);
@@ -6120,7 +6142,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   if (window.visualViewport) {
     const onVisualViewportChange = () => {
       if (!canRefitMonitorUi()) return;
-      if (mode === "monitor" || mode === "monitor-enter") fitUiToMonitorScreen();
+      if (mode === "monitor" || mode === "monitor-enter") {
+        requestMonitorUiFit();
+        fitUiToMonitorScreen();
+      }
     };
     window.visualViewport.addEventListener("resize", onVisualViewportChange);
     window.visualViewport.addEventListener("scroll", onVisualViewportChange);
@@ -6477,7 +6502,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const pose = getMonitorCameraPose();
       camera.position.copy(pose.pos);
       camera.lookAt(pose.look);
-      if (canRefitMonitorUi()) fitUiToMonitorScreen();
+      if (canRefitMonitorUi() && monitorUiNeedsFit) {
+        fitUiToMonitorScreen();
+        monitorUiNeedsFit = false;
+      }
     } else if (mode === "speaker") {
       const now = performance.now();
       if (speakerStage === "focusSpeaker") {
