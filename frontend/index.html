@@ -5062,6 +5062,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let mobileMoveY = 0;
   let mobileLookX = 0;
   let mobileLookY = 0;
+  let lastMonitorUiRect = null;
+  let monitorInputFocused = false;
   let chelseaFootballCache = null;
   let chelseaFootballError = null;
   function clearMobileControlKeys() {
@@ -5901,6 +5903,16 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   function fitUiToMonitorScreen() {
     if (!appWrapper) return;
+    if (monitorInputFocused && lastMonitorUiRect) {
+      appWrapper.style.left = `${lastMonitorUiRect.left}px`;
+      appWrapper.style.top = `${lastMonitorUiRect.top}px`;
+      appWrapper.style.width = `${lastMonitorUiRect.width}px`;
+      appWrapper.style.height = `${lastMonitorUiRect.height}px`;
+      appWrapper.style.maxHeight = `${lastMonitorUiRect.height}px`;
+      appWrapper.style.minHeight = "0px";
+      appWrapper.style.transform = "none";
+      return;
+    }
     const corners = [
       new THREE.Vector3(-1.1, 0.775, 0),
       new THREE.Vector3(1.1, 0.775, 0),
@@ -5951,6 +5963,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     appWrapper.style.maxHeight = `${h}px`;
     appWrapper.style.minHeight = "0px";
     appWrapper.style.transform = "none";
+    lastMonitorUiRect = { left, top, width: w, height: h };
   }
 
   function shouldIgnoreScenePointerEvent(target) {
@@ -6060,9 +6073,42 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     updateMobileControlsVisibility();
   }
   window.addEventListener('resize', onResize);
+  document.addEventListener("focusin", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const isEditable =
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable;
+    if (isEditable && appWrapper && appWrapper.contains(target)) {
+      const frozenRect = appWrapper.getBoundingClientRect();
+      lastMonitorUiRect = {
+        left: Math.round(frozenRect.left),
+        top: Math.round(frozenRect.top),
+        width: Math.round(frozenRect.width),
+        height: Math.round(frozenRect.height),
+      };
+      monitorInputFocused = true;
+    }
+  });
+  document.addEventListener("focusout", () => {
+    queueMicrotask(() => {
+      const activeEl = document.activeElement;
+      const stillInsideMonitorInput =
+        !!appWrapper &&
+        !!activeEl &&
+        appWrapper.contains(activeEl) &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable);
+      monitorInputFocused = stillInsideMonitorInput;
+      if (!monitorInputFocused && (mode === "monitor" || mode === "monitor-enter")) {
+        requestAnimationFrame(() => requestAnimationFrame(() => fitUiToMonitorScreen()));
+      }
+    });
+  });
   window.addEventListener('orientationchange', onResize);
   if (window.visualViewport) {
     const onVisualViewportChange = () => {
+      if (monitorInputFocused) return;
       if (mode === "monitor" || mode === "monitor-enter") fitUiToMonitorScreen();
     };
     window.visualViewport.addEventListener("resize", onVisualViewportChange);
@@ -6420,7 +6466,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const pose = getMonitorCameraPose();
       camera.position.copy(pose.pos);
       camera.lookAt(pose.look);
-      fitUiToMonitorScreen();
+      if (!monitorInputFocused) fitUiToMonitorScreen();
     } else if (mode === "speaker") {
       const now = performance.now();
       if (speakerStage === "focusSpeaker") {
