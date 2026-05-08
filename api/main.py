@@ -17,7 +17,6 @@ from rq.job import Job
 from processor.config import settings
 from processor.utils.download import fetch_audio_from_url
 from processor.utils.validation import validate_file
-from processor.worker import enqueue_job
 from processor.utils.audio_io import load_wav, run_ffmpeg_normalize, save_wav
 from processor.utils.vocal_extraction import extract_vocals
 from processor.dsp.analysis.vocal_layers_analysis import detect_vocal_layers
@@ -47,6 +46,16 @@ if settings.frontend_dir.exists():
 
 # Register metrics endpoint
 register_metrics_endpoint(app)
+
+
+def enqueue_job(reference: Path, dry: Path, options: dict | None = None) -> str:
+    """
+    Lazy import worker enqueue function to avoid loading heavy ML modules
+    during API startup on memory-constrained deploys.
+    """
+    from processor.worker import enqueue_job as _enqueue_job
+
+    return _enqueue_job(reference, dry, options)
 
 
 @app.get("/api/chelsea/football")
