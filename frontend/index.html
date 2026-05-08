@@ -5064,6 +5064,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let mobileLookY = 0;
   let lastMonitorUiRect = null;
   let monitorInputFocused = false;
+  let monitorUiRefitBlockedUntil = 0;
   let chelseaFootballCache = null;
   let chelseaFootballError = null;
   function clearMobileControlKeys() {
@@ -5966,6 +5967,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     lastMonitorUiRect = { left, top, width: w, height: h };
   }
 
+  function canRefitMonitorUi() {
+    return !monitorInputFocused && performance.now() >= monitorUiRefitBlockedUntil;
+  }
+
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
     return !!target.closest(
@@ -6089,6 +6094,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         height: Math.round(frozenRect.height),
       };
       monitorInputFocused = true;
+      monitorUiRefitBlockedUntil = performance.now() + 700;
     }
   });
   document.addEventListener("focusout", () => {
@@ -6101,14 +6107,19 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable);
       monitorInputFocused = stillInsideMonitorInput;
       if (!monitorInputFocused && (mode === "monitor" || mode === "monitor-enter")) {
-        requestAnimationFrame(() => requestAnimationFrame(() => fitUiToMonitorScreen()));
+        monitorUiRefitBlockedUntil = Math.max(monitorUiRefitBlockedUntil, performance.now() + 700);
+        setTimeout(() => {
+          if (canRefitMonitorUi() && (mode === "monitor" || mode === "monitor-enter")) {
+            fitUiToMonitorScreen();
+          }
+        }, 720);
       }
     });
   });
   window.addEventListener('orientationchange', onResize);
   if (window.visualViewport) {
     const onVisualViewportChange = () => {
-      if (monitorInputFocused) return;
+      if (!canRefitMonitorUi()) return;
       if (mode === "monitor" || mode === "monitor-enter") fitUiToMonitorScreen();
     };
     window.visualViewport.addEventListener("resize", onVisualViewportChange);
@@ -6466,7 +6477,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const pose = getMonitorCameraPose();
       camera.position.copy(pose.pos);
       camera.lookAt(pose.look);
-      if (!monitorInputFocused) fitUiToMonitorScreen();
+      if (canRefitMonitorUi()) fitUiToMonitorScreen();
     } else if (mode === "speaker") {
       const now = performance.now();
       if (speakerStage === "focusSpeaker") {
