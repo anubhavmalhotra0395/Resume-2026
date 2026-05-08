@@ -4261,22 +4261,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   concretePad.position.set(-13.1, -1.0, 0.85);
   outside.add(concretePad);
 
-  // Back garage wall (low brick wall) for mounting helmets, axe etc.
-  const garageBackWall = new THREE.Mesh(
-    new THREE.BoxGeometry(5.8, 1.85, 0.16),
-    new THREE.MeshStandardMaterial({ color: 0x5d4536, roughness: 0.9 })
-  );
-  garageBackWall.position.set(-13.1, -0.025, 2.18);
-  outside.add(garageBackWall);
-  // Brick line accents
-  for (let i = 0; i < 6; i++) {
-    const line = new THREE.Mesh(
-      new THREE.BoxGeometry(5.78, 0.018, 0.005),
-      new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.95 })
-    );
-    line.position.set(-13.1, -0.85 + i * 0.32, 2.10);
-    outside.add(line);
-  }
+  // Keep the outside area open; avoid any tall wall planes that can clip into room view.
 
   // ── BBQ grill (kettle-style) ───────────────────────────────────
   const bbqGroup = new THREE.Group();
