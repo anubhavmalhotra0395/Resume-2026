@@ -291,6 +291,7 @@
       z-index: 3;
     }
     .fx-debug {
+      display: none;
       position: fixed;
       right: 12px;
       bottom: 12px;
@@ -5910,16 +5911,22 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     corners.forEach((v) => v.applyMatrix4(screenMesh.matrixWorld).project(camera));
 
     const vv = window.visualViewport;
-    const viewW = Math.round(vv?.width || window.innerWidth);
-    const viewH = Math.round(vv?.height || window.innerHeight);
-    const sx = corners.map((v) => (v.x * 0.5 + 0.5) * viewW);
-    const sy = corners.map((v) => (-v.y * 0.5 + 0.5) * viewH);
-    const minX = Math.max(0, Math.min(...sx));
-    const maxX = Math.min(viewW, Math.max(...sx));
-    const minY = Math.max(0, Math.min(...sy));
-    const maxY = Math.min(viewH, Math.max(...sy));
+    const layoutW = Math.round(window.innerWidth);
+    const layoutH = Math.round(window.innerHeight);
+    const viewportLeft = Math.round(vv?.offsetLeft || 0);
+    const viewportTop = Math.round(vv?.offsetTop || 0);
+    const viewportWidth = Math.round(vv?.width || layoutW);
+    const viewportHeight = Math.round(vv?.height || layoutH);
+    const viewportRight = viewportLeft + viewportWidth;
+    const viewportBottom = viewportTop + viewportHeight;
+    const sx = corners.map((v) => (v.x * 0.5 + 0.5) * layoutW);
+    const sy = corners.map((v) => (-v.y * 0.5 + 0.5) * layoutH);
+    const minX = Math.max(viewportLeft, Math.min(...sx));
+    const maxX = Math.min(viewportRight, Math.max(...sx));
+    const minY = Math.max(viewportTop, Math.min(...sy));
+    const maxY = Math.min(viewportBottom, Math.max(...sy));
 
-    const mobile = viewW <= 900;
+    const mobile = viewportWidth <= 900;
     const pad = mobile ? 3 : 4;
     const targetInset = mobile ? 0.06 : 0.02;
     const rawW = (maxX - minX);
@@ -5928,14 +5935,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     const frameH = rawH * (1 - targetInset * 2);
     const minW = mobile ? 120 : 320;
     const minH = mobile ? 82 : 190;
-    const maxW = viewW - pad * 2;
-    const maxH = viewH - pad * 2;
+    const maxW = viewportWidth - pad * 2;
+    const maxH = viewportHeight - pad * 2;
     const w = Math.max(minW, Math.min(maxW, frameW - pad * 2));
     const h = Math.max(minH, Math.min(maxH, frameH - pad * 2));
     const targetX = minX + rawW * targetInset;
     const targetY = minY + rawH * targetInset;
-    const left = Math.max(pad, Math.min(viewW - w - pad, targetX));
-    const top = Math.max(pad, Math.min(viewH - h - pad, targetY));
+    const left = Math.max(viewportLeft + pad, Math.min(viewportRight - w - pad, targetX));
+    const top = Math.max(viewportTop + pad, Math.min(viewportBottom - h - pad, targetY));
 
     appWrapper.style.left = `${left}px`;
     appWrapper.style.top = `${top}px`;
@@ -6053,6 +6060,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     updateMobileControlsVisibility();
   }
   window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
+  if (window.visualViewport) {
+    const onVisualViewportChange = () => {
+      if (mode === "monitor" || mode === "monitor-enter") fitUiToMonitorScreen();
+    };
+    window.visualViewport.addEventListener("resize", onVisualViewportChange);
+    window.visualViewport.addEventListener("scroll", onVisualViewportChange);
+  }
   window.addEventListener("blur", clearMobileControlKeys);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) clearMobileControlKeys();
