@@ -212,6 +212,23 @@
       pointer-events: auto;
       will-change: transform;
     }
+    /* Cramped monitor screen on mobile — shrink text so content fits horizontally. */
+    @media (max-width: 1024px) {
+      body.monitor-mode .shared-title { font-size: 13px; }
+      body.monitor-mode .shared-nav-btn { font-size: 12px; padding: 1px 5px; }
+      body.monitor-mode .shared-lock-title { font-size: 14px; }
+      body.monitor-mode .shared-lock-hint { font-size: 11px; margin-bottom: 4px; }
+      body.monitor-mode .shared-password-input { font-size: 13px; padding: 2px 4px; }
+      body.monitor-mode .shared-lock-status { font-size: 10px; }
+      body.monitor-mode .about-copy h3 { font-size: 13px; margin-top: 4px; }
+      body.monitor-mode .about-copy p,
+      body.monitor-mode .about-copy li { font-size: 11px; line-height: 1.18; }
+      body.monitor-mode .about-copy .about-job-title { font-size: 12px; margin-bottom: 2px; }
+      body.monitor-mode .about-copy .about-job-meta { font-size: 10px; margin-bottom: 4px; }
+      body.monitor-mode .about-photo { width: 56px; height: 70px; }
+      body.monitor-mode .about-wrap { gap: 6px; }
+      body.monitor-mode .retro-btn { font-size: 12px; padding: 1px 6px; }
+    }
     .shared-shell { position: relative; }
     .shared-topbar {
       display: flex;
@@ -4245,12 +4262,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   outside.add(concretePad);
 
   // Back garage wall (low brick wall) for mounting helmets, axe etc.
-  const backWall = new THREE.Mesh(
+  const garageBackWall = new THREE.Mesh(
     new THREE.BoxGeometry(5.8, 1.85, 0.16),
     new THREE.MeshStandardMaterial({ color: 0x5d4536, roughness: 0.9 })
   );
-  backWall.position.set(-13.1, -0.025, 2.18);
-  outside.add(backWall);
+  garageBackWall.position.set(-13.1, -0.025, 2.18);
+  outside.add(garageBackWall);
   // Brick line accents
   for (let i = 0; i < 6; i++) {
     const line = new THREE.Mesh(
@@ -5744,8 +5761,37 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     }
   }
 
+  function lockCanvasWrap() {
+    const wrap = document.querySelector('.fx-canvas-wrap');
+    if (!wrap) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    wrap.style.position = 'fixed';
+    wrap.style.left = '0px';
+    wrap.style.top = '0px';
+    wrap.style.right = 'auto';
+    wrap.style.bottom = 'auto';
+    wrap.style.width = w + 'px';
+    wrap.style.height = h + 'px';
+  }
+  function unlockCanvasWrap() {
+    const wrap = document.querySelector('.fx-canvas-wrap');
+    if (!wrap) return;
+    wrap.style.left = '';
+    wrap.style.top = '';
+    wrap.style.right = '';
+    wrap.style.bottom = '';
+    wrap.style.width = '';
+    wrap.style.height = '';
+  }
   function setMode(next) {
     mode = next;
+    const isMobileMode = window.innerWidth <= 1024 || window.matchMedia("(pointer: coarse)").matches;
+    if (next === "monitor" || next === "monitor-enter") {
+      if (isMobileMode) lockCanvasWrap();
+    } else {
+      unlockCanvasWrap();
+    }
     if (next !== "monitor" && next !== "monitor-enter") {
       monitorInputFocused = false;
       monitorUiFrozen = false;
