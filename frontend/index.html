@@ -6098,6 +6098,23 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     }
   }
   window.addEventListener('resize', onResize);
+  // pointerdown fires BEFORE the browser resize that keyboard causes on iOS Chrome.
+  // Pre-freezing here ensures the renderer is never resized during keyboard interaction.
+  document.addEventListener("pointerdown", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const isEditable =
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable;
+    if (isEditable && appWrapper && appWrapper.contains(target) &&
+        (mode === "monitor" || mode === "monitor-enter")) {
+      monitorInputFocused = true;
+      monitorUiFrozen = true;
+      monitorUiNeedsFit = false;
+      if (monitorUiSettleTimer) { clearTimeout(monitorUiSettleTimer); monitorUiSettleTimer = null; }
+    }
+  }, { passive: true });
   document.addEventListener("focusin", (e) => {
     const target = e.target;
     if (!(target instanceof Element)) return;
