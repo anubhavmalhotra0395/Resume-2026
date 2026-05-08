@@ -2761,13 +2761,8 @@ async function submitSharedPassword() {
     pass.blur();
     monitorInputFocused = false;
     monitorUiHardLock = true;
-    monitorUiRefitBlockedUntil = performance.now() + 900;
-    setTimeout(() => {
-      if (mode === "monitor" || mode === "monitor-enter") {
-        monitorUiHardLock = false;
-        requestMonitorUiFit();
-      }
-    }, 980);
+    monitorUiRefitBlockedUntil = performance.now() + 1400;
+    monitorUiNeedsFit = false;
     return;
   }
   status.textContent = `Wrong password. Hash: ${hash}`;
@@ -6133,14 +6128,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable);
       monitorInputFocused = stillInsideMonitorInput;
       if (!monitorInputFocused && (mode === "monitor" || mode === "monitor-enter")) {
-        monitorUiRefitBlockedUntil = Math.max(monitorUiRefitBlockedUntil, performance.now() + 900);
-        setTimeout(() => {
-          if (mode === "monitor" || mode === "monitor-enter") {
-            monitorUiHardLock = false;
-            requestMonitorUiFit();
-            if (canRefitMonitorUi()) fitUiToMonitorScreen();
-          }
-        }, 960);
+        // Keep monitor UI hard-locked after keyboard close to avoid iOS viewport
+        // snap-back jumps. It will unlock on explicit layout changes (resize/orientation)
+        // or when leaving monitor mode.
+        monitorUiHardLock = true;
+        monitorUiRefitBlockedUntil = Math.max(monitorUiRefitBlockedUntil, performance.now() + 1400);
+        monitorUiNeedsFit = false;
       }
     });
   });
