@@ -6084,9 +6084,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   function onResize() {
     updateMobileControlsVisibility();
+    // While in monitor mode on mobile: NEVER resize the renderer. The keyboard,
+    // address bar, or any other viewport change must not affect the 3D scene
+    // size, otherwise the frozen UI position drifts away from the 3D monitor.
+    const isMobile = window.innerWidth <= 1024 || window.matchMedia("(pointer: coarse)").matches;
+    if (isMobile && (mode === "monitor" || mode === "monitor-enter")) {
+      return;
+    }
     if (monitorUiFrozen || monitorInputFocused) {
-      // Keyboard open/close: skip renderer & camera resize so the 3D scene
-      // stays identical — frozen UI position remains perfectly aligned.
       return;
     }
     camera.aspect = window.innerWidth / window.innerHeight;
