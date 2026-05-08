@@ -3898,8 +3898,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xd8e2dd);
   const isMobileStart = window.innerWidth <= 900 || window.matchMedia("(pointer: coarse)").matches;
-  const camera = new THREE.PerspectiveCamera(isMobileStart ? 68 : 55, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(isMobileStart ? -1.8 : 0, isMobileStart ? 1.1 : 1.3, isMobileStart ? 5.2 : 7.8);
+  const camera = new THREE.PerspectiveCamera(isMobileStart ? 62 : 55, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, isMobileStart ? 1.15 : 1.3, isMobileStart ? 5.8 : 7.8);
 
   const ambient = new THREE.AmbientLight(0xffffff, 0.62);
   scene.add(ambient);
@@ -5021,8 +5021,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const mobileLookBaseEl = document.getElementById("mobile-look-base");
   const mobileLookThumbEl = document.getElementById("mobile-look-thumb");
   let mode = "room";
-  let yaw = isMobileStart ? 0.22 : 0;
-  let pitch = isMobileStart ? -0.06 : -0.02;
+  let yaw = 0;
+  let pitch = isMobileStart ? -0.04 : -0.02;
   let dragging = false;
   let monitorClickPending = false;
   let speakerStage = "idle";
@@ -6267,7 +6267,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         1
       );
       const moveStrafeInput = THREE.MathUtils.clamp(
-        (keys.has("d") ? 1 : 0) - (keys.has("a") ? 1 : 0) + mobileMoveX,
+        (keys.has("d") ? 1 : 0) - (keys.has("a") ? 1 : 0) - mobileMoveX,
         -1,
         1
       );
