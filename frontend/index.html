@@ -4236,31 +4236,164 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   );
   curb.position.set(-13.1, -1.03, -0.65);
   outside.add(curb);
-  const grassStrip = new THREE.Mesh(
+  // Concrete pad (replaces grass strip) — extends garage back wall area.
+  const concretePad = new THREE.Mesh(
     new THREE.BoxGeometry(5.8, 0.1, 2.8),
-    new THREE.MeshStandardMaterial({ color: 0x5f875f, roughness: 0.93 })
+    new THREE.MeshStandardMaterial({ color: 0x7c8590, roughness: 0.92 })
   );
-  grassStrip.position.set(-13.1, -1.0, 0.85);
-  outside.add(grassStrip);
-  function addShrub(x, z, r = 0.16) {
-    const base = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 12, 10),
-      new THREE.MeshStandardMaterial({ color: 0x3f7b46, roughness: 0.9 })
+  concretePad.position.set(-13.1, -1.0, 0.85);
+  outside.add(concretePad);
+
+  // Back garage wall (low brick wall) for mounting helmets, axe etc.
+  const backWall = new THREE.Mesh(
+    new THREE.BoxGeometry(5.8, 1.85, 0.16),
+    new THREE.MeshStandardMaterial({ color: 0x5d4536, roughness: 0.9 })
+  );
+  backWall.position.set(-13.1, -0.025, 2.18);
+  outside.add(backWall);
+  // Brick line accents
+  for (let i = 0; i < 6; i++) {
+    const line = new THREE.Mesh(
+      new THREE.BoxGeometry(5.78, 0.018, 0.005),
+      new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.95 })
     );
-    base.position.set(x, -0.91 + r * 0.5, z);
-    outside.add(base);
-    const leafTop = new THREE.Mesh(
-      new THREE.SphereGeometry(r * 0.7, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0x5ea663, roughness: 0.86 })
-    );
-    leafTop.position.set(x, -0.91 + r * 1.0, z + 0.01);
-    outside.add(leafTop);
+    line.position.set(-13.1, -0.85 + i * 0.32, 2.10);
+    outside.add(line);
   }
-  addShrub(-15.2, 0.55, 0.2);
-  addShrub(-14.35, 0.75, 0.16);
-  addShrub(-13.55, 0.5, 0.18);
-  addShrub(-12.7, 0.7, 0.15);
-  addShrub(-11.85, 0.58, 0.17);
+
+  // ── BBQ grill (kettle-style) ───────────────────────────────────
+  const bbqGroup = new THREE.Group();
+  const bbqBowl = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.55, metalness: 0.45 })
+  );
+  bbqBowl.position.y = 0.0;
+  bbqGroup.add(bbqBowl);
+  const bbqLid = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.45, metalness: 0.5 })
+  );
+  bbqLid.position.set(0.04, 0.18, 0);
+  bbqLid.rotation.z = -0.55;
+  bbqGroup.add(bbqLid);
+  const bbqHandle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.06, 0.012, 8, 16, Math.PI),
+    new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.4, metalness: 0.7 })
+  );
+  bbqHandle.position.set(0.36, 0.32, 0);
+  bbqHandle.rotation.set(0, 0, Math.PI / 2);
+  bbqGroup.add(bbqHandle);
+  // Three legs
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.6, metalness: 0.4 });
+  for (let i = 0; i < 3; i++) {
+    const angle = (i / 3) * Math.PI * 2;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.62, 8), legMat);
+    leg.position.set(Math.cos(angle) * 0.24, -0.31, Math.sin(angle) * 0.24);
+    leg.rotation.z = Math.cos(angle) * 0.25;
+    leg.rotation.x = Math.sin(angle) * 0.25;
+    bbqGroup.add(leg);
+  }
+  // Glowing coals inside
+  const bbqCoals = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.27, 0.27, 0.04, 18),
+    new THREE.MeshStandardMaterial({ color: 0xff5722, emissive: 0xff3300, emissiveIntensity: 0.85, roughness: 0.7 })
+  );
+  bbqCoals.position.y = -0.04;
+  bbqGroup.add(bbqCoals);
+  bbqGroup.position.set(-15.4, -0.65, 1.0);
+  outside.add(bbqGroup);
+
+  // ── Stacked firewood (logs) ─────────────────────────────────────
+  const woodLight = new THREE.MeshStandardMaterial({ color: 0xa97a4d, roughness: 0.95 });
+  const woodDark = new THREE.MeshStandardMaterial({ color: 0x6e4a2c, roughness: 0.95 });
+  const woodEnd = new THREE.MeshStandardMaterial({ color: 0xc9a37a, roughness: 0.9 });
+  function addLog(x, y, z, length = 0.85, radius = 0.07, color) {
+    const log = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius, length, 14),
+      Math.random() < 0.5 ? woodLight : woodDark
+    );
+    if (color) log.material = color;
+    log.rotation.z = Math.PI / 2;
+    log.position.set(x, y, z);
+    outside.add(log);
+    // End cap (lighter, shows tree rings color)
+    const cap = new THREE.Mesh(new THREE.CircleGeometry(radius, 14), woodEnd);
+    cap.rotation.y = Math.PI / 2;
+    cap.position.set(x + length / 2 + 0.001, y, z);
+    outside.add(cap);
+    const cap2 = new THREE.Mesh(new THREE.CircleGeometry(radius, 14), woodEnd);
+    cap2.rotation.y = -Math.PI / 2;
+    cap2.position.set(x - length / 2 - 0.001, y, z);
+    outside.add(cap2);
+  }
+  // Stack: 3 layers of 3 logs
+  const stackX = -14.4;
+  const stackZ = 1.95;
+  for (let row = 0; row < 3; row++) {
+    const offset = row % 2 === 0 ? 0 : 0.07;
+    for (let col = 0; col < 3; col++) {
+      addLog(stackX + offset, -0.83 + row * 0.135, stackZ - col * 0.16, 0.82, 0.066);
+    }
+  }
+
+  // ── Axe leaning against the firewood ────────────────────────────
+  const axeGroup = new THREE.Group();
+  const axeHandle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.018, 0.022, 0.78, 10),
+    new THREE.MeshStandardMaterial({ color: 0x8b5e34, roughness: 0.9 })
+  );
+  axeGroup.add(axeHandle);
+  const axeHead = new THREE.Mesh(
+    new THREE.BoxGeometry(0.07, 0.13, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.35, metalness: 0.85 })
+  );
+  axeHead.position.set(0.045, 0.34, 0);
+  axeGroup.add(axeHead);
+  const axeBlade = new THREE.Mesh(
+    new THREE.ConeGeometry(0.06, 0.08, 4),
+    new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.3, metalness: 0.9 })
+  );
+  axeBlade.position.set(0.105, 0.34, 0);
+  axeBlade.rotation.z = -Math.PI / 2;
+  axeBlade.scale.set(1, 1, 0.4);
+  axeGroup.add(axeBlade);
+  axeGroup.position.set(-13.85, -0.6, 1.95);
+  axeGroup.rotation.z = 0.35;
+  outside.add(axeGroup);
+
+  // ── Two white helmets on the back wall (mounted) ────────────────
+  function addHelmet(x, y, z) {
+    const helmetGroup = new THREE.Group();
+    const shell = new THREE.Mesh(
+      new THREE.SphereGeometry(0.13, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.62),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.32, metalness: 0.15 })
+    );
+    helmetGroup.add(shell);
+    const visor = new THREE.Mesh(
+      new THREE.SphereGeometry(0.115, 20, 12, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.32, Math.PI * 0.28),
+      new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.18, metalness: 0.65, transparent: true, opacity: 0.85 })
+    );
+    helmetGroup.add(visor);
+    const trim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.13, 0.011, 8, 24),
+      new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.4, metalness: 0.6 })
+    );
+    trim.rotation.x = Math.PI / 2;
+    trim.position.y = -0.01;
+    helmetGroup.add(trim);
+    // Wall mount peg behind helmet
+    const peg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.08, 8),
+      new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.5, metalness: 0.6 })
+    );
+    peg.rotation.x = Math.PI / 2;
+    peg.position.set(0, 0, 0.06);
+    helmetGroup.add(peg);
+    helmetGroup.position.set(x, y, z);
+    outside.add(helmetGroup);
+  }
+  addHelmet(-14.4, 0.4, 2.05);
+  addHelmet(-13.5, 0.4, 2.05);
   // Garage props: ladder, toolkits, and dustbins.
   const ladderSideMat = new THREE.MeshStandardMaterial({ color: 0x8a94a3, roughness: 0.55, metalness: 0.25 });
   const ladderRungMat = new THREE.MeshStandardMaterial({ color: 0xb7c0cc, roughness: 0.5, metalness: 0.3 });
