@@ -2760,18 +2760,8 @@ async function submitSharedPassword() {
     renderSharedUI();
     pass.blur();
     monitorInputFocused = false;
-    monitorUiRefitBlockedUntil = performance.now() + 700;
-    setTimeout(() => {
-      if (
-        (mode === "monitor" || mode === "monitor-enter") &&
-        typeof fitUiToMonitorScreen === "function" &&
-        canRefitMonitorUi()
-      ) {
-        requestMonitorUiFit();
-        fitUiToMonitorScreen();
-        monitorUiNeedsFit = false;
-      }
-    }, 760);
+    monitorUiHardLock = true;
+    monitorUiRefitBlockedUntil = performance.now() + 1200;
     return;
   }
   status.textContent = `Wrong password. Hash: ${hash}`;
@@ -5077,7 +5067,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let mobileLookX = 0;
   let mobileLookY = 0;
   let lastMonitorUiRect = null;
+  let monitorLockViewportLeft = 0;
+  let monitorLockViewportTop = 0;
   let monitorInputFocused = false;
+  let monitorUiHardLock = false;
   let monitorUiRefitBlockedUntil = 0;
   let monitorUiNeedsFit = true;
   let chelseaFootballCache = null;
@@ -5557,6 +5550,11 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   function setMode(next) {
     mode = next;
+    if (next !== "monitor" && next !== "monitor-enter") {
+      monitorUiHardLock = false;
+      monitorInputFocused = false;
+      monitorUiNeedsFit = true;
+    }
     if (next !== "room" && next !== "mirror-sequence" && next !== "mirror-view") closeMirrorCamera();
     leftWall.visible = true;
     if (next !== "clock-view" && next !== "clock-sequence") {
@@ -5921,9 +5919,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   function fitUiToMonitorScreen() {
     if (!appWrapper) return;
-    if (monitorInputFocused && lastMonitorUiRect) {
-      appWrapper.style.left = `${lastMonitorUiRect.left}px`;
-      appWrapper.style.top = `${lastMonitorUiRect.top}px`;
+    if ((monitorInputFocused || monitorUiHardLock) && lastMonitorUiRect) {
+      const vv = window.visualViewport;
+      const currentViewportLeft = Math.round(vv?.offsetLeft || 0);
+      const currentViewportTop = Math.round(vv?.offsetTop || 0);
+      const lockDeltaLeft = currentViewportLeft - monitorLockViewportLeft;
+      const lockDeltaTop = currentViewportTop - monitorLockViewportTop;
+      appWrapper.style.left = `${lastMonitorUiRect.left + lockDeltaLeft}px`;
+      appWrapper.style.top = `${lastMonitorUiRect.top + lockDeltaTop}px`;
       appWrapper.style.width = `${lastMonitorUiRect.width}px`;
       appWrapper.style.height = `${lastMonitorUiRect.height}px`;
       appWrapper.style.maxHeight = `${lastMonitorUiRect.height}px`;
@@ -5982,10 +5985,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     appWrapper.style.minHeight = "0px";
     appWrapper.style.transform = "none";
     lastMonitorUiRect = { left, top, width: w, height: h };
+    monitorLockViewportLeft = viewportLeft;
+    monitorLockViewportTop = viewportTop;
   }
 
   function canRefitMonitorUi() {
-    return !monitorInputFocused && performance.now() >= monitorUiRefitBlockedUntil;
+    return !monitorInputFocused && !monitorUiHardLock && performance.now() >= monitorUiRefitBlockedUntil;
   }
   function requestMonitorUiFit() {
     monitorUiNeedsFit = true;
@@ -6096,6 +6101,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     applyRendererPixelRatio();
     renderer.setSize(window.innerWidth, window.innerHeight);
     updateMobileControlsVisibility();
+    monitorUiHardLock = false;
     requestMonitorUiFit();
   }
   window.addEventListener('resize', onResize);
@@ -6108,13 +6114,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       target.isContentEditable;
     if (isEditable && appWrapper && appWrapper.contains(target)) {
       const frozenRect = appWrapper.getBoundingClientRect();
+      const vv = window.visualViewport;
       lastMonitorUiRect = {
         left: Math.round(frozenRect.left),
         top: Math.round(frozenRect.top),
         width: Math.round(frozenRect.width),
         height: Math.round(frozenRect.height),
       };
+      monitorLockViewportLeft = Math.round(vv?.offsetLeft || 0);
+      monitorLockViewportTop = Math.round(vv?.offsetTop || 0);
       monitorInputFocused = true;
+      monitorUiHardLock = true;
       monitorUiRefitBlockedUntil = performance.now() + 700;
     }
   });
@@ -6502,7 +6512,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const pose = getMonitorCameraPose();
       camera.position.copy(pose.pos);
       camera.lookAt(pose.look);
-      if (canRefitMonitorUi() && monitorUiNeedsFit) {
+      if ((monitorInputFocused || monitorUiHardLock) && lastMonitorUiRect) {
+        fitUiToMonitorScreen();
+      } else if (canRefitMonitorUi() && monitorUiNeedsFit) {
         fitUiToMonitorScreen();
         monitorUiNeedsFit = false;
       }
