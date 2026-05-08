@@ -210,6 +210,7 @@
     body.monitor-mode .app-wrapper {
       opacity: 1;
       pointer-events: auto;
+      will-change: transform;
     }
     .shared-shell { position: relative; }
     .shared-topbar {
@@ -5918,13 +5919,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   function applyMonitorUiRect(rect) {
     if (!appWrapper || !rect) return;
-    appWrapper.style.left = `${rect.left}px`;
-    appWrapper.style.top = `${rect.top}px`;
+    // Use transform for positioning — GPU compositor layer, immune to iOS layout reflows
+    appWrapper.style.left = "0px";
+    appWrapper.style.top = "0px";
+    appWrapper.style.transform = `translate(${rect.left}px,${rect.top}px)`;
     appWrapper.style.width = `${rect.width}px`;
     appWrapper.style.height = `${rect.height}px`;
     appWrapper.style.maxHeight = `${rect.height}px`;
     appWrapper.style.minHeight = "0px";
-    appWrapper.style.transform = "none";
   }
 
   function fitUiToMonitorScreen() {
