@@ -2760,8 +2760,7 @@ async function submitSharedPassword() {
     renderSharedUI();
     pass.blur();
     monitorInputFocused = false;
-    monitorUiHardLock = true;
-    monitorUiRefitBlockedUntil = performance.now() + 1400;
+    monitorUiFrozen = true;
     monitorUiNeedsFit = false;
     return;
   }
@@ -4037,8 +4036,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const WINDOW_REST_OPEN = 0.55;
   let windowOpenAmount = WINDOW_REST_OPEN;
   let windowOpenTarget = WINDOW_REST_OPEN;
-  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x3f7f6b, roughness: 0.68, metalness: 0.04 });
-  const windowSashMat = new THREE.MeshStandardMaterial({ color: 0x72b7a1, roughness: 0.62, metalness: 0.03 });
+  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x6c4c3b, roughness: 0.75, metalness: 0.04 });
+  const windowSashMat = new THREE.MeshStandardMaterial({ color: 0x7f5b48, roughness: 0.72, metalness: 0.03 });
   const windowGlassMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.03,
@@ -5068,10 +5067,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let mobileLookX = 0;
   let mobileLookY = 0;
   let lastMonitorUiRect = null;
-  let monitorInputFocused = false;
-  let monitorUiHardLock = false;
-  let monitorUiRefitBlockedUntil = 0;
   let monitorUiNeedsFit = true;
+  let monitorInputFocused = false;
+  let monitorUiFrozen = false;
+  let monitorUiSettleTimer = null;
   let chelseaFootballCache = null;
   let chelseaFootballError = null;
   function clearMobileControlKeys() {
@@ -5550,9 +5549,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function setMode(next) {
     mode = next;
     if (next !== "monitor" && next !== "monitor-enter") {
-      monitorUiHardLock = false;
       monitorInputFocused = false;
+      monitorUiFrozen = false;
       monitorUiNeedsFit = true;
+      if (monitorUiSettleTimer) { clearTimeout(monitorUiSettleTimer); monitorUiSettleTimer = null; }
     }
     if (next !== "room" && next !== "mirror-sequence" && next !== "mirror-view") closeMirrorCamera();
     leftWall.visible = true;
@@ -5916,18 +5916,19 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     updateMobileControlsVisibility();
   }
 
+  function applyMonitorUiRect(rect) {
+    if (!appWrapper || !rect) return;
+    appWrapper.style.left = `${rect.left}px`;
+    appWrapper.style.top = `${rect.top}px`;
+    appWrapper.style.width = `${rect.width}px`;
+    appWrapper.style.height = `${rect.height}px`;
+    appWrapper.style.maxHeight = `${rect.height}px`;
+    appWrapper.style.minHeight = "0px";
+    appWrapper.style.transform = "none";
+  }
+
   function fitUiToMonitorScreen() {
     if (!appWrapper) return;
-    if ((monitorInputFocused || monitorUiHardLock) && lastMonitorUiRect) {
-      appWrapper.style.left = `${lastMonitorUiRect.left}px`;
-      appWrapper.style.top = `${lastMonitorUiRect.top}px`;
-      appWrapper.style.width = `${lastMonitorUiRect.width}px`;
-      appWrapper.style.height = `${lastMonitorUiRect.height}px`;
-      appWrapper.style.maxHeight = `${lastMonitorUiRect.height}px`;
-      appWrapper.style.minHeight = "0px";
-      appWrapper.style.transform = "none";
-      return;
-    }
     const corners = [
       new THREE.Vector3(-1.1, 0.775, 0),
       new THREE.Vector3(1.1, 0.775, 0),
@@ -5937,53 +5938,48 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     screenMesh.updateWorldMatrix(true, false);
     corners.forEach((v) => v.applyMatrix4(screenMesh.matrixWorld).project(camera));
 
-    const vv = window.visualViewport;
+    // Use window dimensions for THREE.js projection (matches renderer size)
     const layoutW = Math.round(window.innerWidth);
     const layoutH = Math.round(window.innerHeight);
-    const viewportLeft = Math.round(vv?.offsetLeft || 0);
-    const viewportTop = Math.round(vv?.offsetTop || 0);
-    const viewportWidth = Math.round(vv?.width || layoutW);
-    const viewportHeight = Math.round(vv?.height || layoutH);
-    const viewportRight = viewportLeft + viewportWidth;
-    const viewportBottom = viewportTop + viewportHeight;
+    // Use visualViewport for actual visible area (fixes Safari address-bar clipping)
+    const vv = window.visualViewport;
+    const vpTop = Math.round(vv?.offsetTop || 0);
+    const vpLeft = Math.round(vv?.offsetLeft || 0);
+    const vpW = Math.round(vv?.width || layoutW);
+    const vpH = Math.round(vv?.height || layoutH);
+
     const sx = corners.map((v) => (v.x * 0.5 + 0.5) * layoutW);
     const sy = corners.map((v) => (-v.y * 0.5 + 0.5) * layoutH);
-    const minX = Math.max(viewportLeft, Math.min(...sx));
-    const maxX = Math.min(viewportRight, Math.max(...sx));
-    const minY = Math.max(viewportTop, Math.min(...sy));
-    const maxY = Math.min(viewportBottom, Math.max(...sy));
+    const minX = Math.max(vpLeft, Math.min(...sx));
+    const maxX = Math.min(vpLeft + vpW, Math.max(...sx));
+    const minY = Math.max(vpTop, Math.min(...sy));
+    const maxY = Math.min(vpTop + vpH, Math.max(...sy));
 
-    const mobile = viewportWidth <= 900;
+    const mobile = vpW <= 900;
     const pad = mobile ? 3 : 4;
     const targetInset = mobile ? 0.06 : 0.02;
-    const rawW = (maxX - minX);
-    const rawH = (maxY - minY);
-    const frameW = rawW * (1 - targetInset * 2);
-    const frameH = rawH * (1 - targetInset * 2);
-    const minW = mobile ? 120 : 320;
-    const minH = mobile ? 82 : 190;
-    const maxW = viewportWidth - pad * 2;
-    const maxH = viewportHeight - pad * 2;
-    const w = Math.max(minW, Math.min(maxW, frameW - pad * 2));
-    const h = Math.max(minH, Math.min(maxH, frameH - pad * 2));
-    const targetX = minX + rawW * targetInset;
-    const targetY = minY + rawH * targetInset;
-    const left = Math.max(viewportLeft + pad, Math.min(viewportRight - w - pad, targetX));
-    const top = Math.max(viewportTop + pad, Math.min(viewportBottom - h - pad, targetY));
+    const rawW = maxX - minX;
+    const rawH = maxY - minY;
+    const w = Math.max(mobile ? 120 : 320, Math.min(vpW - pad * 2, rawW * (1 - targetInset * 2) - pad * 2));
+    const h = Math.max(mobile ? 82 : 190, Math.min(vpH - pad * 2, rawH * (1 - targetInset * 2) - pad * 2));
+    const left = Math.max(vpLeft + pad, Math.min(vpLeft + vpW - w - pad, minX + rawW * targetInset));
+    const top = Math.max(vpTop + pad, Math.min(vpTop + vpH - h - pad, minY + rawH * targetInset));
 
-    appWrapper.style.left = `${left}px`;
-    appWrapper.style.top = `${top}px`;
-    appWrapper.style.width = `${w}px`;
-    appWrapper.style.height = `${h}px`;
-    appWrapper.style.maxHeight = `${h}px`;
-    appWrapper.style.minHeight = "0px";
-    appWrapper.style.transform = "none";
     lastMonitorUiRect = { left, top, width: w, height: h };
+    applyMonitorUiRect(lastMonitorUiRect);
+    monitorUiNeedsFit = false;
   }
 
-  function canRefitMonitorUi() {
-    return !monitorInputFocused && !monitorUiHardLock && performance.now() >= monitorUiRefitBlockedUntil;
+  function scheduleMonitorUiFit(delayMs) {
+    if (monitorUiSettleTimer) clearTimeout(monitorUiSettleTimer);
+    monitorUiSettleTimer = setTimeout(() => {
+      monitorUiSettleTimer = null;
+      if (mode === "monitor" || mode === "monitor-enter") {
+        fitUiToMonitorScreen();
+      }
+    }, delayMs);
   }
+
   function requestMonitorUiFit() {
     monitorUiNeedsFit = true;
   }
@@ -6088,12 +6084,19 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   });
 
   function onResize() {
+    updateMobileControlsVisibility();
+    if (monitorUiFrozen || monitorInputFocused) {
+      // Keyboard open/close: skip renderer & camera resize so the 3D scene
+      // stays identical — frozen UI position remains perfectly aligned.
+      return;
+    }
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     applyRendererPixelRatio();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    updateMobileControlsVisibility();
-    requestMonitorUiFit();
+    if (mode === "monitor" || mode === "monitor-enter") {
+      scheduleMonitorUiFit(250);
+    }
   }
   window.addEventListener('resize', onResize);
   document.addEventListener("focusin", (e) => {
@@ -6104,55 +6107,42 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       target.tagName === "TEXTAREA" ||
       target.isContentEditable;
     if (isEditable && appWrapper && appWrapper.contains(target)) {
-      const frozenRect = appWrapper.getBoundingClientRect();
-      lastMonitorUiRect = {
-        left: Math.round(frozenRect.left),
-        top: Math.round(frozenRect.top),
-        width: Math.round(frozenRect.width),
-        height: Math.round(frozenRect.height),
-      };
       monitorInputFocused = true;
-      monitorUiHardLock = true;
-      monitorUiRefitBlockedUntil = performance.now() + 1400;
+      monitorUiFrozen = true;
       monitorUiNeedsFit = false;
+      if (monitorUiSettleTimer) { clearTimeout(monitorUiSettleTimer); monitorUiSettleTimer = null; }
     }
   });
   document.addEventListener("focusout", () => {
     queueMicrotask(() => {
       const activeEl = document.activeElement;
-      const stillInsideMonitorInput =
-        !!appWrapper &&
-        !!activeEl &&
-        appWrapper.contains(activeEl) &&
+      const stillFocused =
+        !!appWrapper && !!activeEl && appWrapper.contains(activeEl) &&
         (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable);
-      monitorInputFocused = stillInsideMonitorInput;
-      if (!monitorInputFocused && (mode === "monitor" || mode === "monitor-enter")) {
-        // Keep monitor UI hard-locked after keyboard close to avoid iOS viewport
-        // snap-back jumps. It will unlock on explicit layout changes (resize/orientation)
-        // or when leaving monitor mode.
-        monitorUiHardLock = true;
-        monitorUiRefitBlockedUntil = Math.max(monitorUiRefitBlockedUntil, performance.now() + 1400);
-        monitorUiNeedsFit = false;
-      }
+      monitorInputFocused = stillFocused;
+      // Stay frozen after keyboard closes — no refit, no fade, no movement
     });
   });
   window.addEventListener('orientationchange', () => {
-    monitorUiHardLock = false;
     monitorInputFocused = false;
-    requestMonitorUiFit();
-    onResize();
+    monitorUiFrozen = false;
+    // Force renderer resize after orientation (bypass freeze guard)
+    setTimeout(() => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      applyRendererPixelRatio();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      updateMobileControlsVisibility();
+      scheduleMonitorUiFit(300);
+    }, 300);
   });
   if (window.visualViewport) {
-    const onVisualViewportChange = () => {
-      if (monitorInputFocused || monitorUiHardLock) return;
-      if (!canRefitMonitorUi()) return;
-      if (mode === "monitor" || mode === "monitor-enter") {
-        requestMonitorUiFit();
-        fitUiToMonitorScreen();
-      }
-    };
-    window.visualViewport.addEventListener("resize", onVisualViewportChange);
-    window.visualViewport.addEventListener("scroll", onVisualViewportChange);
+    window.visualViewport.addEventListener("resize", () => {
+      if (monitorUiFrozen || monitorInputFocused) return;
+      if (mode !== "monitor" && mode !== "monitor-enter") return;
+      // Safari address-bar show/hide fires here — refit quickly
+      scheduleMonitorUiFit(80);
+    });
   }
   window.addEventListener("blur", clearMobileControlKeys);
   document.addEventListener("visibilitychange", () => {
@@ -6506,11 +6496,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const pose = getMonitorCameraPose();
       camera.position.copy(pose.pos);
       camera.lookAt(pose.look);
-      if ((monitorInputFocused || monitorUiHardLock) && lastMonitorUiRect) {
+      if ((monitorInputFocused || monitorUiFrozen) && lastMonitorUiRect) {
+        applyMonitorUiRect(lastMonitorUiRect);
+      } else if (monitorUiNeedsFit && !monitorUiSettleTimer) {
         fitUiToMonitorScreen();
-      } else if (canRefitMonitorUi() && monitorUiNeedsFit) {
-        fitUiToMonitorScreen();
-        monitorUiNeedsFit = false;
       }
     } else if (mode === "speaker") {
       const now = performance.now();
