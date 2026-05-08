@@ -19,23 +19,3 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
-
-  - type: worker
-    name: doctasky-worker
-    env: docker
-    dockerfilePath: ./infra/Dockerfile.worker
-    plan: free
-    autoDeploy: true
-    envVars:
-      - key: APP_REDIS_URL
-        sync: false
-      - key: APP_STORAGE_ROOT
-        value: /tmp/storage
-      - key: APP_DELETE_AFTER_HOURS
-        value: "24"
-      - key: APP_CORS_ORIGINS
-        value: "*"
-      - key: APP_FOOTBALL_DATA_API_TOKEN
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" fill="#0f172a"/>
+  <rect x="4" y="4" width="56" height="56" rx="6" fill="none" stroke="#64748b" stroke-width="2"/>
+
+  <!-- Retro A -->
+  <polygon points="10,50 18,14 26,14 34,50 28,50 26.6,42 17.4,42 16,50" fill="#e2e8f0"/>
+  <rect x="19.8" y="32" width="4.4" height="4.8" fill="#0f172a"/>
+
+  <!-- Retro M -->
+  <polygon points="36,50 36,14 42,14 48,28 54,14 60,14 60,50 55,50 55,25 50,38 46,38 41,25 41,50" fill="#86efac"/>
+</svg>
