@@ -4105,50 +4105,60 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   rightWall.position.set(9.95, 2.8, -0.4);
   rightWall.rotation.y = -Math.PI / 2;
   room.add(rightWall);
+  // Front wall: animated water texture with hover-reactive ripple.
   const frontWallCanvas = document.createElement("canvas");
-  frontWallCanvas.width = 2048;
-  frontWallCanvas.height = 1024;
+  frontWallCanvas.width = 1024;
+  frontWallCanvas.height = 512;
   const frontWallCtx = frontWallCanvas.getContext("2d");
-  if (frontWallCtx) {
-    const bg = frontWallCtx.createLinearGradient(0, 0, 2048, 1024);
-    bg.addColorStop(0, "#fff8ef");
-    bg.addColorStop(0.4, "#ffd8b0");
-    bg.addColorStop(1, "#ec8f3d");
-    frontWallCtx.fillStyle = bg;
-    frontWallCtx.fillRect(0, 0, 2048, 1024);
-    for (let i = 0; i < 22; i++) {
-      frontWallCtx.globalAlpha = 0.12 + (i % 5) * 0.06;
-      frontWallCtx.fillStyle = i % 2 === 0 ? "#ffffff" : "#f28b2c";
+  let frontWallHover = 0;
+  let frontWallHoverU = 0.5;
+  let frontWallHoverV = 0.5;
+  function renderFrontWallWater(timeSec) {
+    if (!frontWallCtx) return;
+    const w = frontWallCanvas.width;
+    const h = frontWallCanvas.height;
+    const grad = frontWallCtx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, "#c8e6f2");
+    grad.addColorStop(0.45, "#9ccfe2");
+    grad.addColorStop(1, "#5fa8c5");
+    frontWallCtx.fillStyle = grad;
+    frontWallCtx.fillRect(0, 0, w, h);
+
+    const rippleCx = frontWallHoverU * w;
+    const rippleCy = (1 - frontWallHoverV) * h;
+    for (let y = 0; y < h; y += 14) {
+      const yy = y / h;
+      const baseAmp = 6 + Math.sin(timeSec * 0.9 + yy * 8) * 2;
+      const freq = 0.016 + yy * 0.004;
       frontWallCtx.beginPath();
-      frontWallCtx.ellipse(
-        120 + (i * 89) % 1900,
-        80 + (i * 57) % 860,
-        180 + (i % 4) * 70,
-        38 + (i % 3) * 24,
-        (i * Math.PI) / 11,
-        0,
-        Math.PI * 2
-      );
-      frontWallCtx.fill();
+      for (let x = 0; x <= w; x += 8) {
+        const dx = x - rippleCx;
+        const dy = y - rippleCy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const ripple = Math.sin(dist * 0.055 - timeSec * 5.2) * Math.exp(-dist * 0.008) * frontWallHover * 18;
+        const wave = Math.sin(x * freq + timeSec * (2.0 + yy * 1.3) + yy * 10) * baseAmp;
+        const py = y + wave + ripple;
+        if (x === 0) frontWallCtx.moveTo(x, py); else frontWallCtx.lineTo(x, py);
+      }
+      const alpha = 0.1 + yy * 0.12;
+      frontWallCtx.strokeStyle = `rgba(255,255,255,${alpha})`;
+      frontWallCtx.lineWidth = 1.6;
+      frontWallCtx.stroke();
     }
-    frontWallCtx.globalAlpha = 0.34;
-    frontWallCtx.strokeStyle = "#ffffff";
-    frontWallCtx.lineWidth = 18;
-    frontWallCtx.beginPath();
-    frontWallCtx.moveTo(0, 300);
-    frontWallCtx.bezierCurveTo(450, 140, 820, 480, 1230, 280);
-    frontWallCtx.bezierCurveTo(1500, 160, 1800, 420, 2048, 240);
-    frontWallCtx.stroke();
-    frontWallCtx.globalAlpha = 0.28;
-    frontWallCtx.strokeStyle = "#de7322";
-    frontWallCtx.lineWidth = 14;
-    frontWallCtx.beginPath();
-    frontWallCtx.moveTo(80, 760);
-    frontWallCtx.bezierCurveTo(500, 560, 900, 940, 1360, 700);
-    frontWallCtx.bezierCurveTo(1640, 560, 1880, 860, 2020, 780);
-    frontWallCtx.stroke();
-    frontWallCtx.globalAlpha = 1;
+
+    // Subtle caustic glints
+    for (let i = 0; i < 18; i++) {
+      const x = ((i * 83 + timeSec * 42) % (w + 140)) - 70;
+      const y = (i * 27 + Math.sin(timeSec + i) * 28) % h;
+      const r = 24 + (i % 5) * 8;
+      const g = frontWallCtx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(255,255,255,0.12)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      frontWallCtx.fillStyle = g;
+      frontWallCtx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
   }
+  renderFrontWallWater(0);
   const frontWallTex = new THREE.CanvasTexture(frontWallCanvas);
   frontWallTex.needsUpdate = true;
   const frontWall = new THREE.Mesh(
@@ -4164,8 +4174,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const WINDOW_REST_OPEN = 0.55;
   let windowOpenAmount = WINDOW_REST_OPEN;
   let windowOpenTarget = WINDOW_REST_OPEN;
-  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x6c4c3b, roughness: 0.75, metalness: 0.04 });
-  const windowSashMat = new THREE.MeshStandardMaterial({ color: 0x7f5b48, roughness: 0.72, metalness: 0.03 });
+  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x101010, roughness: 0.72, metalness: 0.18 });
+  const windowSashMat = new THREE.MeshStandardMaterial({ color: 0x1d1d1d, roughness: 0.68, metalness: 0.14 });
   const windowGlassMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.03,
@@ -6702,6 +6712,22 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     screenMesh.material.color.setHex(0x000000);
     speakerWoofer.scale.setScalar(1 + Math.sin(t * 6.5) * (speakerAudio && !speakerAudio.paused ? 0.03 : 0.005));
     renderWallClock();
+    // Water wall hover reaction: raycast mouse to front wall and amplify ripple.
+    if (mode === "room" || mode === "couch-view" || mode === "speaker") {
+      raycaster.setFromCamera(pointer, camera);
+      const hitFrontWall = raycaster.intersectObject(frontWall, false);
+      if (hitFrontWall.length > 0 && hitFrontWall[0].uv) {
+        frontWallHover = lerpTo(frontWallHover, 1, 0.11);
+        frontWallHoverU = lerpTo(frontWallHoverU, hitFrontWall[0].uv.x, 0.18);
+        frontWallHoverV = lerpTo(frontWallHoverV, hitFrontWall[0].uv.y, 0.18);
+      } else {
+        frontWallHover = lerpTo(frontWallHover, 0, 0.08);
+      }
+    } else {
+      frontWallHover = lerpTo(frontWallHover, 0, 0.08);
+    }
+    renderFrontWallWater(t);
+    frontWallTex.needsUpdate = true;
     if (bonsaiWaterAnim) {
       const nowMs = performance.now();
       const raw = Math.min(1, Math.max(0, (nowMs - bonsaiWaterAnim.start) / bonsaiWaterAnim.duration));
