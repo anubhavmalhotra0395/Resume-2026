@@ -2698,7 +2698,36 @@ function renderSharedUI() {
 function switchSharedTab(tab) {
   if (!sharedUnlocked) return;
   if (tab === 'music') {
-    showDoorDeniedToast();
+    if (typeof showDoorDeniedToast === 'function') {
+      showDoorDeniedToast();
+    } else {
+      let el = document.getElementById('door-denied-toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'door-denied-toast';
+        el.textContent = 'ACCESS DENIED';
+        el.style.position = 'fixed';
+        el.style.left = '50%';
+        el.style.bottom = '84px';
+        el.style.transform = 'translateX(-50%)';
+        el.style.padding = '10px 16px';
+        el.style.border = '2px solid #7f1d1d';
+        el.style.background = 'rgba(127,29,29,0.92)';
+        el.style.color = '#fee2e2';
+        el.style.fontFamily = '"VT323", monospace';
+        el.style.fontSize = '24px';
+        el.style.letterSpacing = '0.03em';
+        el.style.borderRadius = '6px';
+        el.style.zIndex = '220';
+        el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)';
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        el.style.transition = 'opacity 180ms ease';
+        document.body.appendChild(el);
+      }
+      el.style.opacity = '1';
+      setTimeout(() => { el.style.opacity = '0'; }, 1400);
+    }
     sharedTab = 'about';
     renderSharedUI();
     return;
