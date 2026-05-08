@@ -3879,11 +3879,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     if (mirrorVideoEl) mirrorVideoEl.srcObject = null;
     if (typeof mirrorGlassMat !== "undefined" && mirrorGlassMat) {
       mirrorGlassMat.map = null;
-      mirrorGlassMat.color.setHex(0xd7e6f6);
-      mirrorGlassMat.metalness = 0.88;
+      mirrorGlassMat.color.setHex(0xffffff);
+      mirrorGlassMat.metalness = 0;
       mirrorGlassMat.roughness = 0.06;
-      mirrorGlassMat.opacity = 0.96;
+      mirrorGlassMat.opacity = 1;
       mirrorGlassMat.transparent = true;
+      if ("transmission" in mirrorGlassMat) mirrorGlassMat.transmission = 0.92;
+      if ("thickness" in mirrorGlassMat) mirrorGlassMat.thickness = 0.22;
+      mirrorGlassMat.envMapIntensity = 0.85;
       mirrorGlassMat.needsUpdate = true;
     }
   }
@@ -3920,10 +3923,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       if (typeof mirrorGlassMat !== "undefined" && mirrorGlassMat) {
         mirrorGlassMat.map = mirrorVideoTexture;
         mirrorGlassMat.color.setHex(0xffffff);
-        mirrorGlassMat.metalness = 0.12;
-        mirrorGlassMat.roughness = 0.32;
+        mirrorGlassMat.metalness = 0.06;
+        mirrorGlassMat.roughness = 0.28;
         mirrorGlassMat.opacity = 1.0;
         mirrorGlassMat.transparent = false;
+        if ("transmission" in mirrorGlassMat) mirrorGlassMat.transmission = 0;
+        if ("thickness" in mirrorGlassMat) mirrorGlassMat.thickness = 0;
         mirrorGlassMat.needsUpdate = true;
       }
     } catch (err) {
@@ -4729,15 +4734,15 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     const author = "— Buddha";
     const ctx = buddhaQuoteCtx;
     ctx.clearRect(0, 0, buddhaQuoteCanvas.width, buddhaQuoteCanvas.height);
-    ctx.fillStyle = "#0b1118";
+    ctx.fillStyle = "#fff3bf";
     ctx.fillRect(0, 0, buddhaQuoteCanvas.width, buddhaQuoteCanvas.height);
-    ctx.strokeStyle = "#8b6b3f";
+    ctx.strokeStyle = "#2f8b72";
     ctx.lineWidth = 24;
     ctx.strokeRect(12, 12, buddhaQuoteCanvas.width - 24, buddhaQuoteCanvas.height - 24);
-    ctx.strokeStyle = "#d6c3a2";
+    ctx.strokeStyle = "#7dd4b5";
     ctx.lineWidth = 5;
     ctx.strokeRect(44, 44, buddhaQuoteCanvas.width - 88, buddhaQuoteCanvas.height - 88);
-    ctx.fillStyle = "#f8f1dd";
+    ctx.fillStyle = "#0a0a0a";
     ctx.font = "54px VT323, monospace";
     ctx.textAlign = "center";
     const maxWidth = 810;
@@ -4756,7 +4761,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     if (line) lines.push(line);
     const startY = 278 - ((lines.length - 1) * 44) / 2;
     lines.forEach((ln, i) => ctx.fillText(ln, buddhaQuoteCanvas.width / 2, startY + i * 44));
-    ctx.fillStyle = "#d8c7ab";
+    ctx.fillStyle = "#1a1a1a";
     ctx.font = "42px VT323, monospace";
     ctx.fillText(author, buddhaQuoteCanvas.width / 2, 420);
     buddhaQuoteTex.needsUpdate = true;
@@ -4772,14 +4777,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const buddhaClickable = [buddhaQuoteFrame];
   const clockClickable = [wallClockFrame, wallClock];
   const mirrorClickable = [];
-  const mirrorFrameMat = new THREE.MeshStandardMaterial({ color: 0x8a6a47, roughness: 0.44, metalness: 0.35 });
-  const mirrorGlassMat = new THREE.MeshStandardMaterial({
-    color: 0xd7e6f6,
+  const mirrorFrameMat = new THREE.MeshStandardMaterial({ color: 0x2f8b72, roughness: 0.44, metalness: 0.35 });
+  const mirrorGlassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    metalness: 0,
     roughness: 0.06,
-    metalness: 0.88,
-    envMapIntensity: 1.15,
+    transmission: 0.92,
+    thickness: 0.22,
     transparent: true,
-    opacity: 0.96,
+    opacity: 1,
+    envMapIntensity: 0.85,
+    ior: 1.45,
   });
   const mirrorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.62, 2.05, 0.09), mirrorFrameMat);
   mirrorFrame.position.set(2.8, 2.1, 8.72);
@@ -4914,8 +4922,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const couchShotPos = new THREE.Vector3(6.65, -0.18, 3.2);
   const couchShotLook = new THREE.Vector3(0.85, 0.32, -0.72);
   // Lego focus shot for easy mini-game interaction.
-  const legoShotPos = new THREE.Vector3(7.75, 0.72, -4.88);
-  const legoShotLook = new THREE.Vector3(5.92, 0.62, -5.86);
+  // Shelf at ~(8.15, 0.15, -5.86); camera in-room (+Z) centered on shelf so the stand fills the frame.
+  const legoShotPos = new THREE.Vector3(8.15, 1.05, -3.55);
+  const legoShotLook = new THREE.Vector3(8.15, 0.56, -5.84);
 
   // Desk
   const deskTop = new THREE.Mesh(
@@ -4996,19 +5005,19 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const couch = new THREE.Group();
   const couchSeat = new THREE.Mesh(
     new THREE.BoxGeometry(3.35, 0.56, 1.25),
-    new THREE.MeshStandardMaterial({ color: 0x7f5b48, roughness: 0.88, metalness: 0.03 })
+    new THREE.MeshStandardMaterial({ color: 0xf4d03f, roughness: 0.88, metalness: 0.03 })
   );
   couchSeat.position.set(0, -0.84, 0);
   couch.add(couchSeat);
   const couchBack = new THREE.Mesh(
     new THREE.BoxGeometry(3.35, 1.02, 0.34),
-    new THREE.MeshStandardMaterial({ color: 0x6c4c3b, roughness: 0.9, metalness: 0.02 })
+    new THREE.MeshStandardMaterial({ color: 0xe6b422, roughness: 0.9, metalness: 0.02 })
   );
   couchBack.position.set(0, -0.38, -0.45);
   couch.add(couchBack);
   const couchArmL = new THREE.Mesh(
     new THREE.BoxGeometry(0.3, 0.72, 1.25),
-    new THREE.MeshStandardMaterial({ color: 0x694a3a, roughness: 0.9, metalness: 0.02 })
+    new THREE.MeshStandardMaterial({ color: 0xd9a406, roughness: 0.9, metalness: 0.02 })
   );
   couchArmL.position.set(-1.52, -0.67, 0);
   couch.add(couchArmL);
@@ -5216,7 +5225,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   legoRoofBlock.rotation.y = Math.PI * 0.25;
   legoRoofBlock.userData.legoStep = 2;
   legoShelf.add(legoRoofBlock);
-  legoClickable.push(legoBaseBlock, legoMidBlock, legoRoofBlock);
+  legoClickable.push(legoShelfBoard, legoShelfBracket1, legoShelfBracket2, legoBaseBlock, legoMidBlock, legoRoofBlock);
   function makeLegoStepLabel(n) {
     const c = document.createElement("canvas");
     c.width = 128;
@@ -5269,15 +5278,31 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   legoHouse.position.set(0.02, 0, 0);
   legoShelf.add(legoHouse);
 
+  function resetLegoAttempt() {
+    legoProgress = 0;
+    legoBaseBlock.visible = true;
+    legoBaseBlock.userData.legoStep = 0;
+    legoMidBlock.visible = true;
+    legoMidBlock.userData.legoStep = 1;
+    legoRoofBlock.visible = true;
+    legoRoofBlock.userData.legoStep = 2;
+    legoLabel1.visible = true;
+    legoLabel2.visible = true;
+    legoLabel3.visible = true;
+    houseBase.visible = false;
+    houseTop.visible = false;
+    houseRoof.visible = false;
+  }
+
   function handleLegoClick(hitObj) {
     if (legoCreated) {
       showLegoToast("Lego already created.");
       return;
     }
     const step = Number(hitObj?.userData?.legoStep);
-    if (!Number.isFinite(step)) return;
+    if (!Number.isFinite(step) || step < 0) return;
     if (step !== legoProgress) {
-      legoProgress = 0;
+      resetLegoAttempt();
       showLegoToast("Wrong move", true);
       return;
     }
@@ -6373,7 +6398,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       document.body.classList.add("room-mode", "lego-sequence");
       legoSeq = {
         start: performance.now(),
-        duration: 1000,
+        duration: 1500,
         fromPos: camera.position.clone(),
         fromLook: getCurrentLookPoint(),
         toPos: legoShotPos.clone(),
