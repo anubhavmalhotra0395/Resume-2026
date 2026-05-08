@@ -115,8 +115,10 @@
         );
     }
     .monitor-boot-line {
-      white-space: pre;
-      min-height: 24px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      min-height: 1.15em;
       text-shadow: 0 0 6px rgba(141, 247, 141, 0.4);
     }
     .monitor-boot-cursor {
@@ -214,12 +216,14 @@
     }
     /* Cramped monitor screen on mobile — shrink text so content fits horizontally. */
     @media (max-width: 1024px) {
-      body.monitor-mode .shared-title { font-size: 13px; }
+      body.monitor-mode .shared-title { font-size: 13px; line-height: 1.15; word-break: break-word; }
       body.monitor-mode .shared-nav-btn { font-size: 12px; padding: 1px 5px; }
-      body.monitor-mode .shared-lock-title { font-size: 14px; }
-      body.monitor-mode .shared-lock-hint { font-size: 11px; margin-bottom: 4px; }
+      body.monitor-mode .shared-lock { padding: 8px; margin: 6px 0 8px; box-sizing: border-box; max-width: 100%; overflow: hidden; }
+      body.monitor-mode .shared-lock-title { font-size: 14px; line-height: 1.2; word-break: break-word; }
+      body.monitor-mode .shared-lock-hint { font-size: 11px; margin-bottom: 4px; line-height: 1.2; word-break: break-word; }
       body.monitor-mode .shared-password-input { font-size: 13px; padding: 2px 4px; }
       body.monitor-mode .shared-lock-status { font-size: 10px; }
+      body.monitor-mode .shared-lock .btn { width: 100%; max-width: 100%; box-sizing: border-box; font-size: 12px; padding: 7px 12px; white-space: normal; line-height: 1.2; }
       body.monitor-mode .about-copy h3 { font-size: 13px; margin-top: 4px; }
       body.monitor-mode .about-copy p,
       body.monitor-mode .about-copy li { font-size: 11px; line-height: 1.18; }
@@ -228,6 +232,17 @@
       body.monitor-mode .about-photo { width: 56px; height: 70px; }
       body.monitor-mode .about-wrap { gap: 6px; }
       body.monitor-mode .retro-btn { font-size: 12px; padding: 1px 6px; }
+      body.monitor-mode .monitor-boot-screen { font-size: clamp(12px, 3.4vw, 17px); }
+      body.monitor-mode .monitor-boot-terminal { padding: 8px 10px; }
+    }
+    @media (max-width: 560px) {
+      body.monitor-mode .shared-title { font-size: 11px; }
+      body.monitor-mode .shared-nav-btn { font-size: 10px; padding: 2px 5px; }
+      body.monitor-mode .shared-lock-title { font-size: 12px; }
+      body.monitor-mode .shared-lock-hint { font-size: 10px; }
+      body.monitor-mode .shared-lock .btn { font-size: 11px; padding: 6px 10px; }
+      body.monitor-mode .monitor-boot-screen { font-size: clamp(11px, 3.2vw, 15px); }
+      body.monitor-mode .monitor-boot-terminal { padding: 6px 8px; }
     }
     .shared-shell { position: relative; }
     .shared-topbar {
@@ -3822,61 +3837,80 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     el.style.opacity = '1';
     setTimeout(() => { el.style.opacity = '0'; }, 1200);
   }
+  function isCoffeeOrderPanelOpen() {
+    const p = document.getElementById("coffee-order-panel");
+    if (!p) return false;
+    return window.getComputedStyle(p).display !== "none";
+  }
   function openCoffeeOrderDialog() {
-    let panel = document.getElementById('coffee-order-panel');
+    let panel = document.getElementById("coffee-order-panel");
     if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'coffee-order-panel';
-      panel.style.position = 'fixed';
-      panel.style.left = '50%';
-      panel.style.top = '52%';
-      panel.style.transform = 'translate(-50%, -50%)';
-      panel.style.width = 'min(92vw, 420px)';
-      panel.style.background = '#e2e8f0';
-      panel.style.border = '2px solid #475569';
-      panel.style.boxShadow = '0 8px 0 #334155, 0 18px 40px rgba(0,0,0,0.35)';
-      panel.style.zIndex = '222';
-      panel.style.padding = '12px';
-      panel.style.fontFamily = '"VT323", monospace';
-      panel.style.color = '#0f172a';
+      panel = document.createElement("div");
+      panel.id = "coffee-order-panel";
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-modal", "true");
+      panel.style.cssText = [
+        "position:fixed",
+        "inset:0",
+        "z-index:222",
+        "display:none",
+        "box-sizing:border-box",
+        "align-items:center",
+        "justify-content:center",
+        "padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))",
+        "background:rgba(15,23,42,0.28)",
+        "touch-action:manipulation",
+        "-webkit-tap-highlight-color:transparent",
+      ].join(";");
       panel.innerHTML = `
-        <div style="font-size:28px; margin-bottom:8px;">Coffee Maker</div>
-        <label style="display:block; font-size:22px; margin:6px 0 4px;">Brew style</label>
-        <select id="coffee-strength" style="width:100%; font-family:'VT323', monospace; font-size:22px; border:1px solid #64748b; background:#f8fafc;">
+        <div id="coffee-order-card" style="width:min(92vw,420px);max-height:min(88vh,640px);overflow:auto;box-sizing:border-box;background:#e2e8f0;border:2px solid #475569;box-shadow:0 8px 0 #334155,0 18px 40px rgba(0,0,0,0.35);padding:12px;font-family:'VT323',monospace;color:#0f172a;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+        <div style="font-size:clamp(18px,4.5vw,28px);margin-bottom:8px;">Coffee Maker</div>
+        <label style="display:block;font-size:clamp(16px,4vw,22px);margin:6px 0 4px;">Brew style</label>
+        <select id="coffee-strength" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:1px solid #64748b;background:#f8fafc;border-radius:4px;padding:6px 8px;">
           <option value="Strong">Strong espresso</option>
           <option value="Balanced">Balanced brew</option>
           <option value="Mild">Mild roast</option>
         </select>
-        <label style="display:block; font-size:22px; margin:8px 0 4px;">Milk</label>
-        <select id="coffee-milk" style="width:100%; font-family:'VT323', monospace; font-size:22px; border:1px solid #64748b; background:#f8fafc;">
+        <label style="display:block;font-size:clamp(16px,4vw,22px);margin:8px 0 4px;">Milk</label>
+        <select id="coffee-milk" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:1px solid #64748b;background:#f8fafc;border-radius:4px;padding:6px 8px;">
           <option value="No milk">No milk</option>
           <option value="With milk">With milk</option>
         </select>
-        <label style="display:block; font-size:22px; margin:8px 0 4px;">Sugar</label>
-        <select id="coffee-sugar" style="width:100%; font-family:'VT323', monospace; font-size:22px; border:1px solid #64748b; background:#f8fafc;">
+        <label style="display:block;font-size:clamp(16px,4vw,22px);margin:8px 0 4px;">Sugar</label>
+        <select id="coffee-sugar" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:1px solid #64748b;background:#f8fafc;border-radius:4px;padding:6px 8px;">
           <option value="No sugar">No sugar</option>
           <option value="1 tsp">1 tsp</option>
           <option value="2 tsp">2 tsp</option>
           <option value="3 tsp">3 tsp</option>
         </select>
-        <div style="display:flex; gap:8px; margin-top:12px;">
-          <button id="coffee-order-confirm" class="retro-btn" style="font-size:22px;">Brew Coffee</button>
-          <button id="coffee-order-cancel" class="retro-btn" style="font-size:22px;">Cancel</button>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+          <button type="button" id="coffee-order-confirm" class="retro-btn" style="font-size:clamp(15px,3.8vw,22px);flex:1;min-width:120px;">Brew Coffee</button>
+          <button type="button" id="coffee-order-cancel" class="retro-btn" style="font-size:clamp(15px,3.8vw,22px);flex:1;min-width:120px;">Cancel</button>
+        </div>
         </div>
       `;
       document.body.appendChild(panel);
+      const card = panel.querySelector("#coffee-order-card");
+      const closePanel = () => {
+        panel.style.display = "none";
+      };
+      card?.addEventListener("pointerdown", (e) => e.stopPropagation());
+      card?.addEventListener("click", (e) => e.stopPropagation());
+      panel.querySelector("#coffee-order-cancel")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closePanel();
+      });
+      panel.querySelector("#coffee-order-confirm")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const s = panel.querySelector("#coffee-strength")?.value || "Balanced";
+        const m = panel.querySelector("#coffee-milk")?.value || "No milk";
+        const g = panel.querySelector("#coffee-sugar")?.value || "No sugar";
+        closePanel();
+        showCoffeeToast(`Your ${s.toLowerCase()} coffee (${m.toLowerCase()}, ${g.toLowerCase()}) is ready. Enjoy!`);
+        if (typeof window.startCoffeeMugAnim === "function") window.startCoffeeMugAnim();
+      });
     }
-    panel.style.display = 'block';
-    const closePanel = () => { panel.style.display = 'none'; };
-    panel.querySelector('#coffee-order-cancel')?.addEventListener('click', closePanel, { once: true });
-    panel.querySelector('#coffee-order-confirm')?.addEventListener('click', () => {
-      const s = panel.querySelector('#coffee-strength')?.value || 'Balanced';
-      const m = panel.querySelector('#coffee-milk')?.value || 'No milk';
-      const g = panel.querySelector('#coffee-sugar')?.value || 'No sugar';
-      closePanel();
-      showCoffeeToast(`Your ${s.toLowerCase()} coffee (${m.toLowerCase()}, ${g.toLowerCase()}) is ready. Enjoy!`);
-      if (typeof window.startCoffeeMugAnim === 'function') window.startCoffeeMugAnim();
-    }, { once: true });
+    panel.style.display = "flex";
   }
   function closeMirrorCamera() {
     if (mirrorVideoStream) {
@@ -6693,11 +6727,13 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let lastPointerTapMs = 0;
   window.addEventListener("pointerup", (e) => {
     if (!e.isPrimary) return;
+    if (isCoffeeOrderPanelOpen()) return;
     if (shouldIgnoreScenePointerEvent(e.target)) return;
     lastPointerTapMs = performance.now();
     queueSceneClick(e.clientX, e.clientY);
   }, { passive: true });
   window.addEventListener("click", (e) => {
+    if (isCoffeeOrderPanelOpen()) return;
     if (performance.now() - lastPointerTapMs < 450) return;
     if (shouldIgnoreScenePointerEvent(e.target)) return;
     queueSceneClick(e.clientX, e.clientY);
