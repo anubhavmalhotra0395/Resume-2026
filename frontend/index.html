@@ -456,6 +456,25 @@
       z-index: 40;
       gap: 8px;
     }
+    .speaker-player-controls {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 6px;
+      border: 1px solid #334155;
+      background: rgba(219,226,234,0.96);
+      max-width: min(78vw, 760px);
+    }
+    .speaker-track-label {
+      font-family: "VT323", monospace;
+      font-size: 18px;
+      color: #0f172a;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    body.speaker-mode .speaker-player-controls { display: inline-flex; }
     body.monitor-mode .app-overlay-toolbar,
     body.speaker-mode .app-overlay-toolbar,
     body.chelsea-mode .app-overlay-toolbar,
@@ -2005,6 +2024,14 @@
 <div class="app-overlay-toolbar" id="app-overlay-toolbar">
   <button class="retro-btn" id="enter-monitor-btn">Enter Screen</button>
   <button class="retro-btn" id="back-room-btn">Back To Room</button>
+  <div class="speaker-player-controls" id="speaker-player-controls" aria-label="Speaker controls">
+    <button class="retro-btn" id="speaker-prev-btn" type="button">Prev</button>
+    <button class="retro-btn" id="speaker-playpause-btn" type="button">Pause</button>
+    <button class="retro-btn" id="speaker-next-btn" type="button">Next</button>
+    <button class="retro-btn" id="speaker-vol-down-btn" type="button">Vol-</button>
+    <button class="retro-btn" id="speaker-vol-up-btn" type="button">Vol+</button>
+    <span class="speaker-track-label" id="speaker-track-label">Not playing</span>
+  </div>
 </div>
 <div class="mobile-controls" id="mobile-controls" aria-label="Mobile room controls">
   <div class="mobile-joystick-zone" id="mobile-joystick-zone" aria-label="Move joystick">
@@ -3670,6 +3697,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const monitorBootTerminalEl = document.getElementById('monitor-boot-terminal');
   const enterBtn = document.getElementById('enter-monitor-btn');
   const backBtn = document.getElementById('back-room-btn');
+  const speakerPrevBtn = document.getElementById('speaker-prev-btn');
+  const speakerPlayPauseBtn = document.getElementById('speaker-playpause-btn');
+  const speakerNextBtn = document.getElementById('speaker-next-btn');
+  const speakerVolDownBtn = document.getElementById('speaker-vol-down-btn');
+  const speakerVolUpBtn = document.getElementById('speaker-vol-up-btn');
+  const speakerTrackLabelEl = document.getElementById('speaker-track-label');
   const mobileControlsEl = document.getElementById("mobile-controls");
   const roomGuide = document.getElementById('room-guide');
   const roomGuideToggle = document.getElementById('room-guide-toggle');
@@ -4040,14 +4073,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   // Side + front walls with green architectural accents
   const leftWall = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 10),
-    new THREE.MeshStandardMaterial({ color: 0xf2f7f4, roughness: 0.95, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ color: 0xf8faf8, roughness: 0.95, side: THREE.DoubleSide })
   );
   leftWall.position.set(-9.95, 2.8, -0.4);
   leftWall.rotation.y = Math.PI / 2;
   room.add(leftWall);
   const rightWall = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 10),
-    new THREE.MeshStandardMaterial({ color: 0xf2f7f4, roughness: 0.95, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ color: 0xf8faf8, roughness: 0.95, side: THREE.DoubleSide })
   );
   rightWall.position.set(9.95, 2.8, -0.4);
   rightWall.rotation.y = -Math.PI / 2;
@@ -5150,7 +5183,69 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   let speakerAudio = null;
   let speakerVolumeFade = null;
-  const defaultSpeakerTrackUrl = "/ui/assets/doctasky%20-%20voices.mp3";
+  const speakerPlaylist = [
+    { title: "doctasky - voices", artist: "doctasky", url: "/ui/assets/doctasky%20-%20voices.mp3" },
+    { title: "Ode to You", artist: "Joshua K Lepcha", url: "/ui/assets/Ode%20to%20You.mp3" },
+    { title: "doctasky - skydiving", artist: "doctasky", url: "/ui/assets/doctasky-%20skydiving.mp3" },
+    { title: "doctasky - worlds away", artist: "doctasky", url: "/ui/assets/doctasky%20-%20worlds%20away.mp3" },
+    { title: "doctasky - high and dry", artist: "doctasky", url: "/ui/assets/doctasky%20-%20high%20and%20dry.mp3" },
+  ];
+  let speakerTrackIndex = 0;
+  let speakerUserPaused = false;
+  function updateSpeakerTrackUi() {
+    const track = speakerPlaylist[speakerTrackIndex];
+    if (speakerTrackLabelEl && track) speakerTrackLabelEl.textContent = `${track.title} - ${track.artist}`;
+    if (speakerPlayPauseBtn) {
+      const paused = !speakerAudio || speakerAudio.paused;
+      speakerPlayPauseBtn.textContent = paused ? "Play" : "Pause";
+    }
+    if (track) setWallTvText("Now playing", `${track.title} - ${track.artist}`);
+  }
+  function setSpeakerTrack(index, autoplay = true) {
+    if (!speakerPlaylist.length) return;
+    const len = speakerPlaylist.length;
+    speakerTrackIndex = ((index % len) + len) % len;
+    const track = speakerPlaylist[speakerTrackIndex];
+    if (!speakerAudio) speakerAudio = new Audio();
+    const resolved = new URL(track.url, window.location.href).href;
+    if (speakerAudio.src !== resolved) {
+      speakerAudio.src = track.url;
+    }
+    speakerAudio.loop = false;
+    if (!Number.isFinite(speakerAudio.volume)) speakerAudio.volume = 0.7;
+    updateSpeakerTrackUi();
+    if (autoplay) {
+      speakerUserPaused = false;
+      speakerAudio.play().then(() => {
+        setSpeakerFocusMix();
+        updateSpeakerTrackUi();
+      }).catch(() => {});
+    }
+  }
+  function nextSpeakerTrack() { setSpeakerTrack(speakerTrackIndex + 1, true); }
+  function prevSpeakerTrack() { setSpeakerTrack(speakerTrackIndex - 1, true); }
+  function toggleSpeakerPlayPause() {
+    if (!speakerAudio) {
+      setSpeakerTrack(speakerTrackIndex, true);
+      return;
+    }
+    if (speakerAudio.paused) {
+      speakerUserPaused = false;
+      speakerAudio.play().then(() => {
+        setSpeakerFocusMix();
+        updateSpeakerTrackUi();
+      }).catch(() => {});
+    } else {
+      speakerUserPaused = true;
+      speakerAudio.pause();
+      updateSpeakerTrackUi();
+    }
+  }
+  function adjustSpeakerVolume(delta) {
+    if (!speakerAudio) return;
+    speakerVolumeFade = null;
+    speakerAudio.volume = THREE.MathUtils.clamp((speakerAudio.volume || 0) + delta, 0, 1);
+  }
   function fadeSpeakerVolume(target, durationMs = 800) {
     if (!speakerAudio) return;
     const to = THREE.MathUtils.clamp(target, 0, 1);
@@ -5176,20 +5271,47 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       speakerAudio.currentTime = 0;
       speakerAudio.volume = 1;
     }
+    speakerUserPaused = false;
     speakerVolumeFade = null;
     speakerDisplay.material.color.setHex(0x22c55e);
     setWallTvText("Press speaker to play");
+    if (speakerTrackLabelEl) speakerTrackLabelEl.textContent = "Not playing";
+    if (speakerPlayPauseBtn) speakerPlayPauseBtn.textContent = "Play";
   }
   function playSpeakerMedia() {
     if (!speakerAudio) speakerAudio = new Audio();
-    speakerAudio.src = defaultSpeakerTrackUrl;
-    speakerAudio.loop = true;
-    if (!Number.isFinite(speakerAudio.volume)) speakerAudio.volume = 0.5;
-    speakerAudio.play().catch(() => {});
+    // Register once: when a track ends, move to next automatically unless paused by user.
+    if (!speakerAudio.__playlistBound) {
+      speakerAudio.addEventListener("ended", () => {
+        if (!speakerUserPaused) nextSpeakerTrack();
+      });
+      speakerAudio.__playlistBound = true;
+    }
+    setSpeakerTrack(speakerTrackIndex, true);
     setSpeakerFocusMix();
     speakerDisplay.material.color.setHex(0x22c55e);
-    setWallTvText("Now playing", "doctasky - voices");
+    updateSpeakerTrackUi();
   }
+  speakerPrevBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    prevSpeakerTrack();
+  });
+  speakerPlayPauseBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleSpeakerPlayPause();
+  });
+  speakerNextBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    nextSpeakerTrack();
+  });
+  speakerVolDownBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    adjustSpeakerVolume(-0.1);
+  });
+  speakerVolUpBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    adjustSpeakerVolume(0.1);
+  });
 
 
   const root = new THREE.Group();
