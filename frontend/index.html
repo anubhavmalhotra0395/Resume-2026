@@ -487,6 +487,8 @@
     body.buddha-sequence .app-overlay-toolbar,
     body.couch-view .app-overlay-toolbar,
     body.couch-sequence .app-overlay-toolbar,
+    body.lego-view .app-overlay-toolbar,
+    body.lego-sequence .app-overlay-toolbar,
     body.window-sequence .app-overlay-toolbar,
     body.window-view .app-overlay-toolbar { display: inline-flex; }
     .retro-btn {
@@ -510,6 +512,8 @@
     body.buddha-sequence #enter-monitor-btn,
     body.couch-view #enter-monitor-btn,
     body.couch-sequence #enter-monitor-btn,
+    body.lego-view #enter-monitor-btn,
+    body.lego-sequence #enter-monitor-btn,
     body.window-sequence #enter-monitor-btn,
     body.window-view #enter-monitor-btn { display: none; }
     body.room-mode #back-room-btn { display: none; }
@@ -523,6 +527,8 @@
     body.buddha-sequence #back-room-btn,
     body.couch-view #back-room-btn,
     body.couch-sequence #back-room-btn,
+    body.lego-view #back-room-btn,
+    body.lego-sequence #back-room-btn,
     body.window-sequence #back-room-btn,
     body.window-view #back-room-btn { display: inline-block; }
     .mobile-controls {
@@ -4083,24 +4089,102 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.2;
   room.add(floor);
+  // Back wall (behind monitor): animated cloudy texture with hover-reactive drift.
+  const backWallCanvas = document.createElement("canvas");
+  backWallCanvas.width = 1024;
+  backWallCanvas.height = 512;
+  const backWallCtx = backWallCanvas.getContext("2d");
+  let backWallHover = 0;
+  let backWallHoverU = 0.5;
+  let backWallHoverV = 0.5;
+  function renderBackWallClouds(timeSec) {
+    if (!backWallCtx) return;
+    const w = backWallCanvas.width;
+    const h = backWallCanvas.height;
+    const sky = backWallCtx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, "#e8f2f6");
+    sky.addColorStop(0.55, "#dbe8ee");
+    sky.addColorStop(1, "#cbdde6");
+    backWallCtx.fillStyle = sky;
+    backWallCtx.fillRect(0, 0, w, h);
+
+    const hoverX = backWallHoverU * w;
+    const hoverY = (1 - backWallHoverV) * h;
+    for (let i = 0; i < 22; i++) {
+      const baseX = ((i * 117 + timeSec * (28 + (i % 5) * 6)) % (w + 340)) - 170;
+      const baseY = 60 + ((i * 39) % 300) + Math.sin(timeSec * 0.8 + i * 0.7) * 16;
+      const dx = baseX - hoverX;
+      const dy = baseY - hoverY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const push = Math.exp(-dist * 0.008) * backWallHover * 85;
+      const dirX = dist > 1 ? dx / dist : 0;
+      const dirY = dist > 1 ? dy / dist : 0;
+      const x = baseX + dirX * push;
+      const y = baseY + dirY * push;
+      const rx = 90 + (i % 4) * 28;
+      const ry = 30 + (i % 3) * 12;
+      const g = backWallCtx.createRadialGradient(x, y, 0, x, y, rx);
+      g.addColorStop(0, "rgba(255,255,255,0.38)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      backWallCtx.fillStyle = g;
+      backWallCtx.beginPath();
+      backWallCtx.ellipse(x, y, rx, ry, Math.sin(i) * 0.25, 0, Math.PI * 2);
+      backWallCtx.fill();
+    }
+  }
+  renderBackWallClouds(0);
+  const backWallTex = new THREE.CanvasTexture(backWallCanvas);
+  backWallTex.needsUpdate = true;
   const backWall = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 10),
-    new THREE.MeshStandardMaterial({ color: 0xf8faf8, roughness: 0.95 })
+    new THREE.MeshStandardMaterial({ map: backWallTex, color: 0xffffff, roughness: 0.92 })
   );
   backWall.position.set(0, 2.8, -6);
   room.add(backWall);
 
   // Side + front walls with green architectural accents
+  // Side walls (TV wall + Buddha wall): flowing wavy texture, always animated.
+  const sideWallCanvas = document.createElement("canvas");
+  sideWallCanvas.width = 1024;
+  sideWallCanvas.height = 512;
+  const sideWallCtx = sideWallCanvas.getContext("2d");
+  function renderSideWallWaves(timeSec) {
+    if (!sideWallCtx) return;
+    const w = sideWallCanvas.width;
+    const h = sideWallCanvas.height;
+    const grad = sideWallCtx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, "#dff0f7");
+    grad.addColorStop(0.45, "#b9dceb");
+    grad.addColorStop(1, "#89bfd5");
+    sideWallCtx.fillStyle = grad;
+    sideWallCtx.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 16) {
+      const yy = y / h;
+      const amp = 5 + Math.sin(timeSec * 0.9 + yy * 9) * 2.2;
+      const freq = 0.015 + yy * 0.006;
+      sideWallCtx.beginPath();
+      for (let x = 0; x <= w; x += 8) {
+        const py = y + Math.sin(x * freq + timeSec * (1.8 + yy * 1.4) + yy * 7) * amp;
+        if (x === 0) sideWallCtx.moveTo(x, py); else sideWallCtx.lineTo(x, py);
+      }
+      sideWallCtx.strokeStyle = `rgba(255,255,255,${0.09 + yy * 0.14})`;
+      sideWallCtx.lineWidth = 1.5;
+      sideWallCtx.stroke();
+    }
+  }
+  renderSideWallWaves(0);
+  const sideWallTex = new THREE.CanvasTexture(sideWallCanvas);
+  sideWallTex.needsUpdate = true;
   const leftWall = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 10),
-    new THREE.MeshStandardMaterial({ color: 0xf8faf8, roughness: 0.95, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ map: sideWallTex, color: 0xffffff, roughness: 0.92, side: THREE.DoubleSide })
   );
   leftWall.position.set(-9.95, 2.8, -0.4);
   leftWall.rotation.y = Math.PI / 2;
   room.add(leftWall);
   const rightWall = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 10),
-    new THREE.MeshStandardMaterial({ color: 0xf8faf8, roughness: 0.95, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ map: sideWallTex, color: 0xffffff, roughness: 0.92, side: THREE.DoubleSide })
   );
   rightWall.position.set(9.95, 2.8, -0.4);
   rightWall.rotation.y = -Math.PI / 2;
@@ -4822,6 +4906,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   // Couch cinematic target: "sitting on couch" view toward room.
   const couchShotPos = new THREE.Vector3(6.65, -0.18, 3.2);
   const couchShotLook = new THREE.Vector3(0.85, 0.32, -0.72);
+  // Lego focus shot for easy mini-game interaction.
+  const legoShotPos = new THREE.Vector3(7.75, 0.72, -4.88);
+  const legoShotLook = new THREE.Vector3(5.92, 0.62, -5.86);
 
   // Desk
   const deskTop = new THREE.Mesh(
@@ -5100,7 +5187,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const legoShelfBracket2 = legoShelfBracket1.clone();
   legoShelfBracket2.position.x = 0.55;
   legoShelf.add(legoShelfBracket2);
-  legoShelf.position.set(5.7, 0.15, -5.86);
+  legoShelf.position.set(6.9, 0.15, -5.86);
   room.add(legoShelf);
 
   const legoClickable = [];
@@ -5123,19 +5210,55 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   legoRoofBlock.userData.legoStep = 2;
   legoShelf.add(legoRoofBlock);
   legoClickable.push(legoBaseBlock, legoMidBlock, legoRoofBlock);
+  function makeLegoStepLabel(n) {
+    const c = document.createElement("canvas");
+    c.width = 128;
+    c.height = 128;
+    const ctx = c.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "rgba(15,23,42,0.88)";
+      ctx.fillRect(10, 10, 108, 108);
+      ctx.strokeStyle = "rgba(226,232,240,0.9)";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(14, 14, 100, 100);
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold 76px VT323, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(n), 64, 70);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return new THREE.Mesh(
+      new THREE.PlaneGeometry(0.09, 0.09),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })
+    );
+  }
+  const legoLabel1 = makeLegoStepLabel(1);
+  legoLabel1.position.set(-0.3, 0.58, 0.095);
+  legoShelf.add(legoLabel1);
+  const legoLabel2 = makeLegoStepLabel(2);
+  legoLabel2.position.set(0.0, 0.58, 0.09);
+  legoShelf.add(legoLabel2);
+  const legoLabel3 = makeLegoStepLabel(3);
+  legoLabel3.position.set(0.3, 0.6, 0.085);
+  legoShelf.add(legoLabel3);
 
   const legoHouse = new THREE.Group();
   const houseBase = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.14, 0.2), legoBlockMatBase.clone());
   houseBase.position.y = 0.47;
+  houseBase.visible = false;
   legoHouse.add(houseBase);
   const houseTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.17), legoBlockMatMid.clone());
   houseTop.position.y = 0.62;
+  houseTop.visible = false;
   legoHouse.add(houseTop);
   const houseRoof = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.13, 4), legoBlockMatRoof.clone());
   houseRoof.position.y = 0.76;
   houseRoof.rotation.y = Math.PI * 0.25;
+  houseRoof.visible = false;
   legoHouse.add(houseRoof);
-  legoHouse.visible = false;
+  legoHouse.visible = true;
   legoHouse.position.set(0.02, 0, 0);
   legoShelf.add(legoHouse);
 
@@ -5152,20 +5275,25 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       return;
     }
     legoProgress += 1;
-    // Move solved piece into house spot.
+    // Lock solved piece so users can't accidentally click it again.
     if (step === 0) {
-      legoBaseBlock.position.set(0.02, 0.47, 0);
+      legoBaseBlock.visible = false;
+      legoBaseBlock.userData.legoStep = -1;
+      legoLabel1.visible = false;
+      houseBase.visible = true;
     } else if (step === 1) {
-      legoMidBlock.position.set(0.02, 0.62, 0);
+      legoMidBlock.visible = false;
+      legoMidBlock.userData.legoStep = -1;
+      legoLabel2.visible = false;
+      houseTop.visible = true;
     } else if (step === 2) {
-      legoRoofBlock.position.set(0.02, 0.76, 0);
+      legoRoofBlock.visible = false;
+      legoRoofBlock.userData.legoStep = -1;
+      legoLabel3.visible = false;
+      houseRoof.visible = true;
     }
     if (legoProgress >= 3) {
       legoCreated = true;
-      legoBaseBlock.visible = false;
-      legoMidBlock.visible = false;
-      legoRoofBlock.visible = false;
-      legoHouse.visible = true;
       showLegoToast("Lego created.");
     } else {
       showLegoToast("Good move");
@@ -5497,6 +5625,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let buddhaSeq = null;
   let windowSeq = null;
   let couchSeq = null;
+  let legoSeq = null;
   let joystickPointerId = null;
   let lookPointerId = null;
   let joystickCenterX = 0;
@@ -6042,6 +6171,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       document.body.classList.remove("couch-view", "couch-sequence");
       couchSeq = null;
     }
+    if (next !== "lego-view" && next !== "lego-sequence") {
+      document.body.classList.remove("lego-view", "lego-sequence");
+      legoSeq = null;
+    }
     if (next !== "window-view" && next !== "window-sequence") {
       document.body.classList.remove("window-view", "window-sequence");
       windowSeq = null;
@@ -6225,6 +6358,27 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const couchDir = couchShotLook.clone().sub(couchShotPos).normalize();
       yaw = Math.atan2(couchDir.x, -couchDir.z);
       pitch = Math.max(-0.5, Math.min(0.5, couchDir.y));
+    } else if (next === "lego-sequence") {
+      setSpeakerRoomMix();
+      monitorEnterAnim = null;
+      setMonitorBooting(false);
+      document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode", "lego-sequence");
+      legoSeq = {
+        start: performance.now(),
+        duration: 1000,
+        fromPos: camera.position.clone(),
+        fromLook: getCurrentLookPoint(),
+        toPos: legoShotPos.clone(),
+        toLook: legoShotLook.clone(),
+      };
+    } else if (next === "lego-view") {
+      legoSeq = null;
+      document.body.classList.remove("lego-sequence");
+      document.body.classList.add("lego-view", "room-mode");
+      document.body.classList.remove("monitor-mode", "speaker-mode");
+      camera.position.copy(legoShotPos);
+      camera.lookAt(legoShotLook);
     } else if (next === "chelsea") {
       chelseaSeq = null;
       document.body.classList.remove("chelsea-sequence");
@@ -6318,6 +6472,20 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       monitorEnterAnim = null;
       setMonitorBooting(false);
       document.body.classList.remove("couch-view", "couch-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode");
+    } else if (next === "return-lego") {
+      legoSeq = null;
+      if (monitorBootTimer) {
+        clearTimeout(monitorBootTimer);
+        monitorBootTimer = null;
+      }
+      if (monitorBootInterval) {
+        clearInterval(monitorBootInterval);
+        monitorBootInterval = null;
+      }
+      monitorEnterAnim = null;
+      setMonitorBooting(false);
+      document.body.classList.remove("lego-view", "lego-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
       document.body.classList.add("room-mode");
     } else if (next === "speaker") {
       if (monitorBootTimer) {
@@ -6461,13 +6629,13 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function queueSceneClick(clientX, clientY) {
     pointer.x = (clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(clientY / window.innerHeight) * 2 + 1;
-    if (mode === "room" || mode === "couch-view") monitorClickPending = true;
+    if (mode === "room" || mode === "couch-view" || mode === "lego-view") monitorClickPending = true;
   }
 
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     keys.add(k);
-    if ((mode === "room" || mode === "speaker" || mode === "intro-room-entry" || mode === "chelsea-sequence" || mode === "chelsea" || mode === "window-sequence" || mode === "window-view" || mode === "clock-sequence" || mode === "clock-view" || mode === "mirror-sequence" || mode === "mirror-view" || mode === "buddha-sequence" || mode === "buddha-view" || mode === "couch-sequence" || mode === "couch-view") && ["w","a","s","d","q","e","arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) {
+    if ((mode === "room" || mode === "speaker" || mode === "intro-room-entry" || mode === "chelsea-sequence" || mode === "chelsea" || mode === "window-sequence" || mode === "window-view" || mode === "clock-sequence" || mode === "clock-view" || mode === "mirror-sequence" || mode === "mirror-view" || mode === "buddha-sequence" || mode === "buddha-view" || mode === "couch-sequence" || mode === "couch-view" || mode === "lego-sequence" || mode === "lego-view") && ["w","a","s","d","q","e","arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) {
       e.preventDefault();
     }
   });
@@ -6525,6 +6693,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       couchSeq = null;
       setMode("return-couch");
       beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      return;
+    }
+    if (mode === "lego-view" || mode === "lego-sequence") {
+      legoSeq = null;
+      setMode("return-lego");
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 900);
       return;
     }
     if (mode === "chelsea" || mode === "chelsea-sequence") {
@@ -6726,8 +6900,26 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     } else {
       frontWallHover = lerpTo(frontWallHover, 0, 0.08);
     }
+    // Cloud wall hover reaction (monitor wall).
+    if (mode === "room" || mode === "couch-view" || mode === "speaker") {
+      raycaster.setFromCamera(pointer, camera);
+      const hitBackWall = raycaster.intersectObject(backWall, false);
+      if (hitBackWall.length > 0 && hitBackWall[0].uv) {
+        backWallHover = lerpTo(backWallHover, 1, 0.12);
+        backWallHoverU = lerpTo(backWallHoverU, hitBackWall[0].uv.x, 0.22);
+        backWallHoverV = lerpTo(backWallHoverV, hitBackWall[0].uv.y, 0.22);
+      } else {
+        backWallHover = lerpTo(backWallHover, 0, 0.08);
+      }
+    } else {
+      backWallHover = lerpTo(backWallHover, 0, 0.08);
+    }
     renderFrontWallWater(t);
     frontWallTex.needsUpdate = true;
+    renderBackWallClouds(t);
+    backWallTex.needsUpdate = true;
+    renderSideWallWaves(t);
+    sideWallTex.needsUpdate = true;
     if (bonsaiWaterAnim) {
       const nowMs = performance.now();
       const raw = Math.min(1, Math.max(0, (nowMs - bonsaiWaterAnim.start) / bonsaiWaterAnim.duration));
@@ -6862,7 +7054,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
             } else {
               const hitLego = raycaster.intersectObjects(legoClickable, false);
               if (hitLego.length > 0) {
-                handleLegoClick(hitLego[0].object);
+                setMode("lego-sequence");
               } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
@@ -6907,6 +7099,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         } else {
           const hitLampFromCouch = raycaster.intersectObjects(lampClickable, false);
           if (hitLampFromCouch.length > 0) toggleLamp();
+        }
+      }
+    } else if (mode === "lego-view") {
+      camera.position.copy(legoShotPos);
+      camera.lookAt(legoShotLook);
+      if (monitorClickPending) {
+        monitorClickPending = false;
+        raycaster.setFromCamera(pointer, camera);
+        const hitLego = raycaster.intersectObjects(legoClickable, false);
+        if (hitLego.length > 0) {
+          handleLegoClick(hitLego[0].object);
         }
       }
     } else if (mode === "window-sequence" && windowSeq) {
@@ -6958,6 +7161,16 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       if (tc >= 1) {
         couchSeq = null;
         setMode("couch-view");
+      }
+    } else if (mode === "lego-sequence" && legoSeq) {
+      const tl = Math.min(1, Math.max(0, (performance.now() - legoSeq.start) / legoSeq.duration));
+      const el = easeInOutCubic(tl);
+      camera.position.lerpVectors(legoSeq.fromPos, legoSeq.toPos, el);
+      const lkl = new THREE.Vector3().lerpVectors(legoSeq.fromLook, legoSeq.toLook, el);
+      camera.lookAt(lkl);
+      if (tl >= 1) {
+        legoSeq = null;
+        setMode("lego-view");
       }
     } else if (mode === "chelsea-sequence" && chelseaSeq) {
       const tr = Math.min(1, Math.max(0, (performance.now() - chelseaSeq.start) / chelseaSeq.duration));
@@ -7080,7 +7293,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         camera.position.z = lerpTo(camera.position.z, speakerWallPos.z, 0.08);
         camera.lookAt(speakerWallLook.x, speakerWallLook.y, speakerWallLook.z);
       }
-    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch") {
+    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego") {
       if (returnAnim) {
         const tr = Math.min(1, Math.max(0, (performance.now() - returnAnim.start) / returnAnim.duration));
         const e = easeInOutCubic(tr);
