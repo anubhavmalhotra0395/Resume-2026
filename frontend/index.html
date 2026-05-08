@@ -5940,32 +5940,28 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     screenMesh.updateWorldMatrix(true, false);
     corners.forEach((v) => v.applyMatrix4(screenMesh.matrixWorld).project(camera));
 
-    // Use window dimensions for THREE.js projection (matches renderer size)
-    const layoutW = Math.round(window.innerWidth);
-    const layoutH = Math.round(window.innerHeight);
-    // Use visualViewport for actual visible area (fixes Safari address-bar clipping)
-    const vv = window.visualViewport;
-    const vpTop = Math.round(vv?.offsetTop || 0);
-    const vpLeft = Math.round(vv?.offsetLeft || 0);
-    const vpW = Math.round(vv?.width || layoutW);
-    const vpH = Math.round(vv?.height || layoutH);
+    // Always use window dimensions — same coordinate space as the renderer and Three.js.
+    // Do NOT use visualViewport: it shrinks when keyboard opens, causing the UI to be
+    // clamped into a "keyboard-open" position that looks wrong after keyboard closes.
+    const W = Math.round(window.innerWidth);
+    const H = Math.round(window.innerHeight);
 
-    const sx = corners.map((v) => (v.x * 0.5 + 0.5) * layoutW);
-    const sy = corners.map((v) => (-v.y * 0.5 + 0.5) * layoutH);
-    const minX = Math.max(vpLeft, Math.min(...sx));
-    const maxX = Math.min(vpLeft + vpW, Math.max(...sx));
-    const minY = Math.max(vpTop, Math.min(...sy));
-    const maxY = Math.min(vpTop + vpH, Math.max(...sy));
+    const sx = corners.map((v) => (v.x * 0.5 + 0.5) * W);
+    const sy = corners.map((v) => (-v.y * 0.5 + 0.5) * H);
+    const minX = Math.max(0, Math.min(...sx));
+    const maxX = Math.min(W, Math.max(...sx));
+    const minY = Math.max(0, Math.min(...sy));
+    const maxY = Math.min(H, Math.max(...sy));
 
-    const mobile = vpW <= 900;
+    const mobile = W <= 900;
     const pad = mobile ? 3 : 4;
     const targetInset = mobile ? 0.06 : 0.02;
     const rawW = maxX - minX;
     const rawH = maxY - minY;
-    const w = Math.max(mobile ? 120 : 320, Math.min(vpW - pad * 2, rawW * (1 - targetInset * 2) - pad * 2));
-    const h = Math.max(mobile ? 82 : 190, Math.min(vpH - pad * 2, rawH * (1 - targetInset * 2) - pad * 2));
-    const left = Math.max(vpLeft + pad, Math.min(vpLeft + vpW - w - pad, minX + rawW * targetInset));
-    const top = Math.max(vpTop + pad, Math.min(vpTop + vpH - h - pad, minY + rawH * targetInset));
+    const w = Math.max(mobile ? 120 : 320, Math.min(W - pad * 2, rawW * (1 - targetInset * 2) - pad * 2));
+    const h = Math.max(mobile ? 82 : 190, Math.min(H - pad * 2, rawH * (1 - targetInset * 2) - pad * 2));
+    const left = Math.max(pad, Math.min(W - w - pad, minX + rawW * targetInset));
+    const top = Math.max(pad, Math.min(H - h - pad, minY + rawH * targetInset));
 
     lastMonitorUiRect = { left, top, width: w, height: h };
     applyMonitorUiRect(lastMonitorUiRect);
@@ -6138,14 +6134,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       scheduleMonitorUiFit(300);
     }, 300);
   });
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", () => {
-      if (monitorUiFrozen || monitorInputFocused) return;
-      if (mode !== "monitor" && mode !== "monitor-enter") return;
-      // Safari address-bar show/hide fires here — refit quickly
-      scheduleMonitorUiFit(80);
-    });
-  }
+  // No visualViewport listener needed — positioning uses window dimensions only
   window.addEventListener("blur", clearMobileControlKeys);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) clearMobileControlKeys();
