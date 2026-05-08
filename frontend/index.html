@@ -2073,9 +2073,8 @@
 
     <div class="shared-lock" id="shared-lock">
       <div class="shared-lock-title">Access Required</div>
-      <div class="shared-lock-hint">Hint: 1 to 3</div>
-      <input id="shared-password" class="shared-password-input" type="password" placeholder="Enter password" />
-      <button class="btn btn-primary" style="margin-top:8px;" onclick="submitSharedPassword()">Unlock</button>
+      <div class="shared-lock-hint">Tap below to continue</div>
+      <button class="btn btn-primary" style="margin-top:8px;" onclick="grantSharedAccess()">Grant Access</button>
       <div class="shared-lock-status" id="shared-lock-status"></div>
     </div>
 
@@ -2793,35 +2792,25 @@ function resetSharedComputerLock() {
 }
 
 async function submitSharedPassword() {
-  const pass = document.getElementById('shared-password');
   const status = document.getElementById('shared-lock-status');
-  if (!pass || !status) return;
-  const typed = pass.value.trim();
-  const hash = await sha256Hex(typed);
-  if (hash === SHARED_PASSWORD_SHA256) {
-    sharedUnlocked = true;
-    sharedTab = 'about';
-    status.textContent = `Access granted. Password hash: ${hash}`;
-    renderSharedUI();
-    pass.blur();
-    monitorInputFocused = false;
-    monitorUiFrozen = true;
-    monitorUiNeedsFit = false;
-    return;
-  }
-  status.textContent = `Wrong password. Hash: ${hash}`;
+  sharedUnlocked = true;
+  sharedTab = 'about';
+  if (status) status.textContent = 'Permission granted.';
+  renderSharedUI();
+  monitorInputFocused = false;
+  monitorUiFrozen = true;
+  monitorUiNeedsFit = false;
+}
+
+function grantSharedAccess() {
+  submitSharedPassword();
 }
 
 window.switchSharedTab = switchSharedTab;
 window.submitSharedPassword = submitSharedPassword;
+window.grantSharedAccess = grantSharedAccess;
 window.resetSharedComputerLock = resetSharedComputerLock;
 window.addEventListener('DOMContentLoaded', () => {
-  const pass = document.getElementById('shared-password');
-  if (pass) {
-    pass.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submitSharedPassword();
-    });
-  }
   renderSharedUI();
 });
 
@@ -3788,6 +3777,37 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     coffeeToastTimer = setTimeout(() => {
       el.style.opacity = '0';
     }, 1900);
+  }
+  function showLegoToast(message, isError = false) {
+    let el = document.getElementById('lego-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'lego-toast';
+      el.style.position = 'fixed';
+      el.style.left = '50%';
+      el.style.bottom = '128px';
+      el.style.transform = 'translateX(-50%)';
+      el.style.padding = '10px 16px';
+      el.style.border = '2px solid #334155';
+      el.style.background = 'rgba(30,41,59,0.92)';
+      el.style.color = '#e2e8f0';
+      el.style.fontFamily = '"VT323", monospace';
+      el.style.fontSize = '24px';
+      el.style.letterSpacing = '0.03em';
+      el.style.borderRadius = '6px';
+      el.style.zIndex = '223';
+      el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)';
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+      el.style.transition = 'opacity 180ms ease';
+      document.body.appendChild(el);
+    }
+    el.style.borderColor = isError ? '#7f1d1d' : '#14532d';
+    el.style.background = isError ? 'rgba(127,29,29,0.92)' : 'rgba(22,101,52,0.92)';
+    el.style.color = isError ? '#fee2e2' : '#dcfce7';
+    el.textContent = message;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 1200);
   }
   function openCoffeeOrderDialog() {
     let panel = document.getElementById('coffee-order-panel');
@@ -5052,6 +5072,95 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   bonsai.position.set(2.75, 0.02, -0.95);
   room.add(bonsai);
   const bonsaiClickable = [bonsaiPot, bonsaiSoil, bonsaiTrunk, bonsaiLeaf1, bonsaiLeaf2, bonsaiLeaf3];
+
+  // Lego shelf mini-game: click blocks in order (base -> top -> roof) to create a house.
+  const legoShelf = new THREE.Group();
+  const legoShelfBoard = new THREE.Mesh(
+    new THREE.BoxGeometry(1.55, 0.08, 0.48),
+    new THREE.MeshStandardMaterial({ color: 0x8a6a4e, roughness: 0.82 })
+  );
+  legoShelfBoard.position.y = 0.38;
+  legoShelf.add(legoShelfBoard);
+  const legoShelfBracket1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.34, 0.1),
+    new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7 })
+  );
+  legoShelfBracket1.position.set(-0.55, 0.17, 0.12);
+  legoShelf.add(legoShelfBracket1);
+  const legoShelfBracket2 = legoShelfBracket1.clone();
+  legoShelfBracket2.position.x = 0.55;
+  legoShelf.add(legoShelfBracket2);
+  legoShelf.position.set(5.7, 0.15, -5.86);
+  room.add(legoShelf);
+
+  const legoClickable = [];
+  let legoProgress = 0;
+  let legoCreated = false;
+  const legoBlockMatBase = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.65 });
+  const legoBlockMatMid = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.65 });
+  const legoBlockMatRoof = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.65 });
+  const legoBaseBlock = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.1, 0.16), legoBlockMatBase);
+  legoBaseBlock.position.set(-0.3, 0.47, 0);
+  legoBaseBlock.userData.legoStep = 0;
+  legoShelf.add(legoBaseBlock);
+  const legoMidBlock = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.14), legoBlockMatMid);
+  legoMidBlock.position.set(0.0, 0.47, 0);
+  legoMidBlock.userData.legoStep = 1;
+  legoShelf.add(legoMidBlock);
+  const legoRoofBlock = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.11, 4), legoBlockMatRoof);
+  legoRoofBlock.position.set(0.3, 0.47, 0);
+  legoRoofBlock.rotation.y = Math.PI * 0.25;
+  legoRoofBlock.userData.legoStep = 2;
+  legoShelf.add(legoRoofBlock);
+  legoClickable.push(legoBaseBlock, legoMidBlock, legoRoofBlock);
+
+  const legoHouse = new THREE.Group();
+  const houseBase = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.14, 0.2), legoBlockMatBase.clone());
+  houseBase.position.y = 0.47;
+  legoHouse.add(houseBase);
+  const houseTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.17), legoBlockMatMid.clone());
+  houseTop.position.y = 0.62;
+  legoHouse.add(houseTop);
+  const houseRoof = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.13, 4), legoBlockMatRoof.clone());
+  houseRoof.position.y = 0.76;
+  houseRoof.rotation.y = Math.PI * 0.25;
+  legoHouse.add(houseRoof);
+  legoHouse.visible = false;
+  legoHouse.position.set(0.02, 0, 0);
+  legoShelf.add(legoHouse);
+
+  function handleLegoClick(hitObj) {
+    if (legoCreated) {
+      showLegoToast("Lego already created.");
+      return;
+    }
+    const step = Number(hitObj?.userData?.legoStep);
+    if (!Number.isFinite(step)) return;
+    if (step !== legoProgress) {
+      legoProgress = 0;
+      showLegoToast("Wrong move", true);
+      return;
+    }
+    legoProgress += 1;
+    // Move solved piece into house spot.
+    if (step === 0) {
+      legoBaseBlock.position.set(0.02, 0.47, 0);
+    } else if (step === 1) {
+      legoMidBlock.position.set(0.02, 0.62, 0);
+    } else if (step === 2) {
+      legoRoofBlock.position.set(0.02, 0.76, 0);
+    }
+    if (legoProgress >= 3) {
+      legoCreated = true;
+      legoBaseBlock.visible = false;
+      legoMidBlock.visible = false;
+      legoRoofBlock.visible = false;
+      legoHouse.visible = true;
+      showLegoToast("Lego created.");
+    } else {
+      showLegoToast("Good move");
+    }
+  }
 
   const wateringCan = new THREE.Group();
   const canBody = new THREE.Mesh(
@@ -6725,12 +6834,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
             if (hitBonsai.length > 0) {
               beginWaterBonsai();
             } else {
+              const hitLego = raycaster.intersectObjects(legoClickable, false);
+              if (hitLego.length > 0) {
+                handleLegoClick(hitLego[0].object);
+              } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
                 setMode("monitor-enter");
               } else {
                 const hitSpeaker = raycaster.intersectObjects(speakerClickable, false);
                 if (hitSpeaker.length > 0) setMode("speaker");
+              }
               }
             }
           }
