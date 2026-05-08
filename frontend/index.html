@@ -4102,15 +4102,15 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     const w = backWallCanvas.width;
     const h = backWallCanvas.height;
     const sky = backWallCtx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, "#e8f2f6");
-    sky.addColorStop(0.55, "#dbe8ee");
-    sky.addColorStop(1, "#cbdde6");
+    sky.addColorStop(0, "#9fd5ef");
+    sky.addColorStop(0.55, "#7dc3e5");
+    sky.addColorStop(1, "#62afd8");
     backWallCtx.fillStyle = sky;
     backWallCtx.fillRect(0, 0, w, h);
 
     const hoverX = backWallHoverU * w;
     const hoverY = (1 - backWallHoverV) * h;
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 26; i++) {
       const baseX = ((i * 117 + timeSec * (28 + (i % 5) * 6)) % (w + 340)) - 170;
       const baseY = 60 + ((i * 39) % 300) + Math.sin(timeSec * 0.8 + i * 0.7) * 16;
       const dx = baseX - hoverX;
@@ -4121,10 +4121,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const dirY = dist > 1 ? dy / dist : 0;
       const x = baseX + dirX * push;
       const y = baseY + dirY * push;
-      const rx = 90 + (i % 4) * 28;
-      const ry = 30 + (i % 3) * 12;
+      const rx = 95 + (i % 4) * 32;
+      const ry = 34 + (i % 3) * 14;
       const g = backWallCtx.createRadialGradient(x, y, 0, x, y, rx);
-      g.addColorStop(0, "rgba(255,255,255,0.38)");
+      g.addColorStop(0, "rgba(255,255,255,0.62)");
       g.addColorStop(1, "rgba(255,255,255,0)");
       backWallCtx.fillStyle = g;
       backWallCtx.beginPath();
@@ -4148,6 +4148,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   sideWallCanvas.width = 1024;
   sideWallCanvas.height = 512;
   const sideWallCtx = sideWallCanvas.getContext("2d");
+  let sideWallHover = 0;
+  let sideWallHoverU = 0.5;
+  let sideWallHoverV = 0.5;
   function renderSideWallWaves(timeSec) {
     if (!sideWallCtx) return;
     const w = sideWallCanvas.width;
@@ -4160,14 +4163,18 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     sideWallCtx.fillRect(0, 0, w, h);
     for (let y = 0; y < h; y += 16) {
       const yy = y / h;
-      const amp = 5 + Math.sin(timeSec * 0.9 + yy * 9) * 2.2;
+      const amp = 7 + Math.sin(timeSec * 0.9 + yy * 9) * 2.8;
       const freq = 0.015 + yy * 0.006;
       sideWallCtx.beginPath();
       for (let x = 0; x <= w; x += 8) {
-        const py = y + Math.sin(x * freq + timeSec * (1.8 + yy * 1.4) + yy * 7) * amp;
+        const dx = x - sideWallHoverU * w;
+        const dy = y - (1 - sideWallHoverV) * h;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const ripple = Math.sin(dist * 0.06 - timeSec * 5.0) * Math.exp(-dist * 0.008) * sideWallHover * 16;
+        const py = y + Math.sin(x * freq + timeSec * (1.8 + yy * 1.4) + yy * 7) * amp + ripple;
         if (x === 0) sideWallCtx.moveTo(x, py); else sideWallCtx.lineTo(x, py);
       }
-      sideWallCtx.strokeStyle = `rgba(255,255,255,${0.09 + yy * 0.14})`;
+      sideWallCtx.strokeStyle = `rgba(255,255,255,${0.12 + yy * 0.16})`;
       sideWallCtx.lineWidth = 1.5;
       sideWallCtx.stroke();
     }
@@ -4258,8 +4265,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const WINDOW_REST_OPEN = 0.55;
   let windowOpenAmount = WINDOW_REST_OPEN;
   let windowOpenTarget = WINDOW_REST_OPEN;
-  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x101010, roughness: 0.72, metalness: 0.18 });
-  const windowSashMat = new THREE.MeshStandardMaterial({ color: 0x1d1d1d, roughness: 0.68, metalness: 0.14 });
+  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x2f8b72, roughness: 0.72, metalness: 0.08 });
+  const windowSashMat = new THREE.MeshStandardMaterial({ color: 0x2f8b72, roughness: 0.68, metalness: 0.06 });
   const windowGlassMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.03,
@@ -5187,7 +5194,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const legoShelfBracket2 = legoShelfBracket1.clone();
   legoShelfBracket2.position.x = 0.55;
   legoShelf.add(legoShelfBracket2);
-  legoShelf.position.set(6.9, 0.15, -5.86);
+  legoShelf.position.set(8.15, 0.15, -5.86);
   room.add(legoShelf);
 
   const legoClickable = [];
@@ -6913,6 +6920,22 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       }
     } else {
       backWallHover = lerpTo(backWallHover, 0, 0.08);
+    }
+    // Side wall hover reaction (TV + Buddha walls share this texture)
+    if (mode === "room" || mode === "couch-view" || mode === "speaker") {
+      raycaster.setFromCamera(pointer, camera);
+      const hitLeftWall = raycaster.intersectObject(leftWall, false);
+      const hitRightWall = raycaster.intersectObject(rightWall, false);
+      const hitSideWall = hitLeftWall[0] || hitRightWall[0];
+      if (hitSideWall && hitSideWall.uv) {
+        sideWallHover = lerpTo(sideWallHover, 1, 0.12);
+        sideWallHoverU = lerpTo(sideWallHoverU, hitSideWall.uv.x, 0.2);
+        sideWallHoverV = lerpTo(sideWallHoverV, hitSideWall.uv.y, 0.2);
+      } else {
+        sideWallHover = lerpTo(sideWallHover, 0, 0.08);
+      }
+    } else {
+      sideWallHover = lerpTo(sideWallHover, 0, 0.08);
     }
     renderFrontWallWater(t);
     frontWallTex.needsUpdate = true;
