@@ -6093,7 +6093,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     applyRendererPixelRatio();
     renderer.setSize(window.innerWidth, window.innerHeight);
     updateMobileControlsVisibility();
-    monitorUiHardLock = false;
     requestMonitorUiFit();
   }
   window.addEventListener('resize', onResize);
@@ -6137,7 +6136,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       }
     });
   });
-  window.addEventListener('orientationchange', onResize);
+  window.addEventListener('orientationchange', () => {
+    monitorUiHardLock = false;
+    monitorInputFocused = false;
+    requestMonitorUiFit();
+    onResize();
+  });
   if (window.visualViewport) {
     const onVisualViewportChange = () => {
       if (monitorInputFocused || monitorUiHardLock) return;
@@ -6502,7 +6506,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const pose = getMonitorCameraPose();
       camera.position.copy(pose.pos);
       camera.lookAt(pose.look);
-      if (canRefitMonitorUi() && monitorUiNeedsFit) {
+      if ((monitorInputFocused || monitorUiHardLock) && lastMonitorUiRect) {
+        fitUiToMonitorScreen();
+      } else if (canRefitMonitorUi() && monitorUiNeedsFit) {
         fitUiToMonitorScreen();
         monitorUiNeedsFit = false;
       }
