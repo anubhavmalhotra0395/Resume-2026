@@ -3792,6 +3792,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const g = panel.querySelector('#coffee-sugar')?.value || 'No sugar';
       closePanel();
       showCoffeeToast(`Your ${s.toLowerCase()} coffee (${m.toLowerCase()}, ${g.toLowerCase()}) is ready. Enjoy!`);
+      if (typeof window.startCoffeeMugAnim === 'function') window.startCoffeeMugAnim();
     }, { once: true });
   }
   function closeMirrorCamera() {
@@ -3909,6 +3910,61 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const fill = new THREE.PointLight(0x8fe8bf, 0.76, 24);
   fill.position.set(-2, 2, 2);
   scene.add(fill);
+
+  // Camera in scene so we can attach first-person items (e.g. coffee mug).
+  scene.add(camera);
+
+  // Coffee mug — child of camera, animated when player brews coffee.
+  const coffeeMug = new THREE.Group();
+  const mugBody = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.055, 0.048, 0.11, 28, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.55, metalness: 0.05, side: THREE.DoubleSide })
+  );
+  coffeeMug.add(mugBody);
+  const mugInner = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.044, 0.11, 28, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0xe5e5e5, roughness: 0.7, side: THREE.BackSide })
+  );
+  coffeeMug.add(mugInner);
+  const mugBottom = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.048, 0.048, 0.005, 28),
+    new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.6 })
+  );
+  mugBottom.position.y = -0.0525;
+  coffeeMug.add(mugBottom);
+  const mugCoffee = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.044, 0.005, 28),
+    new THREE.MeshStandardMaterial({ color: 0x3a1f10, roughness: 0.4, metalness: 0.1 })
+  );
+  mugCoffee.position.y = 0.04;
+  coffeeMug.add(mugCoffee);
+  const mugHandle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.04, 0.011, 12, 18, Math.PI),
+    new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.55, metalness: 0.05 })
+  );
+  mugHandle.position.set(0.058, 0, 0);
+  mugHandle.rotation.set(0, 0, Math.PI / 2);
+  coffeeMug.add(mugHandle);
+  // Steam (small white spheres rising) — animated in tick.
+  const mugSteam = new THREE.Group();
+  const steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 });
+  for (let i = 0; i < 5; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 10), steamMat.clone());
+    puff.userData.phase = i * 0.6;
+    puff.position.set((Math.random() - 0.5) * 0.02, 0.05 + i * 0.025, (Math.random() - 0.5) * 0.02);
+    mugSteam.add(puff);
+  }
+  coffeeMug.add(mugSteam);
+  // Default position: lower-right, slightly forward, hidden until brewed.
+  coffeeMug.position.set(0.18, -0.18, -0.45);
+  coffeeMug.scale.setScalar(1);
+  coffeeMug.visible = false;
+  camera.add(coffeeMug);
+  let coffeeAnim = null; // { startMs }
+  window.startCoffeeMugAnim = function () {
+    coffeeAnim = { startMs: performance.now() };
+    coffeeMug.visible = true;
+  };
 
   const room = new THREE.Group();
   scene.add(room);
@@ -6175,6 +6231,48 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function tick() {
     const dt = Math.min(0.05, clock.getDelta());
     const t = clock.elapsedTime;
+    if (coffeeAnim) {
+      const elapsed = (performance.now() - coffeeAnim.startMs) / 1000;
+      // Total ~4.2s: rise 0.6s -> hold 0.4s -> sip 1.2s -> hold 0.5s -> sip 1.0s -> lower 0.5s
+      const restPos = new THREE.Vector3(0.18, -0.18, -0.45);
+      const sipPos = new THREE.Vector3(0.06, -0.06, -0.22);
+      const startPos = new THREE.Vector3(0.18, -0.42, -0.45);
+      let p, sipAmt = 0;
+      if (elapsed < 0.6) {
+        p = elapsed / 0.6;
+        coffeeMug.position.lerpVectors(startPos, restPos, easeOutCubic(p));
+        coffeeMug.rotation.set(0, 0, 0);
+      } else if (elapsed < 1.0) {
+        coffeeMug.position.copy(restPos);
+        coffeeMug.rotation.set(0, 0, 0);
+      } else if (elapsed < 2.2) {
+        p = (elapsed - 1.0) / 1.2;
+        sipAmt = Math.sin(p * Math.PI);
+        coffeeMug.position.lerpVectors(restPos, sipPos, sipAmt);
+        coffeeMug.rotation.set(-0.55 * sipAmt, 0, -0.25 * sipAmt);
+      } else if (elapsed < 2.7) {
+        coffeeMug.position.copy(restPos);
+        coffeeMug.rotation.set(0, 0, 0);
+      } else if (elapsed < 3.7) {
+        p = (elapsed - 2.7) / 1.0;
+        sipAmt = Math.sin(p * Math.PI);
+        coffeeMug.position.lerpVectors(restPos, sipPos, sipAmt);
+        coffeeMug.rotation.set(-0.5 * sipAmt, 0, -0.22 * sipAmt);
+      } else if (elapsed < 4.2) {
+        p = (elapsed - 3.7) / 0.5;
+        coffeeMug.position.lerpVectors(restPos, startPos, easeInOutCubic(p));
+        coffeeMug.rotation.set(0, 0, 0);
+      } else {
+        coffeeMug.visible = false;
+        coffeeAnim = null;
+      }
+      // Animate steam puffs floating up
+      mugSteam.children.forEach((puff, i) => {
+        const phase = (t * 0.8 + puff.userData.phase) % 1;
+        puff.position.y = 0.05 + phase * 0.18;
+        if (puff.material) puff.material.opacity = (1 - phase) * 0.55;
+      });
+    }
     if (speakerAudio && speakerVolumeFade) {
       const prog = Math.min(1, Math.max(0, (performance.now() - speakerVolumeFade.start) / speakerVolumeFade.duration));
       const eased = easeInOutCubic(prog);
