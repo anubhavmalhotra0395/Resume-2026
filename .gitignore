@@ -1,0 +1,13 @@
+﻿venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+infra/.env
+.env
+.env.*
+storage/
+infra/storage/
+models/
+_henry_portfolio_ref/
+cyber-portfolio/
