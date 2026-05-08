@@ -8,6 +8,6 @@ infra/.env
 .env.*
 storage/
 infra/storage/
-models/
+/models/
 _henry_portfolio_ref/
 cyber-portfolio/
