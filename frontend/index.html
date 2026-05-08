@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VocalForge — AI Vocal Processing</title>
+  <title>Anubhav Malhotra Portfolio</title>
   <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -489,85 +489,87 @@
     body.window-view #back-room-btn { display: inline-block; }
     .mobile-controls {
       position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 10px;
+      inset: 0;
       z-index: 42;
       display: none;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 12px;
       pointer-events: none;
       user-select: none;
       -webkit-user-select: none;
       touch-action: none;
     }
-    .mobile-pad {
-      width: 142px;
-      height: 142px;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      gap: 3px;
-      padding: 8px;
-      border: 3px solid #334155;
-      border-radius: 6px;
-      background: linear-gradient(180deg, #dbe2ea 0%, #bcc8d8 100%);
-      box-shadow:
-        inset 0 2px 0 rgba(255,255,255,0.45),
-        inset 0 -3px 0 rgba(51,65,85,0.35),
-        0 8px 0 #64748b,
-        0 14px 22px rgba(15, 23, 42, 0.28);
-      pointer-events: auto;
-    }
-    .mobile-pad-btn {
-      border: 2px solid #334155;
-      border-radius: 4px;
-      background: linear-gradient(180deg, #f1f5f9 0%, #dbe2ea 100%);
-      color: #0f172a;
-      font-family: "VT323", monospace;
-      font-size: 22px;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.7),
-        inset 0 -2px 0 rgba(51,65,85,0.25),
-        0 2px 0 #64748b;
-      text-shadow: 1px 1px 0 rgba(255,255,255,0.45);
-    }
-    .mobile-pad-btn.active {
-      background: linear-gradient(180deg, #bbf7d0 0%, #86efac 100%);
-      border-color: #15803d;
-      color: #14532d;
-      box-shadow:
-        inset 0 2px 0 rgba(21, 128, 61, 0.22),
-        inset 0 -1px 0 rgba(255,255,255,0.2),
-        0 1px 0 #15803d;
-      transform: translateY(2px);
-    }
-    .mobile-pad-gap { visibility: hidden; }
-    .mobile-controls-label {
+    .mobile-joystick-zone {
       position: absolute;
-      bottom: 154px;
-      font-family: "VT323", monospace;
-      font-size: 18px;
-      color: #0f172a;
-      background: rgba(226, 232, 240, 0.94);
-      border: 2px solid #475569;
-      border-radius: 4px;
-      padding: 1px 8px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      box-shadow: 0 3px 0 #64748b;
+      left: 12px;
+      bottom: 10px;
+      width: min(44vw, 190px);
+      height: min(44vw, 190px);
+      pointer-events: auto;
+      touch-action: none;
+      border-radius: 18px;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.04), rgba(15,23,42,0.02));
+      border: 1px solid rgba(203, 213, 225, 0.18);
+    }
+    .mobile-joystick-base {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 98px;
+      height: 98px;
+      margin-left: -49px;
+      margin-top: -49px;
+      border-radius: 999px;
+      border: 1px solid rgba(203, 213, 225, 0.3);
+      background: rgba(148, 163, 184, 0.16);
+      box-shadow: inset 0 0 16px rgba(255,255,255,0.07);
+      opacity: 0.22;
+      transition: opacity 120ms ease;
       pointer-events: none;
     }
-    .mobile-controls-label.left { left: 20px; }
-    .mobile-controls-label.right { right: 20px; }
+    .mobile-joystick-base.active { opacity: 0.58; }
+    .mobile-joystick-thumb {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 52px;
+      height: 52px;
+      margin-left: -26px;
+      margin-top: -26px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.45);
+      background: rgba(241, 245, 249, 0.22);
+      box-shadow: 0 0 18px rgba(15, 23, 42, 0.24);
+      transform: translate(0, 0);
+      transition: transform 70ms linear;
+    }
+    .mobile-look-zone {
+      position: absolute;
+      right: 12px;
+      bottom: 10px;
+      width: min(44vw, 190px);
+      height: min(44vw, 190px);
+      pointer-events: auto;
+      touch-action: none;
+      border-radius: 18px;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.04), rgba(15,23,42,0.02));
+      border: 1px solid rgba(203, 213, 225, 0.18);
+    }
+    .mobile-joystick-zone::after,
+    .mobile-look-zone::after {
+      position: absolute;
+      bottom: 8px;
+      font-family: "VT323", monospace;
+      font-size: 16px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(226, 232, 240, 0.82);
+      background: rgba(15, 23, 42, 0.24);
+      border: 1px solid rgba(226, 232, 240, 0.24);
+      border-radius: 6px;
+      padding: 1px 8px;
+      pointer-events: none;
+    }
+    .mobile-joystick-zone::after { content: "Move"; left: 8px; }
+    .mobile-look-zone::after { content: "Look"; right: 8px; }
 
     .chelsea-desk-shell {
       display: none;
@@ -1986,29 +1988,15 @@
   <button class="retro-btn" id="back-room-btn">Back To Room</button>
 </div>
 <div class="mobile-controls" id="mobile-controls" aria-label="Mobile room controls">
-  <div class="mobile-controls-label left">Move</div>
-  <div class="mobile-controls-label right">Look</div>
-  <div class="mobile-pad" aria-label="Move pad">
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="w">▲</button>
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="a">◀</button>
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="d">▶</button>
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="s">▼</button>
-    <div class="mobile-pad-gap"></div>
+  <div class="mobile-joystick-zone" id="mobile-joystick-zone" aria-label="Move joystick">
+    <div class="mobile-joystick-base" id="mobile-joystick-base">
+      <div class="mobile-joystick-thumb" id="mobile-joystick-thumb"></div>
+    </div>
   </div>
-  <div class="mobile-pad" aria-label="Look pad">
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="arrowup">▲</button>
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="arrowleft">◀</button>
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="arrowright">▶</button>
-    <div class="mobile-pad-gap"></div>
-    <button type="button" class="mobile-pad-btn" data-key="arrowdown">▼</button>
-    <div class="mobile-pad-gap"></div>
+  <div class="mobile-look-zone" id="mobile-look-zone" aria-label="Look joystick">
+    <div class="mobile-joystick-base" id="mobile-look-base">
+      <div class="mobile-joystick-thumb" id="mobile-look-thumb"></div>
+    </div>
   </div>
 </div>
 <div class="chelsea-desk-shell" id="chelsea-desk-shell" aria-hidden="true">
@@ -2709,7 +2697,13 @@ function renderSharedUI() {
 
 function switchSharedTab(tab) {
   if (!sharedUnlocked) return;
-  sharedTab = tab === 'music' ? 'music' : 'about';
+  if (tab === 'music') {
+    showDoorDeniedToast();
+    sharedTab = 'about';
+    renderSharedUI();
+    return;
+  }
+  sharedTab = 'about';
   renderSharedUI();
 }
 
@@ -3833,9 +3827,19 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   document.body.classList.remove('monitor-mode');
   document.body.classList.add('room-mode');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function isLikelyMobileInput() {
+    return (
+      window.innerWidth <= 1024 ||
+      window.matchMedia("(pointer: coarse)").matches ||
+      window.matchMedia("(hover: none)").matches
+    );
+  }
+  const isMobileDevice = isLikelyMobileInput();
   const initialQuality = (qualityEl && qualityEl.value) || 'auto';
   const lowPower = (navigator.hardwareConcurrency || 8) <= 4;
-  const quality = reducedMotion ? 'low' : (initialQuality === 'auto' ? (lowPower ? 'low' : 'high') : initialQuality);
+  const quality = reducedMotion
+    ? 'low'
+    : (initialQuality === 'auto' ? (lowPower && !isMobileDevice ? 'low' : 'high') : initialQuality);
 
   let renderer;
   try {
@@ -3844,7 +3848,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     set3dStatus('3D FAIL', false);
     return;
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === 'high' ? 1.8 : 1.2));
+  function applyRendererPixelRatio() {
+    const dpr = window.devicePixelRatio || 1;
+    const cap = quality === 'high'
+      ? (isMobileDevice ? 2.2 : 1.8)
+      : (isMobileDevice ? 1.6 : 1.2);
+    renderer.setPixelRatio(Math.min(dpr, cap));
+  }
+  applyRendererPixelRatio();
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.84;
@@ -4904,12 +4915,34 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const speakerHomePos = new THREE.Vector3(-4.6, -0.35, 2.15);
 
   let speakerAudio = null;
+  let speakerVolumeFade = null;
   const defaultSpeakerTrackUrl = "/ui/assets/doctasky%20-%20voices.mp3";
+  function fadeSpeakerVolume(target, durationMs = 800) {
+    if (!speakerAudio) return;
+    const to = THREE.MathUtils.clamp(target, 0, 1);
+    const from = THREE.MathUtils.clamp(Number.isFinite(speakerAudio.volume) ? speakerAudio.volume : 1, 0, 1);
+    speakerVolumeFade = {
+      start: performance.now(),
+      duration: Math.max(1, durationMs),
+      from,
+      to,
+    };
+  }
+  function setSpeakerRoomMix() {
+    if (!speakerAudio) return;
+    fadeSpeakerVolume(0.5, 850);
+  }
+  function setSpeakerFocusMix() {
+    if (!speakerAudio) return;
+    fadeSpeakerVolume(1, 600);
+  }
   function stopSpeakerAudio() {
     if (speakerAudio) {
       speakerAudio.pause();
       speakerAudio.currentTime = 0;
+      speakerAudio.volume = 1;
     }
+    speakerVolumeFade = null;
     speakerDisplay.material.color.setHex(0x22c55e);
     setWallTvText("Press speaker to play");
   }
@@ -4917,7 +4950,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     if (!speakerAudio) speakerAudio = new Audio();
     speakerAudio.src = defaultSpeakerTrackUrl;
     speakerAudio.loop = true;
+    if (!Number.isFinite(speakerAudio.volume)) speakerAudio.volume = 0.5;
     speakerAudio.play().catch(() => {});
+    setSpeakerFocusMix();
     speakerDisplay.material.color.setHex(0x22c55e);
     setWallTvText("Now playing", "doctasky - voices");
   }
@@ -4943,8 +4978,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const keys = new Set();
-  const mobileControlKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"]);
-  const mobileControlButtons = mobileControlsEl ? Array.from(mobileControlsEl.querySelectorAll(".mobile-pad-btn[data-key]")) : [];
+  const mobileJoystickZoneEl = document.getElementById("mobile-joystick-zone");
+  const mobileJoystickBaseEl = document.getElementById("mobile-joystick-base");
+  const mobileJoystickThumbEl = document.getElementById("mobile-joystick-thumb");
+  const mobileLookZoneEl = document.getElementById("mobile-look-zone");
+  const mobileLookBaseEl = document.getElementById("mobile-look-base");
+  const mobileLookThumbEl = document.getElementById("mobile-look-thumb");
   let mode = "room";
   let yaw = 0;
   let pitch = -0.02;
@@ -4983,45 +5022,127 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let buddhaSeq = null;
   let windowSeq = null;
   let couchSeq = null;
+  let joystickPointerId = null;
+  let lookPointerId = null;
+  let joystickCenterX = 0;
+  let joystickCenterY = 0;
+  let lookCenterX = 0;
+  let lookCenterY = 0;
+  let mobileMoveX = 0;
+  let mobileMoveY = 0;
+  let mobileLookX = 0;
+  let mobileLookY = 0;
   let chelseaFootballCache = null;
   let chelseaFootballError = null;
   function clearMobileControlKeys() {
-    mobileControlKeys.forEach((k) => keys.delete(k));
-    mobileControlButtons.forEach((b) => b.classList.remove("active"));
+    mobileMoveX = 0;
+    mobileMoveY = 0;
+    mobileLookX = 0;
+    mobileLookY = 0;
+    joystickPointerId = null;
+    lookPointerId = null;
+    if (mobileJoystickBaseEl) mobileJoystickBaseEl.classList.remove("active");
+    if (mobileJoystickThumbEl) mobileJoystickThumbEl.style.transform = "translate(0px, 0px)";
+    if (mobileLookBaseEl) mobileLookBaseEl.classList.remove("active");
+    if (mobileLookThumbEl) mobileLookThumbEl.style.transform = "translate(0px, 0px)";
   }
   function updateMobileControlsVisibility() {
     if (!mobileControlsEl) return;
-    const mobile = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+    const mobile = isLikelyMobileInput();
     const show = mobile && (mode === "room" || mode === "couch-view");
     mobileControlsEl.style.display = show ? "flex" : "none";
     if (!show) clearMobileControlKeys();
   }
-  if (mobileControlsEl) {
-    const pressBtn = (btn) => {
-      const key = (btn.getAttribute("data-key") || "").toLowerCase();
-      if (!key) return;
-      keys.add(key);
-      btn.classList.add("active");
+  if (mobileJoystickZoneEl && mobileJoystickBaseEl && mobileJoystickThumbEl) {
+    const joystickRadius = 36;
+    const setJoystickFromPoint = (clientX, clientY) => {
+      const dx = clientX - joystickCenterX;
+      const dy = clientY - joystickCenterY;
+      const dist = Math.hypot(dx, dy);
+      const clampScale = dist > joystickRadius ? joystickRadius / dist : 1;
+      const clampedX = dx * clampScale;
+      const clampedY = dy * clampScale;
+      mobileMoveX = THREE.MathUtils.clamp(clampedX / joystickRadius, -1, 1);
+      mobileMoveY = THREE.MathUtils.clamp(-clampedY / joystickRadius, -1, 1);
+      mobileJoystickThumbEl.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
     };
-    const releaseBtn = (btn) => {
-      const key = (btn.getAttribute("data-key") || "").toLowerCase();
-      if (!key) return;
-      keys.delete(key);
-      btn.classList.remove("active");
+
+    mobileJoystickZoneEl.addEventListener("pointerdown", (e) => {
+      if (joystickPointerId !== null) return;
+      e.preventDefault();
+      joystickPointerId = e.pointerId;
+      const rect = mobileJoystickZoneEl.getBoundingClientRect();
+      joystickCenterX = THREE.MathUtils.clamp(e.clientX, rect.left + 52, rect.right - 52);
+      joystickCenterY = THREE.MathUtils.clamp(e.clientY, rect.top + 52, rect.bottom - 52);
+      mobileJoystickBaseEl.style.left = `${joystickCenterX - rect.left}px`;
+      mobileJoystickBaseEl.style.top = `${joystickCenterY - rect.top}px`;
+      mobileJoystickBaseEl.classList.add("active");
+      setJoystickFromPoint(e.clientX, e.clientY);
+      mobileJoystickZoneEl.setPointerCapture(e.pointerId);
+    }, { passive: false });
+
+    mobileJoystickZoneEl.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== joystickPointerId) return;
+      e.preventDefault();
+      setJoystickFromPoint(e.clientX, e.clientY);
+    }, { passive: false });
+
+    const releaseJoystick = (e) => {
+      if (e.pointerId !== joystickPointerId) return;
+      mobileMoveX = 0;
+      mobileMoveY = 0;
+      joystickPointerId = null;
+      mobileJoystickBaseEl.classList.remove("active");
+      mobileJoystickThumbEl.style.transform = "translate(0px, 0px)";
     };
-    mobileControlButtons.forEach((btn) => {
-      btn.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        pressBtn(btn);
-      }, { passive: false });
-      btn.addEventListener("pointerup", (e) => {
-        e.preventDefault();
-        releaseBtn(btn);
-      }, { passive: false });
-      btn.addEventListener("pointercancel", () => releaseBtn(btn));
-      btn.addEventListener("pointerleave", () => releaseBtn(btn));
-      btn.addEventListener("contextmenu", (e) => e.preventDefault());
-    });
+    mobileJoystickZoneEl.addEventListener("pointerup", releaseJoystick);
+    mobileJoystickZoneEl.addEventListener("pointercancel", releaseJoystick);
+    mobileJoystickZoneEl.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+
+  if (mobileLookZoneEl && mobileLookBaseEl && mobileLookThumbEl) {
+    const lookRadius = 36;
+    const setLookFromPoint = (clientX, clientY) => {
+      const dx = clientX - lookCenterX;
+      const dy = clientY - lookCenterY;
+      const dist = Math.hypot(dx, dy);
+      const clampScale = dist > lookRadius ? lookRadius / dist : 1;
+      const clampedX = dx * clampScale;
+      const clampedY = dy * clampScale;
+      mobileLookX = THREE.MathUtils.clamp(clampedX / lookRadius, -1, 1);
+      mobileLookY = THREE.MathUtils.clamp(-clampedY / lookRadius, -1, 1);
+      mobileLookThumbEl.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+    };
+
+    mobileLookZoneEl.addEventListener("pointerdown", (e) => {
+      if (lookPointerId !== null) return;
+      e.preventDefault();
+      lookPointerId = e.pointerId;
+      const rect = mobileLookZoneEl.getBoundingClientRect();
+      lookCenterX = THREE.MathUtils.clamp(e.clientX, rect.left + 52, rect.right - 52);
+      lookCenterY = THREE.MathUtils.clamp(e.clientY, rect.top + 52, rect.bottom - 52);
+      mobileLookBaseEl.style.left = `${lookCenterX - rect.left}px`;
+      mobileLookBaseEl.style.top = `${lookCenterY - rect.top}px`;
+      mobileLookBaseEl.classList.add("active");
+      setLookFromPoint(e.clientX, e.clientY);
+      mobileLookZoneEl.setPointerCapture(e.pointerId);
+    }, { passive: false });
+    mobileLookZoneEl.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== lookPointerId) return;
+      e.preventDefault();
+      setLookFromPoint(e.clientX, e.clientY);
+    }, { passive: false });
+    const releaseLook = (e) => {
+      if (e.pointerId !== lookPointerId) return;
+      mobileLookX = 0;
+      mobileLookY = 0;
+      lookPointerId = null;
+      mobileLookBaseEl.classList.remove("active");
+      mobileLookThumbEl.style.transform = "translate(0px, 0px)";
+    };
+    mobileLookZoneEl.addEventListener("pointerup", releaseLook);
+    mobileLookZoneEl.addEventListener("pointercancel", releaseLook);
+    mobileLookZoneEl.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
   function renderChelseaDeskTab(tab) {
@@ -5425,7 +5546,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         clearInterval(monitorBootInterval);
         monitorBootInterval = null;
       }
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       document.body.classList.add("monitor-mode");
       document.body.classList.remove("speaker-mode");
       document.body.classList.remove("room-mode");
@@ -5443,7 +5564,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         clearInterval(monitorBootInterval);
         monitorBootInterval = null;
       }
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       document.body.classList.remove("monitor-mode");
       document.body.classList.remove("speaker-mode");
       document.body.classList.add("room-mode");
@@ -5460,7 +5581,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       setMonitorBooting(false);
       beginRoomEntryAnimation();
     } else if (next === "chelsea-sequence") {
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
       document.body.classList.add("room-mode", "chelsea-sequence");
       monitorEnterAnim = null;
@@ -5476,7 +5597,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         toLook: jerseyShotLook.clone(),
       };
     } else if (next === "window-sequence") {
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       monitorEnterAnim = null;
       setMonitorBooting(false);
       document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
@@ -5500,7 +5621,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       camera.position.copy(windowShotOutsidePos);
       camera.lookAt(windowShotOutsideLook);
     } else if (next === "clock-sequence") {
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       monitorEnterAnim = null;
       setMonitorBooting(false);
       document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
@@ -5521,7 +5642,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       camera.position.copy(clockShotPos);
       camera.lookAt(clockShotLook);
     } else if (next === "mirror-sequence") {
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       monitorEnterAnim = null;
       setMonitorBooting(false);
       document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
@@ -5543,7 +5664,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       camera.lookAt(mirrorShotLook);
       openMirrorCamera();
     } else if (next === "buddha-sequence") {
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       monitorEnterAnim = null;
       setMonitorBooting(false);
       document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
@@ -5564,7 +5685,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       camera.position.copy(buddhaShotPos);
       camera.lookAt(buddhaShotLook);
     } else if (next === "couch-sequence") {
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       monitorEnterAnim = null;
       setMonitorBooting(false);
       document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
@@ -5728,7 +5849,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       }
       monitorEnterAnim = null;
       setMonitorBooting(false);
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       speakerStage = "idle";
       speakerMediaStarted = false;
       speaker.position.copy(speakerHomePos);
@@ -5823,7 +5944,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
     if (dragging && (mode === "room" || mode === "couch-view")) {
-      yaw -= e.movementX * 0.0025;
+      yaw += e.movementX * 0.0025;
       pitch -= e.movementY * 0.0017;
       pitch = Math.max(-0.5, Math.min(0.5, pitch));
     }
@@ -5885,7 +6006,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     }
     if (mode === "speaker") {
       setMode("return-speaker");
-      stopSpeakerAudio();
+      setSpeakerRoomMix();
       beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1250);
       return;
     }
@@ -5898,6 +6019,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function onResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    applyRendererPixelRatio();
     renderer.setSize(window.innerWidth, window.innerHeight);
     updateMobileControlsVisibility();
   }
@@ -5912,6 +6034,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function tick() {
     const dt = Math.min(0.05, clock.getDelta());
     const t = clock.elapsedTime;
+    if (speakerAudio && speakerVolumeFade) {
+      const prog = Math.min(1, Math.max(0, (performance.now() - speakerVolumeFade.start) / speakerVolumeFade.duration));
+      const eased = easeInOutCubic(prog);
+      speakerAudio.volume = THREE.MathUtils.lerp(speakerVolumeFade.from, speakerVolumeFade.to, eased);
+      if (prog >= 1) speakerVolumeFade = null;
+    }
     const openPhaseProgress =
       mode === "window-sequence" && windowSeq && windowSeq.phase === "open"
         ? Math.min(1, Math.max(0, (performance.now() - windowSeq.start) / Math.max(1, windowSeq.duration)))
@@ -5999,13 +6127,23 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       if (keys.has("arrowright")) yaw -= dt * 1.4;
       if (keys.has("arrowup")) pitch += dt * 0.8;
       if (keys.has("arrowdown")) pitch -= dt * 0.8;
+      if (mobileLookX !== 0) yaw -= mobileLookX * dt * 1.9;
+      if (mobileLookY !== 0) pitch += mobileLookY * dt * 1.2;
       pitch = Math.max(-0.5, Math.min(0.5, pitch));
       const forward = new THREE.Vector3(Math.sin(yaw), 0, -Math.cos(yaw));
       const right = new THREE.Vector3(forward.z, 0, -forward.x);
-      if (keys.has("w")) camera.position.addScaledVector(forward, speed);
-      if (keys.has("s")) camera.position.addScaledVector(forward, -speed);
-      if (keys.has("a")) camera.position.addScaledVector(right, -speed);
-      if (keys.has("d")) camera.position.addScaledVector(right, speed);
+      const moveForwardInput = THREE.MathUtils.clamp(
+        (keys.has("w") ? 1 : 0) - (keys.has("s") ? 1 : 0) + mobileMoveY,
+        -1,
+        1
+      );
+      const moveStrafeInput = THREE.MathUtils.clamp(
+        (keys.has("d") ? 1 : 0) - (keys.has("a") ? 1 : 0) + mobileMoveX,
+        -1,
+        1
+      );
+      if (moveForwardInput !== 0) camera.position.addScaledVector(forward, speed * moveForwardInput);
+      if (moveStrafeInput !== 0) camera.position.addScaledVector(right, speed * moveStrafeInput);
       if (keys.has("q")) camera.position.y += speed * 0.6;
       if (keys.has("e")) camera.position.y -= speed * 0.6;
       camera.position.y = Math.max(-0.2, Math.min(2.2, camera.position.y));
@@ -6085,6 +6223,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       if (keys.has("arrowright")) yaw -= dt * 1.35;
       if (keys.has("arrowup")) pitch += dt * 0.8;
       if (keys.has("arrowdown")) pitch -= dt * 0.8;
+      if (mobileLookX !== 0) yaw -= mobileLookX * dt * 1.9;
+      if (mobileLookY !== 0) pitch += mobileLookY * dt * 1.2;
       pitch = Math.max(-0.5, Math.min(0.5, pitch));
       camera.position.copy(couchShotPos);
       const look = new THREE.Vector3(
