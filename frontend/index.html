@@ -354,7 +354,9 @@
     body.couch-view .room-guide,
     body.couch-sequence .room-guide,
     body.window-sequence .room-guide,
-    body.window-view .room-guide {
+    body.window-view .room-guide,
+    body.lego-view .room-guide,
+    body.lego-sequence .room-guide {
       display: none;
     }
     .room-guide-toggle {
@@ -1993,7 +1995,9 @@
       body.buddha-view .mobile-controls,
       body.buddha-sequence .mobile-controls,
       body.window-sequence .mobile-controls,
-      body.window-view .mobile-controls { display: none; }
+      body.window-view .mobile-controls,
+      body.lego-view .mobile-controls,
+      body.lego-sequence .mobile-controls { display: none; }
     }
   </style>
 </head>
@@ -2009,20 +2013,23 @@
     <div class="room-guide-panel-inner">
       <div class="room-guide-header">In this room</div>
       <ul class="room-guide-list">
-        <li><strong>Move</strong> — WASD on the floor; Q and E for up / down.</li>
-        <li><strong>Look around</strong> — drag with the mouse or use the arrow keys.</li>
-        <li><strong>Monitor</strong> — click the screen to open the shared computer.</li>
-        <li><strong>Window</strong> — click the left window to run the outside-view shot.</li>
-        <li><strong>Door</strong> — click the door to see an ACCESS DENIED toast.</li>
-        <li><strong>Mirror</strong> — click mirror beside the door to move there and toggle live front camera in-mirror.</li>
-        <li><strong>Buddha quote</strong> — click the quote frame for a focused camera shot.</li>
-        <li><strong>Speaker</strong> — click the speaker to listen.</li>
-        <li><strong>Lamp</strong> — click the right-corner lamp to toggle warm light.</li>
-        <li><strong>Bonsai</strong> — click the bonsai on the desk to water it.</li>
-        <li><strong>Couch + Coffee</strong> — click couch for seated view; brew coffee from the side-table maker (also while seated).</li>
-        <li><strong>Chelsea shirt</strong> — click the jersey on the wall for the desk sheet (fixtures, table, squad).</li>
-        <li><strong>Decor</strong> — front wall has orange-white abstract paint; floor uses granite-style tiles.</li>
-        <li><strong>Toolbar</strong> — use “Enter Screen” or “Back To Room” when those appear.</li>
+        <li><strong>Move</strong> — WASD; Q / E for up and down. Phones: transparent left stick.</li>
+        <li><strong>Look</strong> — mouse drag or arrow keys. Phones: transparent right stick.</li>
+        <li><strong>Monitor</strong> — click the screen; tap <strong>Grant Access</strong> for the portfolio UI.</li>
+        <li><strong>Window</strong> — green frame; click for a camera move while the panes open to the outside.</li>
+        <li><strong>Door</strong> — click for an ACCESS DENIED toast.</li>
+        <li><strong>Wall clock</strong> — click for a close-up on the round clock.</li>
+        <li><strong>Mirror</strong> — green frame, clear glass; click to go there. Front camera feeds the mirror surface.</li>
+        <li><strong>Buddha quote</strong> — yellow mat, black text, green frame, “What you think, you become.” Click for a focused shot.</li>
+        <li><strong>Speaker</strong> — music with play / pause, next, previous, and volume. Leaving speaker view lowers volume; audio keeps playing.</li>
+        <li><strong>Lamp</strong> — right-corner lamp toggles warm light.</li>
+        <li><strong>Bonsai</strong> — desk bonsai starts a water animation.</li>
+        <li><strong>Couch + coffee</strong> — yellow couch: seated view with look around; side-table coffee maker for orders; sip animation when the drink is ready.</li>
+        <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
+        <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
+        <li><strong>Walls &amp; floor</strong> — granite-style floor. Front wall: animated water, hover ripples. Behind the monitor: sky and clouds, hover drifts clouds. TV wall and quote wall: flowing waves, hover reacts.</li>
+        <li><strong>Outside</strong> — grill, stacked wood, wall helmets, axe, bins, and a bike beyond the window glass.</li>
+        <li><strong>Toolbar</strong> — Enter Screen and Back To Room when shown.</li>
       </ul>
     </div>
   </div>
