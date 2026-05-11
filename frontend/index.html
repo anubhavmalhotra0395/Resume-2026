@@ -381,24 +381,66 @@
     }
     .car-game-restart.on { display: block; }
     .car-game-touch-controls {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: fixed;
+      inset: 0;
       z-index: 4;
       display: none;
-      gap: 6px;
-      grid-template-columns: 60px 60px 60px;
-      grid-template-rows: 60px 60px;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
     }
+    .cg-zone {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: auto;
+      touch-action: none;
+      border-radius: 18px;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.04), rgba(15,23,42,0.02));
+      border: 1px solid rgba(203, 213, 225, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cg-zone-left {
+      left: 12px;
+      width: min(38vw, 160px);
+      height: min(38vw, 160px);
+    }
+    .cg-zone-right {
+      right: 12px;
+      width: min(48vw, 200px);
+      height: min(38vw, 160px);
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cg-zone-right .cg-steer-row {
+      display: flex;
+      gap: 10px;
+    }
+    .cg-zone::after {
+      position: absolute;
+      bottom: 8px;
+      font-family: "VT323", monospace;
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(226, 232, 240, 0.82);
+      background: rgba(15, 23, 42, 0.24);
+      border: 1px solid rgba(226, 232, 240, 0.24);
+      border-radius: 6px;
+      padding: 1px 8px;
+      pointer-events: none;
+    }
+    .cg-zone-left::after { content: "Gas"; left: 8px; }
+    .cg-zone-right::after { content: "Steer"; right: 8px; }
     .car-game-touch-btn {
-      width: 60px; height: 60px;
-      border-radius: 10px;
-      border: 2px solid rgba(251,191,36,0.6);
-      background: rgba(251,191,36,0.15);
+      border-radius: 14px;
+      border: 2px solid rgba(251,191,36,0.5);
+      background: rgba(251,191,36,0.12);
       color: #fbbf24;
       font-family: "VT323", monospace;
-      font-size: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -406,8 +448,30 @@
       user-select: none;
       touch-action: none;
     }
+    .car-game-touch-btn:active {
+      background: rgba(251,191,36,0.35);
+    }
+    .cg-btn-gas {
+      width: 90px; height: 90px;
+      font-size: 22px;
+      border-radius: 999px;
+    }
+    .cg-btn-steer {
+      width: 64px; height: 64px;
+      font-size: 26px;
+    }
+    .cg-btn-brake {
+      width: 138px; height: 48px;
+      font-size: 20px;
+      border-color: rgba(239,68,68,0.5);
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+    }
+    .cg-btn-brake:active {
+      background: rgba(239,68,68,0.35);
+    }
     @media (max-width: 900px), (pointer: coarse) {
-      .car-game-touch-controls { display: grid; }
+      .car-game-touch-controls { display: flex; }
     }
 
     /* Pong game HUD */
@@ -2341,12 +2405,16 @@
   <button class="car-game-back" id="car-game-back">Go Back</button>
   <button class="car-game-restart" id="car-game-restart">Try Again</button>
   <div class="car-game-touch-controls" id="car-game-touch-controls">
-    <div></div>
-    <button class="car-game-touch-btn" id="cg-touch-up">▲</button>
-    <div></div>
-    <button class="car-game-touch-btn" id="cg-touch-left">◀</button>
-    <button class="car-game-touch-btn" id="cg-touch-down">▼</button>
-    <button class="car-game-touch-btn" id="cg-touch-right">▶</button>
+    <div class="cg-zone cg-zone-left">
+      <button class="car-game-touch-btn cg-btn-gas" id="cg-touch-up">GAS</button>
+    </div>
+    <div class="cg-zone cg-zone-right">
+      <div class="cg-steer-row">
+        <button class="car-game-touch-btn cg-btn-steer" id="cg-touch-left">◀</button>
+        <button class="car-game-touch-btn cg-btn-steer" id="cg-touch-right">▶</button>
+      </div>
+      <button class="car-game-touch-btn cg-btn-brake" id="cg-touch-down">BRAKE</button>
+    </div>
   </div>
 </div>
 <div class="chelsea-desk-shell" id="chelsea-desk-shell" aria-hidden="true">
