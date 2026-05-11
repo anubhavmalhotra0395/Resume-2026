@@ -7179,8 +7179,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const clampScale = dist > joystickRadius ? joystickRadius / dist : 1;
       const clampedX = dx * clampScale;
       const clampedY = dy * clampScale;
-      mobileMoveX = THREE.MathUtils.clamp(clampedX / joystickRadius, -1, 1);
-      mobileMoveY = THREE.MathUtils.clamp(clampedY / joystickRadius, -1, 1);
+      mobileMoveX = THREE.MathUtils.clamp(-clampedX / joystickRadius, -1, 1);
+      mobileMoveY = THREE.MathUtils.clamp(-clampedY / joystickRadius, -1, 1);
       mobileJoystickThumbEl.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
     };
 
@@ -7226,8 +7226,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const clampScale = dist > lookRadius ? lookRadius / dist : 1;
       const clampedX = dx * clampScale;
       const clampedY = dy * clampScale;
-      mobileLookX = THREE.MathUtils.clamp(clampedX / lookRadius, -1, 1);
-      mobileLookY = THREE.MathUtils.clamp(clampedY / lookRadius, -1, 1);
+      mobileLookX = THREE.MathUtils.clamp(-clampedX / lookRadius, -1, 1);
+      mobileLookY = THREE.MathUtils.clamp(-clampedY / lookRadius, -1, 1);
       mobileLookThumbEl.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
     };
 
