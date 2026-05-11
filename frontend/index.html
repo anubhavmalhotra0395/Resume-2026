@@ -209,6 +209,222 @@
       background: #8bff9f;
       box-shadow: 0 0 10px rgba(139, 255, 159, 0.9);
     }
+
+    /* Welcome prompt — Pokemon Gameboy-style dialog box */
+    .welcome-prompt {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 45;
+      width: min(580px, calc(100vw - 24px));
+      display: none;
+      font-family: "VT323", monospace;
+      pointer-events: auto;
+    }
+    .welcome-prompt.on { display: block; }
+    .welcome-prompt-box {
+      border: 4px solid #1e293b;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #f0fdf4 0%, #e0f2e9 100%);
+      padding: 18px 22px 16px;
+      box-shadow: 0 -4px 0 #334155, 0 -8px 24px rgba(0,0,0,0.25),
+                  inset 0 2px 0 rgba(255,255,255,0.7);
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .welcome-prompt-box::after {
+      content: "";
+      position: absolute;
+      bottom: -14px;
+      right: 28px;
+      width: 0; height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-top: 14px solid #1e293b;
+    }
+    .welcome-prompt-box::before {
+      content: "";
+      position: absolute;
+      bottom: -9px;
+      right: 30px;
+      width: 0; height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 10px solid #e0f2e9;
+      z-index: 1;
+    }
+    .welcome-prompt-text {
+      font-size: 24px;
+      color: #0f172a;
+      line-height: 1.35;
+      letter-spacing: 0.02em;
+    }
+    .welcome-prompt-text .wp-green { color: #0f766e; font-weight: 700; }
+    .welcome-prompt-text .wp-highlight {
+      display: inline;
+      background: rgba(20,184,166,0.15);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #0f766e;
+      font-weight: 700;
+    }
+    .welcome-prompt-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .welcome-prompt-btn {
+      border: 3px solid #1e293b;
+      border-radius: 8px;
+      font-family: "VT323", monospace;
+      font-size: 22px;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+    .welcome-prompt-btn:active { transform: scale(0.96); }
+    .welcome-prompt-btn.wp-cv {
+      background: linear-gradient(180deg, #34d399, #10b981);
+      color: #022c22;
+      box-shadow: 0 3px 0 #059669;
+    }
+    .welcome-prompt-btn.wp-cv:hover { background: linear-gradient(180deg, #6ee7b7, #34d399); }
+    .welcome-prompt-btn.wp-explore {
+      background: linear-gradient(180deg, #e2e8f0, #cbd5e1);
+      color: #1e293b;
+      box-shadow: 0 3px 0 #94a3b8;
+    }
+    .welcome-prompt-btn.wp-explore:hover { background: linear-gradient(180deg, #f1f5f9, #e2e8f0); }
+    .welcome-prompt-cursor {
+      display: inline-block;
+      width: 12px; height: 3px;
+      background: #0f766e;
+      margin-left: 3px;
+      vertical-align: middle;
+      animation: crtBlink 0.7s steps(1,end) infinite;
+    }
+    @media (max-width: 560px) {
+      .welcome-prompt-text { font-size: 19px; }
+      .welcome-prompt-btn { font-size: 18px; padding: 7px 14px; }
+      .welcome-prompt-box { padding: 14px 16px 12px; }
+    }
+
+    /* Car jump game fullscreen overlay */
+    .car-game-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      background: #000;
+    }
+    .car-game-overlay.on { display: block; }
+    .car-game-overlay canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .car-game-hud {
+      position: absolute;
+      top: 16px; left: 50%;
+      transform: translateX(-50%);
+      font-family: "VT323", monospace;
+      font-size: 28px;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+      pointer-events: none;
+      text-align: center;
+      z-index: 2;
+    }
+    .car-game-msg {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: "VT323", monospace;
+      font-size: 42px;
+      color: #fbbf24;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+      pointer-events: none;
+      text-align: center;
+      z-index: 3;
+      display: none;
+    }
+    .car-game-msg.on { display: block; }
+    .car-game-back {
+      position: absolute;
+      top: 16px; left: 16px;
+      z-index: 4;
+      border: 2px solid #334155;
+      background: #dbe2ea;
+      color: #111827;
+      font-family: "VT323", monospace;
+      font-size: 22px;
+      padding: 4px 14px;
+      cursor: pointer;
+    }
+    .car-game-back:hover { background: #f1f5f9; }
+    .car-game-restart {
+      position: absolute;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 4;
+      border: 2px solid #334155;
+      background: #34d399;
+      color: #0f172a;
+      font-family: "VT323", monospace;
+      font-size: 26px;
+      padding: 6px 22px;
+      cursor: pointer;
+      display: none;
+    }
+    .car-game-restart.on { display: block; }
+    .car-game-touch-controls {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 4;
+      display: none;
+      gap: 6px;
+      grid-template-columns: 60px 60px 60px;
+      grid-template-rows: 60px 60px;
+    }
+    .car-game-touch-btn {
+      width: 60px; height: 60px;
+      border-radius: 10px;
+      border: 2px solid rgba(251,191,36,0.6);
+      background: rgba(251,191,36,0.15);
+      color: #fbbf24;
+      font-family: "VT323", monospace;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+    }
+    @media (max-width: 900px), (pointer: coarse) {
+      .car-game-touch-controls { display: grid; }
+    }
+
+    /* Pong game HUD */
+    .pong-hud {
+      position: fixed;
+      top: 16px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 42;
+      font-family: "VT323", monospace;
+      font-size: 32px;
+      color: #fbbf24;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      pointer-events: none;
+      display: none;
+    }
+    body.pong-view .pong-hud { display: block; }
+
     body.monitor-mode .app-wrapper {
       opacity: 1;
       pointer-events: auto;
@@ -371,7 +587,11 @@
     body.window-sequence .room-guide,
     body.window-view .room-guide,
     body.lego-view .room-guide,
-    body.lego-sequence .room-guide {
+    body.lego-sequence .room-guide,
+    body.bag-view .room-guide,
+    body.bag-sequence .room-guide,
+    body.pong-view .room-guide,
+    body.pong-sequence .room-guide {
       display: none;
     }
     .room-guide-toggle {
@@ -507,7 +727,11 @@
     body.lego-view .app-overlay-toolbar,
     body.lego-sequence .app-overlay-toolbar,
     body.window-sequence .app-overlay-toolbar,
-    body.window-view .app-overlay-toolbar { display: inline-flex; }
+    body.window-view .app-overlay-toolbar,
+    body.bag-view .app-overlay-toolbar,
+    body.bag-sequence .app-overlay-toolbar,
+    body.pong-view .app-overlay-toolbar,
+    body.pong-sequence .app-overlay-toolbar { display: inline-flex; }
     .retro-btn {
       border: 1px solid #334155;
       background: #dbe2ea;
@@ -532,7 +756,11 @@
     body.lego-view #enter-monitor-btn,
     body.lego-sequence #enter-monitor-btn,
     body.window-sequence #enter-monitor-btn,
-    body.window-view #enter-monitor-btn { display: none; }
+    body.window-view #enter-monitor-btn,
+    body.bag-view #enter-monitor-btn,
+    body.bag-sequence #enter-monitor-btn,
+    body.pong-view #enter-monitor-btn,
+    body.pong-sequence #enter-monitor-btn { display: none; }
     body.room-mode #back-room-btn { display: none; }
     body.room-mode.chelsea-sequence #back-room-btn,
     body.chelsea-mode #back-room-btn,
@@ -547,7 +775,11 @@
     body.lego-view #back-room-btn,
     body.lego-sequence #back-room-btn,
     body.window-sequence #back-room-btn,
-    body.window-view #back-room-btn { display: inline-block; }
+    body.window-view #back-room-btn,
+    body.bag-view #back-room-btn,
+    body.bag-sequence #back-room-btn,
+    body.pong-view #back-room-btn,
+    body.pong-sequence #back-room-btn { display: inline-block; }
     .mobile-controls {
       position: fixed;
       inset: 0;
@@ -2012,7 +2244,11 @@
       body.window-sequence .mobile-controls,
       body.window-view .mobile-controls,
       body.lego-view .mobile-controls,
-      body.lego-sequence .mobile-controls { display: none; }
+      body.lego-sequence .mobile-controls,
+      body.pong-view .mobile-controls,
+      body.pong-sequence .mobile-controls,
+      body.bag-view .mobile-controls,
+      body.bag-sequence .mobile-controls { display: none; }
     }
   </style>
 </head>
@@ -2022,15 +2258,36 @@
 </div>
 <div class="fx-canvas-wrap"><canvas id="fx-canvas"></canvas></div>
 <div class="fx-debug" id="fx-debug">3D INIT</div>
+<div class="welcome-prompt" id="welcome-prompt">
+  <div class="welcome-prompt-box">
+    <div class="welcome-prompt-text" id="welcome-prompt-text"></div>
+    <div class="welcome-prompt-btns" id="welcome-prompt-btns" style="display:none;">
+      <button type="button" class="welcome-prompt-btn wp-cv" id="wp-cv-btn">View CV / Portfolio</button>
+      <button type="button" class="welcome-prompt-btn wp-explore" id="wp-explore-btn">Explore the Room</button>
+    </div>
+  </div>
+</div>
 <div class="room-guide" id="room-guide" aria-label="Room guide">
   <button type="button" class="room-guide-toggle" id="room-guide-toggle" aria-expanded="false" aria-controls="room-guide-panel">Guide</button>
   <div class="room-guide-panel" id="room-guide-panel">
     <div class="room-guide-panel-inner">
-      <div class="room-guide-header">In this room</div>
+      <div class="room-guide-header">Controls</div>
+      <div style="border:1px solid #475569;background:#e2e8f0;padding:6px 8px;margin-bottom:10px;font-size:17px;line-height:1.4;">
+        <div style="margin-bottom:4px;font-size:18px;color:#0f766e;font-weight:700;">Desktop</div>
+        <div><strong>W A S D</strong> — walk forward / left / back / right</div>
+        <div><strong>Q / E</strong> — float up / down</div>
+        <div><strong>Arrow keys</strong> — look around</div>
+        <div><strong>Mouse drag</strong> — look around</div>
+        <div><strong>Shift</strong> — sprint</div>
+        <div><strong>Click</strong> — interact with objects</div>
+        <div style="margin-top:4px;font-size:18px;color:#0f766e;font-weight:700;">Mobile</div>
+        <div><strong>Left stick</strong> — move</div>
+        <div><strong>Right stick</strong> — look</div>
+        <div><strong>Tap</strong> — interact</div>
+      </div>
+      <div class="room-guide-header" style="margin-top:4px;">In this room</div>
       <ul class="room-guide-list">
-        <li><strong>Move</strong> — WASD; Q / E for up and down. Phones: transparent left stick.</li>
-        <li><strong>Look</strong> — mouse drag or arrow keys. Phones: transparent right stick.</li>
-        <li><strong>Monitor</strong> — click the screen; tap <strong>Grant Access</strong> for the portfolio UI.</li>
+        <li><strong>Monitor</strong> — click the screen to view the CV / portfolio.</li>
         <li><strong>Window</strong> — green frame; click for a camera move while the panes open to the outside.</li>
         <li><strong>Door</strong> — click for an ACCESS DENIED toast.</li>
         <li><strong>Wall clock</strong> — click for a close-up on the round clock.</li>
@@ -2041,9 +2298,12 @@
         <li><strong>Bonsai</strong> — desk bonsai starts a water animation.</li>
         <li><strong>Couch + coffee</strong> — yellow couch: seated view with look around; side-table coffee maker for orders; sip animation when the drink is ready.</li>
         <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
+        <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
+        <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
         <li><strong>Walls &amp; floor</strong> — granite-style floor. Front wall: animated water, hover ripples. Behind the monitor: sky and clouds, hover drifts clouds. TV wall and quote wall: flowing waves, hover reacts.</li>
-        <li><strong>Outside</strong> — grill, stacked wood, wall helmets, axe, bins, and a bike beyond the window glass.</li>
+        <li><strong>Car</strong> — Moskvich 412 in the garage. Click for Road Rush — a pseudo-3D racing game! Arrow keys or WASD to steer and accelerate. Touch controls on mobile.</li>
+        <li><strong>Outside</strong> — garage workbench, grill, stacked wood, helmets, axe, bins, and props beyond the window.</li>
         <li><strong>Toolbar</strong> — Enter Screen and Back To Room when shown.</li>
       </ul>
     </div>
@@ -2071,6 +2331,22 @@
     <div class="mobile-joystick-base" id="mobile-look-base">
       <div class="mobile-joystick-thumb" id="mobile-look-thumb"></div>
     </div>
+  </div>
+</div>
+<div class="pong-hud" id="pong-hud">YOU 0 — 0 Anubhav Malhotra</div>
+<div class="car-game-overlay" id="car-game-overlay">
+  <canvas id="car-game-canvas"></canvas>
+  <div class="car-game-hud" id="car-game-hud">ROAD RUSH</div>
+  <div class="car-game-msg" id="car-game-msg"></div>
+  <button class="car-game-back" id="car-game-back">Go Back</button>
+  <button class="car-game-restart" id="car-game-restart">Try Again</button>
+  <div class="car-game-touch-controls" id="car-game-touch-controls">
+    <div></div>
+    <button class="car-game-touch-btn" id="cg-touch-up">▲</button>
+    <div></div>
+    <button class="car-game-touch-btn" id="cg-touch-left">◀</button>
+    <button class="car-game-touch-btn" id="cg-touch-down">▼</button>
+    <button class="car-game-touch-btn" id="cg-touch-right">▶</button>
   </div>
 </div>
 <div class="chelsea-desk-shell" id="chelsea-desk-shell" aria-hidden="true">
@@ -3714,6 +3990,628 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const monitorBootTerminalEl = document.getElementById('monitor-boot-terminal');
   const enterBtn = document.getElementById('enter-monitor-btn');
   const backBtn = document.getElementById('back-room-btn');
+  const welcomePromptEl = document.getElementById('welcome-prompt');
+  const welcomePromptTextEl = document.getElementById('welcome-prompt-text');
+  const welcomePromptBtnsEl = document.getElementById('welcome-prompt-btns');
+  const wpCvBtn = document.getElementById('wp-cv-btn');
+  const wpExploreBtn = document.getElementById('wp-explore-btn');
+  let welcomeShown = false;
+  let welcomeAlreadyShownOnce = false;
+  let welcomeTyping = false;
+  let welcomePage = 0;
+  let welcomeTypeTimer = null;
+  const welcomePages = [
+    { text: "Hey there! Welcome to Anubhav's Space.", highlight: [] },
+    { text: "If you're a recruiter, click the monitor to view my CV.", highlight: [["monitor", "wp-highlight"], ["CV", "wp-highlight"]] },
+    { text: "Everything in this room is interactable — just click or tap on objects to interact.", highlight: [["interactable", "wp-green"], ["click or tap", "wp-green"]] },
+    { text: "Walk around with WASD, look with mouse drag. There's a lot to discover!", highlight: [["WASD", "wp-highlight"], ["mouse drag", "wp-highlight"]] },
+  ];
+  function renderWelcomePage() {
+    if (!welcomePromptTextEl) return;
+    const page = welcomePages[welcomePage];
+    if (!page) return;
+    welcomeTyping = true;
+    if (welcomePromptBtnsEl) welcomePromptBtnsEl.style.display = 'none';
+    let charIdx = 0;
+    const typeSpeed = 20;
+    function typeChar() {
+      if (charIdx <= page.text.length) {
+        let shown = page.text.slice(0, charIdx);
+        for (const [word, cls] of page.highlight) {
+          shown = shown.replace(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `<span class="${cls}">${word}</span>`);
+        }
+        const arrow = welcomePage < welcomePages.length - 1 ? ' <span style="opacity:0.4;font-size:16px;">[click / Enter]</span>' : '';
+        welcomePromptTextEl.innerHTML = shown + '<span class="welcome-prompt-cursor"></span>' + (charIdx === page.text.length ? arrow : '');
+        charIdx++;
+        welcomeTypeTimer = setTimeout(typeChar, typeSpeed);
+      } else {
+        welcomeTyping = false;
+        if (welcomePage >= welcomePages.length - 1) {
+          if (welcomePromptBtnsEl) welcomePromptBtnsEl.style.display = 'flex';
+        }
+      }
+    }
+    typeChar();
+  }
+  function advanceWelcome() {
+    if (!welcomeShown) return;
+    if (welcomeTyping) {
+      if (welcomeTypeTimer) { clearTimeout(welcomeTypeTimer); welcomeTypeTimer = null; }
+      welcomeTyping = false;
+      const page = welcomePages[welcomePage];
+      if (page && welcomePromptTextEl) {
+        let shown = page.text;
+        for (const [word, cls] of page.highlight) {
+          shown = shown.replace(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `<span class="${cls}">${word}</span>`);
+        }
+        const arrow = welcomePage < welcomePages.length - 1 ? ' <span style="opacity:0.4;font-size:16px;">[click / Enter]</span>' : '';
+        welcomePromptTextEl.innerHTML = shown + arrow;
+      }
+      if (welcomePage >= welcomePages.length - 1) {
+        if (welcomePromptBtnsEl) welcomePromptBtnsEl.style.display = 'flex';
+      }
+      return;
+    }
+    if (welcomePage < welcomePages.length - 1) {
+      welcomePage++;
+      renderWelcomePage();
+    } else {
+      dismissWelcomePrompt();
+    }
+  }
+  function showWelcomePrompt() {
+    if (welcomeAlreadyShownOnce) return;
+    if (welcomeShown || !welcomePromptEl || !welcomePromptTextEl) return;
+    welcomeShown = true;
+    welcomePage = 0;
+    welcomePromptEl.classList.add('on');
+    if (welcomePromptBtnsEl) welcomePromptBtnsEl.style.display = 'none';
+    renderWelcomePage();
+  }
+  function dismissWelcomePrompt() {
+    welcomeAlreadyShownOnce = true;
+    if (welcomeTypeTimer) { clearTimeout(welcomeTypeTimer); welcomeTypeTimer = null; }
+    if (welcomePromptEl) welcomePromptEl.classList.remove('on');
+    welcomeTyping = false;
+    welcomeShown = false;
+  }
+  if (welcomePromptEl) welcomePromptEl.addEventListener('click', (e) => {
+    if (e.target.closest('.welcome-prompt-btn')) return;
+    advanceWelcome();
+  });
+  if (wpCvBtn) wpCvBtn.addEventListener('click', () => {
+    dismissWelcomePrompt();
+    setMode("monitor-enter");
+  });
+  if (wpExploreBtn) wpExploreBtn.addEventListener('click', () => {
+    dismissWelcomePrompt();
+  });
+
+  // ── Car Jump Mini-Game ───────────────────────────────────────────
+  const carGameOverlay = document.getElementById('car-game-overlay');
+  const carGameCanvas = document.getElementById('car-game-canvas');
+  const carGameHud = document.getElementById('car-game-hud');
+  const carGameMsg = document.getElementById('car-game-msg');
+  const carGameBackBtn = document.getElementById('car-game-back');
+  const carGameRestartBtn = document.getElementById('car-game-restart');
+  let carGameActive = false;
+  let carGameCtx = null;
+  let carGameRAF = null;
+  const cgKeys = new Set();
+
+  // Touch controls
+  const cgTouchUp = document.getElementById('cg-touch-up');
+  const cgTouchDown = document.getElementById('cg-touch-down');
+  const cgTouchLeft = document.getElementById('cg-touch-left');
+  const cgTouchRight = document.getElementById('cg-touch-right');
+  function bindTouch(el, key) {
+    if (!el) return;
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); cgKeys.add(key); });
+    el.addEventListener('pointerup', () => cgKeys.delete(key));
+    el.addEventListener('pointerleave', () => cgKeys.delete(key));
+    el.addEventListener('pointercancel', () => cgKeys.delete(key));
+  }
+  bindTouch(cgTouchUp, 'arrowup');
+  bindTouch(cgTouchDown, 'arrowdown');
+  bindTouch(cgTouchLeft, 'arrowleft');
+  bindTouch(cgTouchRight, 'arrowright');
+
+  function startCarGame() {
+    if (!carGameOverlay || !carGameCanvas) return;
+    carGameActive = true;
+    carGameOverlay.classList.add('on');
+    carGameCanvas.width = window.innerWidth;
+    carGameCanvas.height = window.innerHeight;
+    carGameCtx = carGameCanvas.getContext('2d');
+    if (carGameMsg) { carGameMsg.classList.remove('on'); carGameMsg.textContent = ''; }
+    if (carGameRestartBtn) carGameRestartBtn.classList.remove('on');
+    cgKeys.clear();
+    runCarGame();
+  }
+
+  function stopCarGame() {
+    carGameActive = false;
+    cgKeys.clear();
+    if (carGameRAF) { cancelAnimationFrame(carGameRAF); carGameRAF = null; }
+    if (carGameOverlay) carGameOverlay.classList.remove('on');
+  }
+
+  function runCarGame() {
+    const W = carGameCanvas.width;
+    const H = carGameCanvas.height;
+    const ctx = carGameCtx;
+
+    // Pseudo-3D road constants
+    const roadW = 2000;
+    const segLen = 200;
+    const camHeight = 1000;
+    const drawDist = 150;
+    const totalSegs = 800;
+    const trackLen = totalSegs * segLen;
+    const laneW = roadW * 0.4;
+
+    // Build track segments with curves and hills
+    const segments = [];
+    for (let i = 0; i < totalSegs; i++) {
+      const curve = (i > 50 && i < 120) ? 1.0 :
+                    (i > 180 && i < 250) ? -1.2 :
+                    (i > 320 && i < 380) ? 1.5 :
+                    (i > 450 && i < 520) ? -0.8 :
+                    (i > 600 && i < 680) ? 1.2 : 0;
+      const hill = (i > 80 && i < 130) ? 25 :
+                   (i > 200 && i < 260) ? -20 :
+                   (i > 400 && i < 440) ? 30 :
+                   (i > 550 && i < 600) ? -15 : 0;
+      segments.push({ curve, y: 0, hill });
+    }
+    // Compute y positions from hills
+    let cy = 0;
+    for (let i = 0; i < totalSegs; i++) {
+      segments[i].y = cy;
+      cy += segments[i].hill;
+    }
+
+    // Traffic / obstacles
+    const traffic = [];
+    const trafficColors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#14b8a6'];
+    for (let i = 0; i < 12; i++) {
+      traffic.push({
+        z: (200 + Math.floor(Math.random() * (totalSegs - 250))) * segLen,
+        x: (Math.random() - 0.5) * roadW * 0.55,
+        speed: 80 + Math.random() * 70,
+        color: trafficColors[Math.floor(Math.random() * trafficColors.length)],
+        w: 55 + Math.random() * 25,
+        h: 30 + Math.random() * 15
+      });
+    }
+
+    // Scenery items (trees, rocks) — spaced out
+    const scenery = [];
+    for (let i = 10; i < totalSegs; i += 8 + Math.floor(Math.random() * 8)) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      scenery.push({
+        seg: i,
+        x: side * (roadW * 0.58 + 150 + Math.random() * 350),
+        type: Math.random() < 0.7 ? 'tree' : 'rock'
+      });
+    }
+
+    // Player state
+    let playerX = 0;
+    let speed = 0;
+    let pos = 0;
+    let score = 0;
+    let gameOver = false;
+    let crashed = false;
+    let crashTimer = 0;
+    let distanceTraveled = 0;
+    let finished = false;
+    const maxSpeed = segLen * 60;
+    const accel = maxSpeed / 2.5;
+    const braking = maxSpeed / 1.5;
+    const decel = maxSpeed / 6;
+    const steerSpeed = roadW * 2.5;
+    const centrifugal = 0.03;
+
+    let lastT = performance.now();
+
+    function project(pX, pY, pZ, camX, camY, camZ) {
+      const scale = camHeight / (pZ - camZ);
+      if (scale <= 0) return null;
+      return {
+        x: W / 2 + (scale * (pX - camX)),
+        y: H / 2 - (scale * (pY - camY)),
+        w: scale * roadW,
+        s: scale
+      };
+    }
+
+    function drawPoly(x1, y1, w1, x2, y2, w2, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x1 - w1, y1);
+      ctx.lineTo(x1 + w1, y1);
+      ctx.lineTo(x2 + w2, y2);
+      ctx.lineTo(x2 - w2, y2);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawSprite(ctx, type, color, cx, cy, scale) {
+      const s = Math.max(scale * 600, 0.1);
+      if (type === 'tree') {
+        ctx.fillStyle = '#5c3a1e';
+        ctx.fillRect(cx - s * 0.06, cy - s * 0.5, s * 0.12, s * 0.5);
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.arc(cx, cy - s * 0.55, s * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(cx - s * 0.1, cy - s * 0.48, s * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'rock') {
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - s * 0.08, s * 0.15, s * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#9ca3af';
+        ctx.beginPath();
+        ctx.ellipse(cx - s * 0.02, cy - s * 0.1, s * 0.1, s * 0.07, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Traffic car
+        const hw = s * 0.08;
+        const hh = s * 0.14;
+        ctx.fillStyle = color;
+        ctx.fillRect(cx - hw, cy - hh * 2, hw * 2, hh * 1.6);
+        ctx.fillStyle = shadeColor(color, -30);
+        ctx.fillRect(cx - hw * 0.7, cy - hh * 2.4, hw * 1.4, hh * 0.5);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(cx - hw * 1.05, cy - hh * 0.4, hw * 0.25, hh * 0.35);
+        ctx.fillRect(cx + hw * 0.8, cy - hh * 0.4, hw * 0.25, hh * 0.35);
+      }
+    }
+
+    function shadeColor(hex, amt) {
+      let r = parseInt(hex.slice(1, 3), 16) + amt;
+      let g = parseInt(hex.slice(3, 5), 16) + amt;
+      let b = parseInt(hex.slice(5, 7), 16) + amt;
+      r = Math.max(0, Math.min(255, r));
+      g = Math.max(0, Math.min(255, g));
+      b = Math.max(0, Math.min(255, b));
+      return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
+    function gameLoop(now) {
+      if (!carGameActive) return;
+      const dt = Math.min((now - lastT) / 1000, 0.05);
+      lastT = now;
+
+      if (!gameOver) {
+        // Steering
+        if (cgKeys.has('arrowleft') || cgKeys.has('a')) playerX -= steerSpeed * dt * (speed / maxSpeed);
+        if (cgKeys.has('arrowright') || cgKeys.has('d')) playerX += steerSpeed * dt * (speed / maxSpeed);
+
+        // Acceleration
+        if (cgKeys.has('arrowup') || cgKeys.has('w')) {
+          speed += accel * dt;
+        } else if (cgKeys.has('arrowdown') || cgKeys.has('s')) {
+          speed -= braking * dt;
+        } else {
+          speed -= decel * dt;
+        }
+        speed = Math.max(0, Math.min(maxSpeed, speed));
+
+        // Centrifugal force from curves
+        const segIdx = Math.floor(pos / segLen) % totalSegs;
+        const curSeg = segments[segIdx];
+        if (curSeg) playerX -= curSeg.curve * centrifugal * speed * dt;
+
+        // Clamp to road edges
+        if (Math.abs(playerX) > roadW * 0.65) {
+          speed *= 0.97;
+          playerX = Math.max(-roadW * 0.65, Math.min(roadW * 0.65, playerX));
+        }
+
+        // Off-road slowdown
+        if (Math.abs(playerX) > roadW * 0.48) {
+          speed *= (1 - 0.8 * dt);
+        }
+
+        // Move forward
+        pos += speed * dt;
+        distanceTraveled += speed * dt;
+
+        // Traffic movement (separate from collision)
+        for (const t of traffic) {
+          t.z += t.speed * dt;
+          if (t.z > trackLen) t.z -= trackLen;
+        }
+        // Traffic collision — only cars directly ahead, tight hitbox
+        for (const t of traffic) {
+          const dz = t.z - pos;
+          if (dz > 0 && dz < segLen * 0.45) {
+            if (Math.abs(playerX - t.x) < 80) {
+              crashed = true;
+              gameOver = true;
+              crashTimer = now;
+              speed = 0;
+              break;
+            }
+          }
+        }
+
+        // Finish line
+        if (pos >= trackLen - segLen * 3) {
+          finished = true;
+          gameOver = true;
+        }
+      }
+
+      // ── RENDER ──
+
+      // Sky
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, H / 2);
+      skyGrad.addColorStop(0, '#1e3a5f');
+      skyGrad.addColorStop(0.6, '#60a5fa');
+      skyGrad.addColorStop(1, '#bae6fd');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, H / 2);
+
+      // Distant mountains
+      ctx.fillStyle = '#374151';
+      ctx.beginPath();
+      ctx.moveTo(0, H * 0.42);
+      for (let mx = 0; mx < W; mx += 40) {
+        const my = H * 0.38 - Math.sin(mx * 0.008 + 1) * 20 - Math.cos(mx * 0.014) * 15;
+        ctx.lineTo(mx, my);
+      }
+      ctx.lineTo(W, H / 2);
+      ctx.lineTo(0, H / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#4b5563';
+      ctx.beginPath();
+      ctx.moveTo(0, H * 0.45);
+      for (let mx = 0; mx < W; mx += 30) {
+        const my = H * 0.42 - Math.sin(mx * 0.012 + 3) * 12 - Math.cos(mx * 0.007) * 10;
+        ctx.lineTo(mx, my);
+      }
+      ctx.lineTo(W, H / 2);
+      ctx.lineTo(0, H / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Ground fill
+      ctx.fillStyle = '#4a7c59';
+      ctx.fillRect(0, H / 2, W, H / 2);
+
+      // Road rendering
+      const baseSeg = Math.floor(pos / segLen);
+      const baseOff = (pos % segLen) / segLen;
+      let curX = 0, curY = 0;
+
+      // Collect sprites to draw
+      const spriteList = [];
+
+      for (let n = drawDist; n > 0; n--) {
+        const idx = (baseSeg + n) % totalSegs;
+        const idx2 = (baseSeg + n + 1) % totalSegs;
+        const s1 = segments[idx];
+        const s2 = segments[idx2];
+
+        const z1 = (n - baseOff) * segLen;
+        const z2 = (n + 1 - baseOff) * segLen;
+
+        const p1 = project(curX, s1.y, z1, playerX, camHeight + s1.y, 0);
+        curX += s1.curve;
+        const p2 = project(curX, s2.y, z2, playerX, camHeight + s2.y, 0);
+
+        if (!p1 || !p2) continue;
+        if (p1.y <= p2.y) continue;
+
+        const dark = (Math.floor(idx / 3) % 2 === 0);
+        const grassColor = dark ? '#2d6a3e' : '#358549';
+        const roadColor = dark ? '#4b5563' : '#555e6e';
+        const rumbleColor = dark ? '#dc2626' : '#f8fafc';
+        const laneColor = dark ? '#d1d5db' : '#4b5563';
+
+        drawPoly(0, p2.y, W, 0, p1.y, W, grassColor);
+        drawPoly(p2.x, p2.y, p2.w * 0.55, p1.x, p1.y, p1.w * 0.55, rumbleColor);
+        drawPoly(p2.x, p2.y, p2.w * 0.5, p1.x, p1.y, p1.w * 0.5, roadColor);
+
+        // Lane markings
+        if (!dark) {
+          drawPoly(p2.x, p2.y, p2.w * 0.02, p1.x, p1.y, p1.w * 0.02, laneColor);
+          drawPoly(p2.x - p2.w * 0.25, p2.y, p2.w * 0.01, p1.x - p1.w * 0.25, p1.y, p1.w * 0.01, laneColor);
+          drawPoly(p2.x + p2.w * 0.25, p2.y, p2.w * 0.01, p1.x + p1.w * 0.25, p1.y, p1.w * 0.01, laneColor);
+        }
+
+        // Finish line indicator
+        if (idx >= totalSegs - 5 && idx < totalSegs) {
+          drawPoly(p2.x, p2.y, p2.w * 0.5, p1.x, p1.y, p1.w * 0.5, '#fbbf24');
+        }
+
+        // Scenery sprites for this segment
+        for (const sc of scenery) {
+          if (sc.seg === idx) {
+            const scZ = (n - baseOff) * segLen;
+            const sp = project(curX + sc.x, s1.y, scZ, playerX, camHeight + s1.y, 0);
+            if (sp && sp.s > 0) {
+              spriteList.push({ type: sc.type, color: '', x: sp.x, y: sp.y, s: sp.s, dist: scZ });
+            }
+          }
+        }
+
+        // Traffic sprites
+        for (const t of traffic) {
+          const tz = t.z - pos;
+          if (tz > (n - 1 - baseOff) * segLen && tz <= (n - baseOff) * segLen) {
+            const tSeg = segments[Math.floor(t.z / segLen) % totalSegs];
+            const tp = project(curX + t.x, tSeg.y, tz, playerX, camHeight + tSeg.y, 0);
+            if (tp && tp.s > 0) {
+              spriteList.push({ type: 'car', color: t.color, x: tp.x, y: tp.y, s: tp.s, dist: tz });
+            }
+          }
+        }
+      }
+
+      // Draw sprites back-to-front
+      spriteList.sort((a, b) => b.dist - a.dist);
+      for (const sp of spriteList) {
+        drawSprite(ctx, sp.type, sp.color, sp.x, sp.y, sp.s);
+      }
+
+      // Player car (bottom center)
+      const playerCarW = 75;
+      const playerCarH = 45;
+      const pcx = W / 2;
+      const pcy = H - playerCarH - 20;
+      const steerTilt = ((cgKeys.has('arrowleft') || cgKeys.has('a')) ? 0.05 : 0) + ((cgKeys.has('arrowright') || cgKeys.has('d')) ? -0.05 : 0);
+      ctx.save();
+      ctx.translate(pcx, pcy);
+      ctx.rotate(steerTilt);
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(0, playerCarH * 0.5, playerCarW * 0.55, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Body
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.roundRect(-playerCarW / 2, -playerCarH * 0.5, playerCarW, playerCarH, 8);
+      ctx.fill();
+      // Roof
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.roundRect(-playerCarW * 0.3, -playerCarH * 0.85, playerCarW * 0.6, playerCarH * 0.45, 5);
+      ctx.fill();
+      // Windshield
+      ctx.fillStyle = 'rgba(147,197,253,0.7)';
+      ctx.fillRect(-playerCarW * 0.25, -playerCarH * 0.8, playerCarW * 0.5, playerCarH * 0.22);
+      // Rear window
+      ctx.fillStyle = 'rgba(147,197,253,0.5)';
+      ctx.fillRect(-playerCarW * 0.2, playerCarH * 0.1, playerCarW * 0.4, playerCarH * 0.18);
+      // Taillights
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(-playerCarW * 0.4, playerCarH * 0.35, 8, 5);
+      ctx.fillRect(playerCarW * 0.4 - 8, playerCarH * 0.35, 8, 5);
+      // Wheels
+      ctx.fillStyle = '#1f2937';
+      for (const wx of [-1, 1]) {
+        ctx.fillRect(wx * playerCarW * 0.5 - (wx > 0 ? 0 : 6), -playerCarH * 0.3, 6, 14);
+        ctx.fillRect(wx * playerCarW * 0.5 - (wx > 0 ? 0 : 6), playerCarH * 0.15, 6, 14);
+      }
+      ctx.restore();
+
+      // Crash effect
+      if (crashed) {
+        const ct = (now - crashTimer) / 1000;
+        if (ct < 1.5) {
+          ctx.fillStyle = `rgba(255,60,20,${0.4 * (1 - ct / 1.5)})`;
+          ctx.fillRect(0, 0, W, H);
+          ctx.font = 'bold 60px VT323, monospace';
+          ctx.fillStyle = '#fbbf24';
+          ctx.textAlign = 'center';
+          ctx.fillText('CRASH!', W / 2, H / 2 - 30);
+        }
+      }
+
+      // HUD
+      const speedKmh = Math.round(speed / segLen * 3.6);
+      const distKm = (distanceTraveled / segLen / 10).toFixed(1);
+      const pctDone = Math.min(100, Math.round(pos / trackLen * 100));
+      if (carGameHud) carGameHud.textContent = `ROAD RUSH — ${speedKmh} km/h — ${pctDone}% complete`;
+
+      // Speedometer bar
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(16, H - 36, 160, 16);
+      const spdPct = speed / maxSpeed;
+      const spdColor = spdPct > 0.8 ? '#ef4444' : spdPct > 0.5 ? '#fbbf24' : '#34d399';
+      ctx.fillStyle = spdColor;
+      ctx.fillRect(16, H - 36, 160 * spdPct, 16);
+      ctx.font = '14px VT323, monospace';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${speedKmh} km/h`, 22, H - 23);
+
+      // Progress bar
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(W - 176, H - 36, 160, 16);
+      ctx.fillStyle = '#60a5fa';
+      ctx.fillRect(W - 176, H - 36, 160 * (pctDone / 100), 16);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${pctDone}%`, W - 22, H - 23);
+
+      // Controls hint (desktop)
+      if (!gameOver && speed < 10) {
+        ctx.font = '24px VT323, monospace';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑ Accelerate  ↓ Brake  ← → Steer', W / 2, H * 0.35);
+      }
+
+      // Game over messages
+      if (gameOver) {
+        if (finished) {
+          if (carGameMsg) {
+            carGameMsg.textContent = 'FINISH!  Race complete!';
+            carGameMsg.classList.add('on');
+          }
+        } else if (crashed) {
+          if (carGameMsg) {
+            carGameMsg.textContent = 'WRECKED!  You hit another car!';
+            carGameMsg.classList.add('on');
+          }
+        }
+        if (carGameRestartBtn) carGameRestartBtn.classList.add('on');
+      }
+
+      carGameRAF = requestAnimationFrame(gameLoop);
+    }
+
+    carGameRAF = requestAnimationFrame(gameLoop);
+
+    if (carGameRestartBtn) {
+      carGameRestartBtn.onclick = () => {
+        if (carGameRAF) cancelAnimationFrame(carGameRAF);
+        if (carGameMsg) { carGameMsg.classList.remove('on'); carGameMsg.textContent = ''; }
+        if (carGameRestartBtn) carGameRestartBtn.classList.remove('on');
+        cgKeys.clear();
+        runCarGame();
+      };
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (!carGameActive) return;
+    const k = e.key.toLowerCase();
+    cgKeys.add(k);
+    if (['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)) e.preventDefault();
+    if (e.key === 'Escape') {
+      stopCarGame();
+      setMode("intro-room-entry");
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (!carGameActive) return;
+    cgKeys.delete(e.key.toLowerCase());
+  });
+
+  if (carGameBackBtn) {
+    carGameBackBtn.addEventListener('click', () => {
+      stopCarGame();
+      setMode("intro-room-entry");
+    });
+  }
+
+  function openCarGame() {
+    startCarGame();
+  }
+
   const speakerPrevBtn = document.getElementById('speaker-prev-btn');
   const speakerPlayPauseBtn = document.getElementById('speaker-playpause-btn');
   const speakerNextBtn = document.getElementById('speaker-next-btn');
@@ -3780,62 +4678,73 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     if (!el) {
       el = document.createElement('div');
       el.id = 'coffee-ready-toast';
-      el.style.position = 'fixed';
-      el.style.left = '50%';
-      el.style.bottom = '84px';
-      el.style.transform = 'translateX(-50%)';
-      el.style.padding = '10px 16px';
-      el.style.border = '2px solid #14532d';
-      el.style.background = 'rgba(21,128,61,0.9)';
-      el.style.color = '#dcfce7';
-      el.style.fontFamily = '"VT323", monospace';
-      el.style.fontSize = '24px';
-      el.style.letterSpacing = '0.03em';
-      el.style.borderRadius = '6px';
-      el.style.zIndex = '221';
-      el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)';
-      el.style.opacity = '0';
-      el.style.pointerEvents = 'none';
-      el.style.transition = 'opacity 180ms ease';
+      el.style.cssText = `
+        position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+        width:min(340px, calc(100vw - 24px)); padding:12px 16px;
+        border:4px solid #1e293b; border-radius:14px;
+        background:linear-gradient(180deg,#f0fdf4 0%,#e0f2e9 100%);
+        color:#0f172a; font-family:"VT323",monospace; font-size:18px;
+        line-height:1.4; letter-spacing:0.02em; z-index:221;
+        box-shadow:0 4px 16px rgba(0,0,0,0.3);
+        opacity:0; pointer-events:none; transition:opacity 200ms ease;
+      `;
       document.body.appendChild(el);
     }
-    el.textContent = message;
+    el.textContent = '';
     el.style.opacity = '1';
+    let charIdx = 0;
+    const typewriterInterval = setInterval(() => {
+      if (charIdx < message.length) {
+        el.textContent += message[charIdx];
+        charIdx++;
+      } else {
+        clearInterval(typewriterInterval);
+      }
+    }, 35);
     if (coffeeToastTimer) clearTimeout(coffeeToastTimer);
     coffeeToastTimer = setTimeout(() => {
+      clearInterval(typewriterInterval);
       el.style.opacity = '0';
-    }, 1900);
+    }, Math.max(3500, message.length * 35 + 2000));
   }
   function showLegoToast(message, isError = false) {
     let el = document.getElementById('lego-toast');
     if (!el) {
       el = document.createElement('div');
       el.id = 'lego-toast';
-      el.style.position = 'fixed';
-      el.style.left = '50%';
-      el.style.bottom = '128px';
-      el.style.transform = 'translateX(-50%)';
-      el.style.padding = '10px 16px';
-      el.style.border = '2px solid #334155';
-      el.style.background = 'rgba(30,41,59,0.92)';
-      el.style.color = '#e2e8f0';
-      el.style.fontFamily = '"VT323", monospace';
-      el.style.fontSize = '24px';
-      el.style.letterSpacing = '0.03em';
-      el.style.borderRadius = '6px';
-      el.style.zIndex = '223';
-      el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)';
-      el.style.opacity = '0';
-      el.style.pointerEvents = 'none';
-      el.style.transition = 'opacity 180ms ease';
+      el.style.cssText = `
+        position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+        width:min(300px, calc(100vw - 24px)); padding:12px 16px;
+        border:4px solid #1e293b; border-radius:14px;
+        background:linear-gradient(180deg,#f0fdf4 0%,#e0f2e9 100%);
+        color:#0f172a; font-family:"VT323",monospace; font-size:18px;
+        line-height:1.4; letter-spacing:0.02em; z-index:223;
+        box-shadow:0 4px 16px rgba(0,0,0,0.3);
+        opacity:0; pointer-events:none; transition:opacity 200ms ease;
+      `;
       document.body.appendChild(el);
     }
-    el.style.borderColor = isError ? '#7f1d1d' : '#14532d';
-    el.style.background = isError ? 'rgba(127,29,29,0.92)' : 'rgba(22,101,52,0.92)';
-    el.style.color = isError ? '#fee2e2' : '#dcfce7';
-    el.textContent = message;
+    if (isError) {
+      el.style.borderColor = '#7f1d1d';
+      el.style.background = 'linear-gradient(180deg,#fef2f2 0%,#fce7e7 100%)';
+      el.style.color = '#7f1d1d';
+    } else {
+      el.style.borderColor = '#1e293b';
+      el.style.background = 'linear-gradient(180deg,#f0fdf4 0%,#e0f2e9 100%)';
+      el.style.color = '#0f172a';
+    }
+    el.textContent = '';
     el.style.opacity = '1';
-    setTimeout(() => { el.style.opacity = '0'; }, 1200);
+    let charIdx = 0;
+    const typewriterInterval = setInterval(() => {
+      if (charIdx < message.length) {
+        el.textContent += message[charIdx];
+        charIdx++;
+      } else {
+        clearInterval(typewriterInterval);
+      }
+    }, 35);
+    setTimeout(() => { clearInterval(typewriterInterval); el.style.opacity = '0'; }, Math.max(2500, message.length * 35 + 1500));
   }
   function isCoffeeOrderPanelOpen() {
     const p = document.getElementById("coffee-order-panel");
@@ -3863,29 +4772,29 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         "-webkit-tap-highlight-color:transparent",
       ].join(";");
       panel.innerHTML = `
-        <div id="coffee-order-card" style="width:min(92vw,420px);max-height:min(88vh,640px);overflow:auto;box-sizing:border-box;background:#e2e8f0;border:2px solid #475569;box-shadow:0 8px 0 #334155,0 18px 40px rgba(0,0,0,0.35);padding:12px;font-family:'VT323',monospace;color:#0f172a;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
-        <div style="font-size:clamp(18px,4.5vw,28px);margin-bottom:8px;">Coffee Maker</div>
-        <label style="display:block;font-size:clamp(16px,4vw,22px);margin:6px 0 4px;">Brew style</label>
-        <select id="coffee-strength" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:1px solid #64748b;background:#f8fafc;border-radius:4px;padding:6px 8px;">
+        <div id="coffee-order-card" style="width:min(88vw,360px);max-height:min(86vh,520px);overflow:auto;box-sizing:border-box;background:linear-gradient(180deg,#f0fdf4 0%,#e0f2e9 100%);border:4px solid #1e293b;border-radius:14px;box-shadow:0 8px 0 #334155,0 18px 40px rgba(0,0,0,0.35);padding:18px 16px;font-family:'VT323',monospace;color:#0f172a;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+        <div style="font-size:clamp(22px,5vw,28px);margin-bottom:12px;color:#0f766e;text-align:center;">☕ COFFEE MAKER</div>
+        <label style="display:block;font-size:clamp(15px,3.5vw,20px);margin:8px 0 4px;color:#0f766e;font-weight:700;">▸ Brew style</label>
+        <select id="coffee-strength" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:2px solid #1e293b;background:#f8fafc;color:#0f172a;border-radius:6px;padding:8px 10px;outline:none;cursor:pointer;">
           <option value="Strong">Strong espresso</option>
           <option value="Balanced">Balanced brew</option>
           <option value="Mild">Mild roast</option>
         </select>
-        <label style="display:block;font-size:clamp(16px,4vw,22px);margin:8px 0 4px;">Milk</label>
-        <select id="coffee-milk" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:1px solid #64748b;background:#f8fafc;border-radius:4px;padding:6px 8px;">
+        <label style="display:block;font-size:clamp(15px,3.5vw,20px);margin:10px 0 4px;color:#0f766e;font-weight:700;">▸ Milk</label>
+        <select id="coffee-milk" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:2px solid #1e293b;background:#f8fafc;color:#0f172a;border-radius:6px;padding:8px 10px;outline:none;cursor:pointer;">
           <option value="No milk">No milk</option>
           <option value="With milk">With milk</option>
         </select>
-        <label style="display:block;font-size:clamp(16px,4vw,22px);margin:8px 0 4px;">Sugar</label>
-        <select id="coffee-sugar" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:1px solid #64748b;background:#f8fafc;border-radius:4px;padding:6px 8px;">
+        <label style="display:block;font-size:clamp(15px,3.5vw,20px);margin:10px 0 4px;color:#0f766e;font-weight:700;">▸ Sugar</label>
+        <select id="coffee-sugar" style="width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:max(16px,3.8vw);border:2px solid #1e293b;background:#f8fafc;color:#0f172a;border-radius:6px;padding:8px 10px;outline:none;cursor:pointer;">
           <option value="No sugar">No sugar</option>
           <option value="1 tsp">1 tsp</option>
           <option value="2 tsp">2 tsp</option>
           <option value="3 tsp">3 tsp</option>
         </select>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
-          <button type="button" id="coffee-order-confirm" class="retro-btn" style="font-size:clamp(15px,3.8vw,22px);flex:1;min-width:120px;">Brew Coffee</button>
-          <button type="button" id="coffee-order-cancel" class="retro-btn" style="font-size:clamp(15px,3.8vw,22px);flex:1;min-width:120px;">Cancel</button>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+          <button type="button" id="coffee-order-confirm" style="flex:1;min-width:110px;font-family:'VT323',monospace;font-size:clamp(16px,4vw,22px);padding:10px 6px;border:3px solid #1e293b;border-radius:8px;background:linear-gradient(180deg,#34d399,#10b981);color:#022c22;cursor:pointer;box-shadow:0 3px 0 #059669;transition:background 150ms;">BREW ☕</button>
+          <button type="button" id="coffee-order-cancel" style="flex:1;min-width:110px;font-family:'VT323',monospace;font-size:clamp(16px,4vw,22px);padding:10px 6px;border:3px solid #1e293b;border-radius:8px;background:linear-gradient(180deg,#e2e8f0,#cbd5e1);color:#1e293b;cursor:pointer;box-shadow:0 3px 0 #94a3b8;transition:background 150ms;">CANCEL</button>
         </div>
         </div>
       `;
@@ -4416,52 +5325,131 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   sunPatch.position.set(-6.2, -1.185, -2.32);
   room.add(sunPatch);
 
-  // Outside street set visible through left windows
+  // Outside street & improved garage set visible through left windows
   const outside = new THREE.Group();
   scene.add(outside);
-  const street = new THREE.Mesh(
+  const carClickable = [];
+
+  // Garage floor — polished epoxy concrete (kept fully outside room wall x <= -10.2)
+  const garageFloor = new THREE.Mesh(
     new THREE.PlaneGeometry(5.8, 8),
-    new THREE.MeshStandardMaterial({ color: 0x4d5560, roughness: 0.92 })
+    new THREE.MeshStandardMaterial({ color: 0x5a6370, roughness: 0.55, metalness: 0.15 })
   );
-  street.rotation.x = -Math.PI / 2;
-  street.position.set(-13.1, -1.17, -3.0);
-  outside.add(street);
+  garageFloor.rotation.x = -Math.PI / 2;
+  garageFloor.position.set(-13.5, -1.17, -2.5);
+  outside.add(garageFloor);
+
+  // Parking bay with subtle color diff
   const parkingBay = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.35, 4.25),
-    new THREE.MeshStandardMaterial({ color: 0x434c57, roughness: 0.9 })
+    new THREE.PlaneGeometry(2.6, 4.5),
+    new THREE.MeshStandardMaterial({ color: 0x4e5868, roughness: 0.5, metalness: 0.12 })
   );
   parkingBay.rotation.x = -Math.PI / 2;
-  parkingBay.position.set(-13.05, -1.166, -2.5);
+  parkingBay.position.set(-13.5, -1.166, -2.5);
   outside.add(parkingBay);
-  function addParkingLine(x, z, w, h, rot = 0) {
+
+  // Parking lines
+  function addParkingLine(x, z, w, h) {
     const line = new THREE.Mesh(
       new THREE.PlaneGeometry(w, h),
-      new THREE.MeshStandardMaterial({ color: 0xd9dee6, roughness: 0.82 })
+      new THREE.MeshStandardMaterial({ color: 0xf0f4f8, roughness: 0.7 })
     );
     line.rotation.x = -Math.PI / 2;
-    line.rotation.z = rot;
-    line.position.set(x, -1.162, z);
+    line.position.set(x, -1.16, z);
     outside.add(line);
   }
-  addParkingLine(-14.15, -2.5, 0.08, 4.0);
-  addParkingLine(-11.95, -2.5, 0.08, 4.0);
-  addParkingLine(-13.05, -4.45, 2.12, 0.08);
-  addParkingLine(-13.05, -0.55, 2.12, 0.08);
-  const curb = new THREE.Mesh(
-    new THREE.BoxGeometry(5.8, 0.12, 0.45),
-    new THREE.MeshStandardMaterial({ color: 0x9fa8b3, roughness: 0.86 })
+  addParkingLine(-14.75, -2.5, 0.06, 4.5);
+  addParkingLine(-12.25, -2.5, 0.06, 4.5);
+  addParkingLine(-13.5, -4.7, 2.44, 0.06);
+  addParkingLine(-13.5, -0.3, 2.44, 0.06);
+
+  // Garage back wall (behind workbench area, fully outside room)
+  const garageBackWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.8, 3.8),
+    new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.85 })
   );
-  curb.position.set(-13.1, -1.03, -0.65);
-  outside.add(curb);
-  // Concrete pad (replaces grass strip) — extends garage back wall area.
+  garageBackWall.position.set(-13.5, 0.7, 2.0);
+  garageBackWall.rotation.y = Math.PI;
+  outside.add(garageBackWall);
+
+  // Garage side wall (far side from room)
+  const garageSideWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(8, 3.8),
+    new THREE.MeshStandardMaterial({ color: 0x64707d, roughness: 0.85 })
+  );
+  garageSideWall.position.set(-16.4, 0.7, -2.5);
+  garageSideWall.rotation.y = Math.PI / 2;
+  outside.add(garageSideWall);
+
+  // Garage ceiling (fully outside room)
+  const garageCeiling = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.8, 8),
+    new THREE.MeshStandardMaterial({ color: 0x78838f, roughness: 0.9 })
+  );
+  garageCeiling.rotation.x = Math.PI / 2;
+  garageCeiling.position.set(-13.5, 2.6, -2.5);
+  outside.add(garageCeiling);
+
+  // Concrete work pad (near back wall, outside room)
   const concretePad = new THREE.Mesh(
-    new THREE.BoxGeometry(5.8, 0.1, 2.8),
-    new THREE.MeshStandardMaterial({ color: 0x7c8590, roughness: 0.92 })
+    new THREE.BoxGeometry(5.8, 0.06, 2.0),
+    new THREE.MeshStandardMaterial({ color: 0x7c8590, roughness: 0.85 })
   );
-  concretePad.position.set(-13.1, -1.0, 0.85);
+  concretePad.position.set(-13.5, -1.02, 0.7);
   outside.add(concretePad);
 
-  // Keep the outside area open; avoid any tall wall planes that can clip into room view.
+  // Garage overhead light
+  const garageLight = new THREE.PointLight(0xfff5e0, 0.6, 8);
+  garageLight.position.set(-13.5, 2.4, -2.5);
+  outside.add(garageLight);
+  const garageLightFixture = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.22, 0.06, 16),
+    new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.4, metalness: 0.3 })
+  );
+  garageLightFixture.position.set(-13.5, 2.57, -2.5);
+  outside.add(garageLightFixture);
+
+  // Garage workbench
+  const workbenchMat = new THREE.MeshStandardMaterial({ color: 0x6b5b47, roughness: 0.9 });
+  const workbenchTop = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.08, 0.7), workbenchMat);
+  workbenchTop.position.set(-15.0, -0.2, 1.5);
+  outside.add(workbenchTop);
+  const wbLegMat = new THREE.MeshStandardMaterial({ color: 0x4b4135, roughness: 0.9 });
+  for (const dx of [-1.3, 1.3]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.94, 0.06), wbLegMat);
+    leg.position.set(-15.0 + dx, -0.67, 1.2);
+    outside.add(leg);
+    const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.94, 0.06), wbLegMat);
+    leg2.position.set(-15.0 + dx, -0.67, 1.8);
+    outside.add(leg2);
+  }
+
+  // Pegboard on back wall
+  const pegboard = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.4, 1.5),
+    new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.95 })
+  );
+  pegboard.position.set(-15.0, 0.8, 1.98);
+  pegboard.rotation.y = Math.PI;
+  outside.add(pegboard);
+
+  // Tool silhouettes on pegboard
+  const toolOutlineMat = new THREE.MeshStandardMaterial({ color: 0xd4d8de, roughness: 0.3, metalness: 0.7 });
+  const wrench = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.02), toolOutlineMat);
+  wrench.position.set(-15.4, 0.9, 1.96);
+  outside.add(wrench);
+  const hammer = new THREE.Group();
+  const hammerHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.35, 0.02), toolOutlineMat);
+  hammer.add(hammerHandle);
+  const hammerHead = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.03), toolOutlineMat);
+  hammerHead.position.y = 0.18;
+  hammer.add(hammerHead);
+  hammer.position.set(-15.1, 0.85, 1.96);
+  outside.add(hammer);
+  const screwdriver = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.38, 0.02), toolOutlineMat);
+  screwdriver.position.set(-14.75, 0.88, 1.96);
+  screwdriver.rotation.z = 0.05;
+  outside.add(screwdriver);
 
   // ── BBQ grill (kettle-style) ───────────────────────────────────
   const bbqGroup = new THREE.Group();
@@ -4485,7 +5473,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   bbqHandle.position.set(0.36, 0.32, 0);
   bbqHandle.rotation.set(0, 0, Math.PI / 2);
   bbqGroup.add(bbqHandle);
-  // Three legs
   const legMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.6, metalness: 0.4 });
   for (let i = 0; i < 3; i++) {
     const angle = (i / 3) * Math.PI * 2;
@@ -4495,7 +5482,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     leg.rotation.x = Math.sin(angle) * 0.25;
     bbqGroup.add(leg);
   }
-  // Glowing coals inside
   const bbqCoals = new THREE.Mesh(
     new THREE.CylinderGeometry(0.27, 0.27, 0.04, 18),
     new THREE.MeshStandardMaterial({ color: 0xff5722, emissive: 0xff3300, emissiveIntensity: 0.85, roughness: 0.7 })
@@ -4518,7 +5504,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     log.rotation.z = Math.PI / 2;
     log.position.set(x, y, z);
     outside.add(log);
-    // End cap (lighter, shows tree rings color)
     const cap = new THREE.Mesh(new THREE.CircleGeometry(radius, 14), woodEnd);
     cap.rotation.y = Math.PI / 2;
     cap.position.set(x + length / 2 + 0.001, y, z);
@@ -4528,7 +5513,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     cap2.position.set(x - length / 2 - 0.001, y, z);
     outside.add(cap2);
   }
-  // Stack: 3 layers of 3 logs
   const stackX = -14.4;
   const stackZ = 1.95;
   for (let row = 0; row < 3; row++) {
@@ -4583,7 +5567,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     trim.rotation.x = Math.PI / 2;
     trim.position.y = -0.01;
     helmetGroup.add(trim);
-    // Wall mount peg behind helmet
     const peg = new THREE.Mesh(
       new THREE.CylinderGeometry(0.012, 0.012, 0.08, 8),
       new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.5, metalness: 0.6 })
@@ -4596,7 +5579,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   }
   addHelmet(-14.4, 0.4, 2.05);
   addHelmet(-13.5, 0.4, 2.05);
-  // Garage props: ladder, toolkits, and dustbins.
+
+  // Garage props: ladder, toolkits, and dustbins
   const ladderSideMat = new THREE.MeshStandardMaterial({ color: 0x8a94a3, roughness: 0.55, metalness: 0.25 });
   const ladderRungMat = new THREE.MeshStandardMaterial({ color: 0xb7c0cc, roughness: 0.5, metalness: 0.3 });
   const ladderY = -0.28;
@@ -4631,13 +5615,25 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   }
   addToolkit(-12.15, -0.89, -0.2, 0xc24f39, 0x29313d);
   addToolkit(-11.55, -0.89, -0.35, 0x3b82b0, 0x29313d);
-  const dustbinMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.8 });
+  const dustbinMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7, metalness: 0.15 });
   const dustbin1 = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.62, 18), dustbinMat);
   dustbin1.position.set(-10.95, -0.69, -0.15);
   outside.add(dustbin1);
+  const dustbin1Lid = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.25, 0.04, 18),
+    new THREE.MeshStandardMaterial({ color: 0x5b6575, roughness: 0.6, metalness: 0.2 })
+  );
+  dustbin1Lid.position.set(-10.95, -0.35, -0.15);
+  outside.add(dustbin1Lid);
   const dustbin2 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.56, 16), dustbinMat);
   dustbin2.position.set(-10.55, -0.72, -0.05);
   outside.add(dustbin2);
+  const dustbin2Lid = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.23, 0.23, 0.04, 16),
+    new THREE.MeshStandardMaterial({ color: 0x5b6575, roughness: 0.6, metalness: 0.2 })
+  );
+  dustbin2Lid.position.set(-10.55, -0.41, -0.05);
+  outside.add(dustbin2Lid);
   const garageShelf = new THREE.Mesh(
     new THREE.BoxGeometry(1.35, 0.08, 0.38),
     new THREE.MeshStandardMaterial({ color: 0x8d99a8, roughness: 0.72 })
@@ -4645,56 +5641,73 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   garageShelf.position.set(-11.5, -0.38, -0.2);
   outside.add(garageShelf);
 
-  // Load provided GLB bike model (Triumph)
-  (function loadOutsideBikeGlb() {
+  // Oil can on shelf
+  const oilCan = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.07, 0.18, 12),
+    new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 })
+  );
+  oilCan.position.set(-11.8, -0.26, -0.2);
+  outside.add(oilCan);
+
+  // Spray bottle
+  const sprayCan = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.05, 0.22, 10),
+    new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.6 })
+  );
+  sprayCan.position.set(-11.3, -0.23, -0.15);
+  outside.add(sprayCan);
+
+  // Tire against the wall
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 });
+  const tire = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.08, 12, 24), tireMat);
+  tire.position.set(-16.45, -0.85, -4.0);
+  tire.rotation.y = Math.PI / 2;
+  tire.rotation.x = 0.1;
+  outside.add(tire);
+  const tire2 = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.08, 12, 24), tireMat);
+  tire2.position.set(-16.45, -0.85, -3.5);
+  tire2.rotation.y = Math.PI / 2;
+  tire2.rotation.x = -0.05;
+  outside.add(tire2);
+
+  // Load outside vehicle GLB (Moskvich 412) — keep original GLB materials.
+  let carRoot = null;
+  (function loadOutsideVehicleGlb() {
     try {
       const loader = new GLTFLoader();
       loader.load(
-        "/ui/assets/vivians_bike.glb",
+        "/ui/assets/moskvich_412.glb",
         (gltf) => {
-          const bikeRoot = gltf.scene || gltf.scenes?.[0];
-          if (!bikeRoot) return;
+          const root = gltf.scene || gltf.scenes?.[0];
+          if (!root) return;
 
-          // Normalize size + place on road.
-          const box = new THREE.Box3().setFromObject(bikeRoot);
+          const box = new THREE.Box3().setFromObject(root);
           const size = new THREE.Vector3();
           box.getSize(size);
           const maxDim = Math.max(size.x, size.y, size.z) || 1;
-          const desiredLen = 1.85;
+          const desiredLen = 2.8;
           const s = desiredLen / maxDim;
-          bikeRoot.scale.setScalar(s);
+          root.scale.setScalar(s);
 
-          // Rotate so it faces along the road.
-          bikeRoot.rotation.y = Math.PI / 2;
+          root.rotation.y = Math.PI / 2;
 
-          // Recompute and drop to road.
-          const box2 = new THREE.Box3().setFromObject(bikeRoot);
+          const box2 = new THREE.Box3().setFromObject(root);
           const minY = box2.min.y;
           const roadY = -1.17;
-          bikeRoot.position.set(-13.05, roadY - minY + 0.01, -2.5);
+          root.position.set(-13.05, roadY - minY + 0.01, -2.5);
 
-          // Apply a painted look (red body, dark accents for wheels/frame parts).
-          bikeRoot.traverse((o) => {
-            if (!o.isMesh) return;
-            o.castShadow = false;
-            o.receiveShadow = false;
-            const name = (o.name || "").toLowerCase();
-            const matName = (o.material?.name || "").toLowerCase();
-            const isDarkPart =
-              /wheel|tire|tyre|seat|frame|engine|exhaust|pipe|chain|fork|handle|grip|mirror|black/.test(name) ||
-              /wheel|tire|tyre|seat|frame|engine|exhaust|pipe|chain|fork|handle|grip|mirror|black|rubber/.test(matName);
-            const isMetalPart =
-              /chrome|metal|silver|spoke|rim|bolt|screw/.test(name) ||
-              /chrome|metal|silver|spoke|rim|bolt|screw/.test(matName);
-            const newMat = new THREE.MeshStandardMaterial({
-              color: isDarkPart ? 0x1a1a1a : isMetalPart ? 0xb8bcc4 : 0xc8302f,
-              roughness: isMetalPart ? 0.28 : isDarkPart ? 0.78 : 0.45,
-              metalness: isMetalPart ? 0.85 : isDarkPart ? 0.18 : 0.35,
-            });
-            o.material = newMat;
-          });
-
-          outside.add(bikeRoot);
+          outside.add(root);
+          carRoot = root;
+          root.traverse((c) => { if (c.isMesh) carClickable.push(c); });
+          // Large invisible click zone around the car for easier targeting
+          const carHitZone = new THREE.Mesh(
+            new THREE.BoxGeometry(3.2, 2.0, 2.5),
+            new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
+          );
+          carHitZone.position.copy(root.position);
+          carHitZone.position.y += 0.5;
+          outside.add(carHitZone);
+          carClickable.push(carHitZone);
         },
         undefined,
         (err) => {
@@ -4705,6 +5718,36 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       console.warn(e);
     }
   })();
+
+  // "CLICK FOR A RIDE" floating label above car
+  const carLabelCanvas = document.createElement("canvas");
+  carLabelCanvas.width = 512;
+  carLabelCanvas.height = 96;
+  const carLabelCtx = carLabelCanvas.getContext("2d");
+  carLabelCtx.clearRect(0, 0, 512, 96);
+  carLabelCtx.fillStyle = "rgba(15,23,42,0.75)";
+  carLabelCtx.beginPath();
+  carLabelCtx.roundRect(8, 8, 496, 80, 12);
+  carLabelCtx.fill();
+  carLabelCtx.strokeStyle = "#fbbf24";
+  carLabelCtx.lineWidth = 3;
+  carLabelCtx.beginPath();
+  carLabelCtx.roundRect(8, 8, 496, 80, 12);
+  carLabelCtx.stroke();
+  carLabelCtx.font = "bold 42px VT323, monospace";
+  carLabelCtx.fillStyle = "#fbbf24";
+  carLabelCtx.textAlign = "center";
+  carLabelCtx.textBaseline = "middle";
+  carLabelCtx.fillText("CLICK FOR A RIDE", 256, 50);
+  const carLabelTex = new THREE.CanvasTexture(carLabelCanvas);
+  const carLabelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.2, 0.5),
+    new THREE.MeshBasicMaterial({ map: carLabelTex, transparent: true, side: THREE.DoubleSide })
+  );
+  carLabelMesh.position.set(-13.05, 0.6, -2.5);
+  outside.add(carLabelMesh);
+  carClickable.push(carLabelMesh);
+
 
   // Opposite small green door (front wall)
   const doorClickable = [];
@@ -4966,6 +6009,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   // Shelf at ~(8.15, 0.15, -5.86); camera in-room (+Z) centered on shelf so the stand fills the frame.
   const legoShotPos = new THREE.Vector3(8.15, 1.05, -3.55);
   const legoShotLook = new THREE.Vector3(8.15, 0.56, -5.84);
+  const bagShotPos = new THREE.Vector3(-6.0, 1.2, 5.0);
+  const bagShotLook = new THREE.Vector3(-8.8, 1.15, 5.0);
 
   // Desk
   const deskTop = new THREE.Mesh(
@@ -5116,6 +6161,351 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   const couchClickable = [couchSeat, couchBack, couchArmL, couchArmR];
   const coffeeMakerClickable = [coffeeBase, coffeeBody, coffeeTop, coffeeCup];
 
+  // Boxing bag in left-front corner (near TV, away from window)
+  const bagGroup = new THREE.Group();
+  const bagMountPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.06, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.5, metalness: 0.4 })
+  );
+  bagMountPlate.position.y = 2.8;
+  bagGroup.add(bagMountPlate);
+  const bagChainMat = new THREE.MeshStandardMaterial({ color: 0xb0b8c4, roughness: 0.32, metalness: 0.7 });
+  for (let ci = 0; ci < 8; ci++) {
+    const link = new THREE.Mesh(
+      new THREE.TorusGeometry(0.05, 0.016, 10, 16),
+      bagChainMat
+    );
+    link.position.y = 2.72 - ci * 0.085;
+    link.rotation.x = ci % 2 === 0 ? 0 : Math.PI / 2;
+    bagGroup.add(link);
+  }
+  const bagPivot = new THREE.Group();
+  bagPivot.position.set(0, 2.15, 0);
+  const bagBody = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.42, 0.34, 1.8, 24),
+    new THREE.MeshStandardMaterial({ color: 0x1a3a6b, roughness: 0.82 })
+  );
+  bagBody.position.y = -1.0;
+  bagPivot.add(bagBody);
+  const bagTopCap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.42, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x1a3a6b, roughness: 0.82 })
+  );
+  bagTopCap.rotation.x = Math.PI;
+  bagTopCap.position.y = -0.1;
+  bagPivot.add(bagTopCap);
+  const bagBottomCap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x122c52, roughness: 0.85 })
+  );
+  bagBottomCap.position.y = -1.9;
+  bagPivot.add(bagBottomCap);
+  for (let si = 0; si < 4; si++) {
+    const stitch = new THREE.Mesh(
+      new THREE.BoxGeometry(0.008, 1.8, 0.008),
+      new THREE.MeshBasicMaterial({ color: 0x0a1e3d })
+    );
+    stitch.position.y = -1.0;
+    const sAng = (si / 4) * Math.PI * 2;
+    stitch.position.x = Math.cos(sAng) * 0.425;
+    stitch.position.z = Math.sin(sAng) * 0.425;
+    bagPivot.add(stitch);
+  }
+  const bagLabelCanvas = document.createElement("canvas");
+  bagLabelCanvas.width = 256;
+  bagLabelCanvas.height = 128;
+  const bagLabelCtx = bagLabelCanvas.getContext("2d");
+  if (bagLabelCtx) {
+    bagLabelCtx.fillStyle = "rgba(0,0,0,0)";
+    bagLabelCtx.clearRect(0, 0, 256, 128);
+    bagLabelCtx.fillStyle = "#c0d0e8";
+    bagLabelCtx.font = "bold 38px VT323, monospace";
+    bagLabelCtx.textAlign = "center";
+    bagLabelCtx.textBaseline = "middle";
+    bagLabelCtx.fillText("BOXING", 128, 42);
+    bagLabelCtx.fillText("BAG", 128, 86);
+  }
+  const bagLabelTex = new THREE.CanvasTexture(bagLabelCanvas);
+  bagLabelTex.needsUpdate = true;
+  const bagLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.52, 0.26),
+    new THREE.MeshBasicMaterial({ map: bagLabelTex, transparent: true, depthWrite: false })
+  );
+  bagLabel.position.set(0.43, -0.95, 0);
+  bagLabel.rotation.y = Math.PI / 2;
+  bagPivot.add(bagLabel);
+  const bagLabel2 = bagLabel.clone();
+  bagLabel2.material = bagLabel.material.clone();
+  bagLabel2.position.set(-0.43, -0.95, 0);
+  bagLabel2.rotation.y = -Math.PI / 2;
+  bagPivot.add(bagLabel2);
+  const bagLabel3 = bagLabel.clone();
+  bagLabel3.material = bagLabel.material.clone();
+  bagLabel3.position.set(0, -0.95, 0.43);
+  bagLabel3.rotation.y = 0;
+  bagPivot.add(bagLabel3);
+  const bagLabel4 = bagLabel.clone();
+  bagLabel4.material = bagLabel.material.clone();
+  bagLabel4.position.set(0, -0.95, -0.43);
+  bagLabel4.rotation.y = Math.PI;
+  bagPivot.add(bagLabel4);
+  bagGroup.add(bagPivot);
+  bagGroup.position.set(-8.8, 0, 5.0);
+  room.add(bagGroup);
+  const bagClickable = [bagBody, bagTopCap, bagBottomCap];
+
+  // ── Ping Pong Table (bigger, top-down view, flat paddles) ────────
+  const pongGroup = new THREE.Group();
+  const pongClickable = [];
+  const ptW = 3.6, ptD = 2.0;
+  const pongTableTop = new THREE.Mesh(
+    new THREE.BoxGeometry(ptW, 0.06, ptD),
+    new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4, metalness: 0.08 })
+  );
+  pongTableTop.position.y = 0;
+  pongGroup.add(pongTableTop);
+  pongClickable.push(pongTableTop);
+  // table lines removed for clean look
+  const netPostMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.5, metalness: 0.5 });
+  const netPostL = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.22, 8), netPostMat);
+  netPostL.position.set(0, 0.14, -ptD / 2 - 0.05);
+  pongGroup.add(netPostL);
+  const netPostR = netPostL.clone();
+  netPostR.position.set(0, 0.14, ptD / 2 + 0.05);
+  pongGroup.add(netPostR);
+  // Net — white strip + thin dark top cord
+  const netBody = new THREE.Mesh(
+    new THREE.BoxGeometry(0.02, 0.15, ptD + 0.12),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, transparent: true, opacity: 0.85 })
+  );
+  netBody.position.set(0, 0.1, 0);
+  pongGroup.add(netBody);
+  const netCord = new THREE.Mesh(
+    new THREE.BoxGeometry(0.025, 0.012, ptD + 0.14),
+    new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.7 })
+  );
+  netCord.position.set(0, 0.176, 0);
+  pongGroup.add(netCord);
+  const legMat2 = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.7, metalness: 0.3 });
+  for (const [lx, lz] of [[-ptW / 2 + 0.15, -ptD / 2 + 0.12], [-ptW / 2 + 0.15, ptD / 2 - 0.12], [ptW / 2 - 0.15, -ptD / 2 + 0.12], [ptW / 2 - 0.15, ptD / 2 - 0.12]]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.82, 8), legMat2);
+    leg.position.set(lx, -0.44, lz);
+    pongGroup.add(leg);
+  }
+
+  // Paddles — upright disc, flat face facing across the table (along X)
+  const paddlePlayerGroup = new THREE.Group();
+  const paddleFace = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.13, 0.13, 0.014, 28),
+    new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.55 })
+  );
+  paddleFace.rotation.z = Math.PI / 2;
+  paddlePlayerGroup.add(paddleFace);
+  const paddleHandleP = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.025, 0.12, 10),
+    new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.9 })
+  );
+  paddleHandleP.position.set(0, -0.12, 0);
+  paddlePlayerGroup.add(paddleHandleP);
+  paddlePlayerGroup.position.set(ptW / 2 - 0.3, 0.16, 0);
+  pongGroup.add(paddlePlayerGroup);
+  pongClickable.push(paddleFace);
+
+  const paddleCpuGroup = new THREE.Group();
+  const paddleFaceCpu = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.13, 0.13, 0.014, 28),
+    new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.55 })
+  );
+  paddleFaceCpu.rotation.z = Math.PI / 2;
+  paddleCpuGroup.add(paddleFaceCpu);
+  const paddleHandleCpu = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.025, 0.12, 10),
+    new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 })
+  );
+  paddleHandleCpu.position.set(0, -0.12, 0);
+  paddleCpuGroup.add(paddleHandleCpu);
+  paddleCpuGroup.position.set(-ptW / 2 + 0.3, 0.16, 0);
+  pongGroup.add(paddleCpuGroup);
+
+  const pongBall = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.25, metalness: 0.12, emissive: 0xfbbf24, emissiveIntensity: 0.2 })
+  );
+  pongBall.position.set(0, 0.06, 0);
+  pongGroup.add(pongBall);
+
+  pongGroup.position.set(0.5, -0.4, 6.8);
+  room.add(pongGroup);
+
+  const pongLabelMesh = null;
+
+  // Side-angle camera — pulled back so both paddles are visible
+  const pongShotPos = new THREE.Vector3(3.2, 1.5, 6.8);
+  const pongShotLook = new THREE.Vector3(0.0, -0.35, 6.8);
+
+  let pongSeq = null;
+  let pongPlayerScore = 0;
+  let pongCpuScore = 0;
+  let pongBallVX = 0;
+  let pongBallVZ = 0;
+  let pongBallX = 0;
+  let pongBallZ = 0;
+  let pongPlayerZ = 0;
+  let pongCpuZ = 0;
+  let pongServeTimer = 0;
+  let pongPlaying = false;
+  let pongDifficultyChosen = false;
+  let pongOpponentName = "Sam";
+  const pongHudEl = document.getElementById('pong-hud');
+  const pongHalfW = ptW / 2 - 0.05;
+  const pongHalfZ = ptD / 2 - 0.05;
+  const pongBallSpeed = 2.8;
+  const pongPaddleSpeed = 3.2;
+  let pongCpuSpeed = 2.0;
+
+  function pongResetBall(dir) {
+    pongBallX = 0;
+    pongBallZ = 0;
+    const angle = (Math.random() - 0.5) * 1.2;
+    pongBallVX = pongBallSpeed * dir;
+    pongBallVZ = Math.sin(angle) * pongBallSpeed * 0.5;
+    pongServeTimer = performance.now();
+    pongPlaying = false;
+  }
+
+  function pongUpdateHud() {
+    if (pongHudEl) pongHudEl.textContent = `YOU ${pongPlayerScore} — ${pongCpuScore} ${pongOpponentName}`;
+  }
+
+  function showPongDifficultyDialog() {
+    let dlg = document.getElementById('pong-difficulty-dialog');
+    if (!dlg) {
+      dlg = document.createElement('div');
+      dlg.id = 'pong-difficulty-dialog';
+      dlg.style.cssText = `
+        position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+        width:min(96vw,520px); z-index:225; pointer-events:auto;
+        font-family:"VT323",monospace; display:none;
+      `;
+      dlg.innerHTML = `
+        <div style="border:4px solid #1e293b;border-radius:14px;background:linear-gradient(180deg,#f0fdf4 0%,#e0f2e9 100%);padding:18px 20px 16px;margin-bottom:18px;box-shadow:0 8px 0 #334155,0 18px 40px rgba(0,0,0,0.35);position:relative;">
+          <div style="font-size:24px;color:#0f172a;line-height:1.35;margin-bottom:14px;">Choose your opponent:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            <button type="button" class="pong-diff-btn" data-diff="easy" style="flex:1;min-width:100px;border:3px solid #1e293b;border-radius:8px;font-family:'VT323',monospace;font-size:20px;padding:10px 8px;background:linear-gradient(180deg,#34d399,#10b981);color:#022c22;cursor:pointer;box-shadow:0 3px 0 #059669;">
+              Anubhav<br><span style="font-size:15px;opacity:0.7;">Easy</span>
+            </button>
+            <button type="button" class="pong-diff-btn" data-diff="medium" style="flex:1;min-width:100px;border:3px solid #1e293b;border-radius:8px;font-family:'VT323',monospace;font-size:20px;padding:10px 8px;background:linear-gradient(180deg,#fbbf24,#f59e0b);color:#422006;cursor:pointer;box-shadow:0 3px 0 #d97706;">
+              Sam<br><span style="font-size:15px;opacity:0.7;">Medium</span>
+            </button>
+            <button type="button" class="pong-diff-btn" data-diff="hard" style="flex:1;min-width:100px;border:3px solid #1e293b;border-radius:8px;font-family:'VT323',monospace;font-size:20px;padding:10px 8px;background:linear-gradient(180deg,#f87171,#ef4444);color:#450a0a;cursor:pointer;box-shadow:0 3px 0 #dc2626;">
+              Jigdray<br><span style="font-size:15px;opacity:0.7;">Hard</span>
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(dlg);
+      dlg.addEventListener('click', (e) => {
+        const btn = e.target.closest('.pong-diff-btn');
+        if (!btn) return;
+        const diff = btn.getAttribute('data-diff');
+        if (diff === 'easy') { pongCpuSpeed = 1.2; pongOpponentName = 'Anubhav'; }
+        else if (diff === 'medium') { pongCpuSpeed = 2.0; pongOpponentName = 'Sam'; }
+        else { pongCpuSpeed = 3.2; pongOpponentName = 'Jigdray'; }
+        pongDifficultyChosen = true;
+        dlg.style.display = 'none';
+        pongResetBall(1);
+        pongPlayerScore = 0;
+        pongCpuScore = 0;
+        pongPlayerZ = 0;
+        pongCpuZ = 0;
+        pongUpdateHud();
+      });
+    }
+    dlg.style.display = 'block';
+  }
+
+  function hidePongDifficultyDialog() {
+    const dlg = document.getElementById('pong-difficulty-dialog');
+    if (dlg) dlg.style.display = 'none';
+  }
+
+  function createBoxingGlove(gc) {
+    const gl = new THREE.Group();
+    const pad = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 16, 12),
+      new THREE.MeshStandardMaterial({ color: gc, roughness: 0.72 })
+    );
+    gl.add(pad);
+    const thumb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 10, 8),
+      new THREE.MeshStandardMaterial({ color: gc, roughness: 0.74 })
+    );
+    thumb.position.set(0.14, -0.06, 0.08);
+    gl.add(thumb);
+    const wrist = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.11, 0.22, 12),
+      new THREE.MeshStandardMaterial({ color: gc, roughness: 0.76 })
+    );
+    wrist.rotation.x = Math.PI / 2;
+    wrist.position.z = 0.22;
+    gl.add(wrist);
+    const laceGl = new THREE.Mesh(
+      new THREE.BoxGeometry(0.015, 0.1, 0.015),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    laceGl.position.set(0, 0.1, 0.06);
+    gl.add(laceGl);
+    return gl;
+  }
+  const leftGlove = createBoxingGlove(0xcc1111);
+  leftGlove.visible = false;
+  room.add(leftGlove);
+  const rightGlove = createBoxingGlove(0xcc1111);
+  rightGlove.visible = false;
+  room.add(rightGlove);
+
+  const leftGloveRest = new THREE.Vector3(-6.4, 0.5, 5.45);
+  const rightGloveRest = new THREE.Vector3(-6.4, 0.5, 4.55);
+  let bagSwingAngleX = 0, bagSwingAngleZ = 0;
+  let bagSwingVelX = 0, bagSwingVelZ = 0;
+  let punchAnim = null;
+  let punchCount = 0;
+  const punchTypes = ["jab", "hook", "uppercut", "cross"];
+  const bagCenter = new THREE.Vector3(-8.8, 1.15, 5.0);
+
+  function triggerPunch() {
+    if (punchAnim) return;
+    const isLeft = punchCount % 2 === 0;
+    const type = punchTypes[Math.floor(Math.random() * punchTypes.length)];
+    punchCount++;
+    const glove = isLeft ? leftGlove : rightGlove;
+    const side = isLeft ? 1 : -1;
+    const rest = isLeft ? leftGloveRest.clone() : rightGloveRest.clone();
+    let hitPos, midPos = null, force, dur;
+    if (type === "jab") {
+      hitPos = new THREE.Vector3(-8.38, 1.2, 5.0 + side * 0.04);
+      force = 0.13; dur = 80;
+    } else if (type === "cross") {
+      hitPos = new THREE.Vector3(-8.38, 1.1, 5.0 - side * 0.06);
+      force = 0.2; dur = 115;
+    } else if (type === "hook") {
+      midPos = new THREE.Vector3(-7.0, 0.7, 5.0 + side * 1.1);
+      hitPos = new THREE.Vector3(-8.55, 1.25, 5.0 + side * 0.35);
+      force = 0.25; dur = 155;
+    } else {
+      midPos = new THREE.Vector3(-7.0, -0.1, 5.0 + side * 0.15);
+      hitPos = new THREE.Vector3(-8.38, 1.6, 5.0 + side * 0.04);
+      force = 0.22; dur = 135;
+    }
+    punchAnim = {
+      glove, type, isLeft, rest, midPos, hitPos, force,
+      startMs: performance.now(), phase: "strike",
+      strikeDur: dur, retractDur: 220, hitDone: false,
+    };
+    glove.visible = true;
+    glove.position.copy(rest);
+  }
+
   // PC setup
   const monitorFrame = new THREE.Mesh(
     new THREE.BoxGeometry(2.8, 2.2, 0.36),
@@ -5129,9 +6519,53 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   );
   monitorStand.position.set(0, -0.1, -1.2);
   room.add(monitorStand);
+  const screenCanvas = document.createElement("canvas");
+  screenCanvas.width = 660;
+  screenCanvas.height = 465;
+  const screenCtx = screenCanvas.getContext("2d");
+  const screenTexture = new THREE.CanvasTexture(screenCanvas);
+  let screenSvX = 80, screenSvY = 140, screenSvDx = 1.5, screenSvDy = 1.1;
+  function renderScreenSaver(timeSec) {
+    if (!screenCtx) return;
+    const w = screenCanvas.width, h = screenCanvas.height;
+    screenCtx.fillStyle = "#020810";
+    screenCtx.fillRect(0, 0, w, h);
+    for (let sy = 0; sy < h; sy += 4) {
+      screenCtx.fillStyle = "rgba(0,255,180,0.02)";
+      screenCtx.fillRect(0, sy, w, 1);
+    }
+    screenSvX += screenSvDx;
+    screenSvY += screenSvDy;
+    const bw = 140, bh = 36;
+    if (screenSvX <= 0 || screenSvX + bw >= w) { screenSvDx *= -1; screenSvX = Math.max(0, Math.min(w - bw, screenSvX)); }
+    if (screenSvY <= 0 || screenSvY + bh >= h) { screenSvDy *= -1; screenSvY = Math.max(0, Math.min(h - bh, screenSvY)); }
+    const hue = (timeSec * 25) % 360;
+    screenCtx.save();
+    screenCtx.shadowColor = `hsl(${hue}, 90%, 55%)`;
+    screenCtx.shadowBlur = 12;
+    screenCtx.strokeStyle = `hsl(${hue}, 85%, 50%)`;
+    screenCtx.lineWidth = 1.5;
+    screenCtx.strokeRect(screenSvX, screenSvY, bw, bh);
+    screenCtx.fillStyle = `hsla(${hue}, 90%, 55%, 0.08)`;
+    screenCtx.fillRect(screenSvX, screenSvY, bw, bh);
+    screenCtx.fillStyle = `hsl(${hue}, 90%, 65%)`;
+    screenCtx.font = "bold 20px VT323, monospace";
+    screenCtx.textAlign = "center";
+    screenCtx.textBaseline = "middle";
+    screenCtx.fillText("CLICK ME", screenSvX + bw / 2, screenSvY + bh / 2);
+    screenCtx.restore();
+    screenCtx.fillStyle = "rgba(16,185,129,0.35)";
+    screenCtx.font = "16px VT323, monospace";
+    screenCtx.textAlign = "left";
+    screenCtx.fillText("ANUBHAV-OS v1.99", 10, 18);
+    screenCtx.textAlign = "right";
+    screenCtx.fillText(new Date().toLocaleTimeString(), w - 10, 18);
+    screenTexture.needsUpdate = true;
+  }
+  renderScreenSaver(0);
   const screenMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(2.2, 1.55),
-    new THREE.MeshBasicMaterial({ color: 0x000000 })
+    new THREE.MeshBasicMaterial({ map: screenTexture })
   );
   screenMesh.position.set(0, 1.12, -1.0);
   screenMesh.userData.clickable = true;
@@ -5699,6 +7133,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let windowSeq = null;
   let couchSeq = null;
   let legoSeq = null;
+  let bagSeq = null;
   let joystickPointerId = null;
   let lookPointerId = null;
   let joystickCenterX = 0;
@@ -5745,7 +7180,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const clampedX = dx * clampScale;
       const clampedY = dy * clampScale;
       mobileMoveX = THREE.MathUtils.clamp(clampedX / joystickRadius, -1, 1);
-      mobileMoveY = THREE.MathUtils.clamp(-clampedY / joystickRadius, -1, 1);
+      mobileMoveY = THREE.MathUtils.clamp(clampedY / joystickRadius, -1, 1);
       mobileJoystickThumbEl.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
     };
 
@@ -5792,7 +7227,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const clampedX = dx * clampScale;
       const clampedY = dy * clampScale;
       mobileLookX = THREE.MathUtils.clamp(clampedX / lookRadius, -1, 1);
-      mobileLookY = THREE.MathUtils.clamp(-clampedY / lookRadius, -1, 1);
+      mobileLookY = THREE.MathUtils.clamp(clampedY / lookRadius, -1, 1);
       mobileLookThumbEl.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
     };
 
@@ -6248,6 +7683,18 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       document.body.classList.remove("lego-view", "lego-sequence");
       legoSeq = null;
     }
+    if (next !== "bag-view" && next !== "bag-sequence") {
+      document.body.classList.remove("bag-view", "bag-sequence");
+      bagSeq = null;
+      leftGlove.visible = false;
+      rightGlove.visible = false;
+      punchAnim = null;
+    }
+    if (next !== "pong-view" && next !== "pong-sequence") {
+      document.body.classList.remove("pong-view", "pong-sequence");
+      pongSeq = null;
+      hidePongDifficultyDialog();
+    }
     if (next !== "window-view" && next !== "window-sequence") {
       document.body.classList.remove("window-view", "window-sequence");
       windowSeq = null;
@@ -6452,6 +7899,74 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       document.body.classList.remove("monitor-mode", "speaker-mode");
       camera.position.copy(legoShotPos);
       camera.lookAt(legoShotLook);
+    } else if (next === "bag-sequence") {
+      setSpeakerRoomMix();
+      monitorEnterAnim = null;
+      setMonitorBooting(false);
+      document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode", "bag-sequence");
+      bagSeq = {
+        start: performance.now(),
+        duration: 1500,
+        fromPos: camera.position.clone(),
+        fromLook: getCurrentLookPoint(),
+        toPos: bagShotPos.clone(),
+        toLook: bagShotLook.clone(),
+      };
+    } else if (next === "bag-view") {
+      bagSeq = null;
+      document.body.classList.remove("bag-sequence");
+      document.body.classList.add("bag-view", "room-mode");
+      document.body.classList.remove("monitor-mode", "speaker-mode");
+      camera.position.copy(bagShotPos);
+      camera.lookAt(bagShotLook);
+      leftGlove.visible = true;
+      rightGlove.visible = true;
+      leftGlove.position.copy(leftGloveRest);
+      rightGlove.position.copy(rightGloveRest);
+    } else if (next === "return-bag") {
+      bagSeq = null;
+      leftGlove.visible = false;
+      rightGlove.visible = false;
+      punchAnim = null;
+      if (monitorBootTimer) { clearTimeout(monitorBootTimer); monitorBootTimer = null; }
+      if (monitorBootInterval) { clearInterval(monitorBootInterval); monitorBootInterval = null; }
+      monitorEnterAnim = null;
+      setMonitorBooting(false);
+      document.body.classList.remove("bag-view", "bag-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode");
+    } else if (next === "pong-sequence") {
+      setSpeakerRoomMix();
+      monitorEnterAnim = null;
+      setMonitorBooting(false);
+      document.body.classList.remove("monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode", "pong-sequence");
+      pongSeq = {
+        start: performance.now(),
+        duration: 1500,
+        fromPos: camera.position.clone(),
+        fromLook: getCurrentLookPoint(),
+        toPos: pongShotPos.clone(),
+        toLook: pongShotLook.clone(),
+      };
+    } else if (next === "pong-view") {
+      pongSeq = null;
+      document.body.classList.remove("pong-sequence");
+      document.body.classList.add("pong-view", "room-mode");
+      document.body.classList.remove("monitor-mode", "speaker-mode");
+      camera.position.copy(pongShotPos);
+      camera.lookAt(pongShotLook);
+      pongDifficultyChosen = false;
+      showPongDifficultyDialog();
+    } else if (next === "return-pong") {
+      pongSeq = null;
+      pongPlaying = false;
+      if (monitorBootTimer) { clearTimeout(monitorBootTimer); monitorBootTimer = null; }
+      if (monitorBootInterval) { clearInterval(monitorBootInterval); monitorBootInterval = null; }
+      monitorEnterAnim = null;
+      setMonitorBooting(false);
+      document.body.classList.remove("pong-view", "pong-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode");
     } else if (next === "chelsea") {
       chelseaSeq = null;
       document.body.classList.remove("chelsea-sequence");
@@ -6695,20 +8210,23 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
     return !!target.closest(
-      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel"
+      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog"
     );
   }
 
   function queueSceneClick(clientX, clientY) {
     pointer.x = (clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(clientY / window.innerHeight) * 2 + 1;
-    if (mode === "room" || mode === "couch-view" || mode === "lego-view") monitorClickPending = true;
+    if (welcomeShown) { advanceWelcome(); return; }
+    if (mode === "room" || mode === "couch-view" || mode === "lego-view" || mode === "bag-view" || mode === "window-view" || mode === "pong-view") monitorClickPending = true;
   }
 
   window.addEventListener("keydown", (e) => {
+    if (carGameActive) return;
     const k = e.key.toLowerCase();
+    if (welcomeShown) { advanceWelcome(); e.preventDefault(); return; }
     keys.add(k);
-    if ((mode === "room" || mode === "speaker" || mode === "intro-room-entry" || mode === "chelsea-sequence" || mode === "chelsea" || mode === "window-sequence" || mode === "window-view" || mode === "clock-sequence" || mode === "clock-view" || mode === "mirror-sequence" || mode === "mirror-view" || mode === "buddha-sequence" || mode === "buddha-view" || mode === "couch-sequence" || mode === "couch-view" || mode === "lego-sequence" || mode === "lego-view") && ["w","a","s","d","q","e","arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) {
+    if ((mode === "room" || mode === "speaker" || mode === "intro-room-entry" || mode === "chelsea-sequence" || mode === "chelsea" || mode === "window-sequence" || mode === "window-view" || mode === "clock-sequence" || mode === "clock-view" || mode === "mirror-sequence" || mode === "mirror-view" || mode === "buddha-sequence" || mode === "buddha-view" || mode === "couch-sequence" || mode === "couch-view" || mode === "lego-sequence" || mode === "lego-view" || mode === "bag-sequence" || mode === "bag-view" || mode === "pong-sequence" || mode === "pong-view") && ["w","a","s","d","q","e","arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) {
       e.preventDefault();
     }
   });
@@ -6718,10 +8236,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   window.addEventListener("mousemove", (e) => {
     pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    if (dragging && (mode === "room" || mode === "couch-view")) {
-      yaw += e.movementX * 0.0025;
+    if (dragging && !welcomeShown && (mode === "room" || mode === "couch-view")) {
+      yaw -= e.movementX * 0.0025;
       pitch -= e.movementY * 0.0017;
       pitch = Math.max(-0.5, Math.min(0.5, pitch));
+    }
+  }, { passive: true });
+  window.addEventListener("touchmove", (e) => {
+    if (mode === "pong-view" && e.touches.length > 0) {
+      const touch = e.touches[0];
+      pointer.x = (touch.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(touch.clientY / window.innerHeight) * 2 + 1;
     }
   }, { passive: true });
   let lastPointerTapMs = 0;
@@ -6774,6 +8299,22 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       legoSeq = null;
       setMode("return-lego");
       beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 900);
+      return;
+    }
+    if (mode === "bag-view" || mode === "bag-sequence") {
+      bagSeq = null;
+      leftGlove.visible = false;
+      rightGlove.visible = false;
+      punchAnim = null;
+      setMode("return-bag");
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      return;
+    }
+    if (mode === "pong-view" || mode === "pong-sequence") {
+      pongSeq = null;
+      pongPlaying = false;
+      setMode("return-pong");
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
       return;
     }
     if (mode === "chelsea" || mode === "chelsea-sequence") {
@@ -6887,7 +8428,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     const t = clock.elapsedTime;
     if (coffeeAnim) {
       const elapsed = (performance.now() - coffeeAnim.startMs) / 1000;
-      // Total ~4.2s: rise 0.6s -> hold 0.4s -> sip 1.2s -> hold 0.5s -> sip 1.0s -> lower 0.5s
+      // Total ~9.2s: rise 0.6s -> hold 0.6s -> sip 1.4s -> hold 0.8s -> sip 1.2s -> hold 0.8s -> sip 1.3s -> hold 0.7s -> sip 1.0s -> lower 0.8s
       const restPos = new THREE.Vector3(0.18, -0.18, -0.45);
       const sipPos = new THREE.Vector3(0.06, -0.06, -0.22);
       const startPos = new THREE.Vector3(0.18, -0.42, -0.45);
@@ -6896,24 +8437,40 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         p = elapsed / 0.6;
         coffeeMug.position.lerpVectors(startPos, restPos, easeOutCubic(p));
         coffeeMug.rotation.set(0, 0, 0);
-      } else if (elapsed < 1.0) {
+      } else if (elapsed < 1.2) {
         coffeeMug.position.copy(restPos);
         coffeeMug.rotation.set(0, 0, 0);
-      } else if (elapsed < 2.2) {
-        p = (elapsed - 1.0) / 1.2;
+      } else if (elapsed < 2.6) {
+        p = (elapsed - 1.2) / 1.4;
         sipAmt = Math.sin(p * Math.PI);
         coffeeMug.position.lerpVectors(restPos, sipPos, sipAmt);
         coffeeMug.rotation.set(-0.55 * sipAmt, 0, -0.25 * sipAmt);
-      } else if (elapsed < 2.7) {
+      } else if (elapsed < 3.4) {
         coffeeMug.position.copy(restPos);
         coffeeMug.rotation.set(0, 0, 0);
-      } else if (elapsed < 3.7) {
-        p = (elapsed - 2.7) / 1.0;
+      } else if (elapsed < 4.6) {
+        p = (elapsed - 3.4) / 1.2;
         sipAmt = Math.sin(p * Math.PI);
         coffeeMug.position.lerpVectors(restPos, sipPos, sipAmt);
         coffeeMug.rotation.set(-0.5 * sipAmt, 0, -0.22 * sipAmt);
-      } else if (elapsed < 4.2) {
-        p = (elapsed - 3.7) / 0.5;
+      } else if (elapsed < 5.4) {
+        coffeeMug.position.copy(restPos);
+        coffeeMug.rotation.set(0, 0, 0);
+      } else if (elapsed < 6.7) {
+        p = (elapsed - 5.4) / 1.3;
+        sipAmt = Math.sin(p * Math.PI);
+        coffeeMug.position.lerpVectors(restPos, sipPos, sipAmt);
+        coffeeMug.rotation.set(-0.52 * sipAmt, 0, -0.2 * sipAmt);
+      } else if (elapsed < 7.4) {
+        coffeeMug.position.copy(restPos);
+        coffeeMug.rotation.set(0, 0, 0);
+      } else if (elapsed < 8.4) {
+        p = (elapsed - 7.4) / 1.0;
+        sipAmt = Math.sin(p * Math.PI);
+        coffeeMug.position.lerpVectors(restPos, sipPos, sipAmt);
+        coffeeMug.rotation.set(-0.48 * sipAmt, 0, -0.18 * sipAmt);
+      } else if (elapsed < 9.2) {
+        p = (elapsed - 8.4) / 0.8;
         coffeeMug.position.lerpVectors(restPos, startPos, easeInOutCubic(p));
         coffeeMug.rotation.set(0, 0, 0);
       } else {
@@ -6958,9 +8515,71 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       bonsai.rotation.y = Math.sin(t * 0.7) * 0.025;
     }
     keyboard.rotation.y = Math.sin(t * 0.9) * 0.01;
-    screenMesh.material.color.setHex(0x000000);
+    if (mode !== "monitor" && mode !== "monitor-enter") renderScreenSaver(t);
+    if (carLabelMesh) {
+      carLabelMesh.position.y = 0.6 + Math.sin(t * 2.0) * 0.06;
+      carLabelMesh.lookAt(camera.position);
+    }
+    // pongLabelMesh removed (click table directly)
     speakerWoofer.scale.setScalar(1 + Math.sin(t * 6.5) * (speakerAudio && !speakerAudio.paused ? 0.03 : 0.005));
     renderWallClock();
+    // Boxing bag swing physics
+    if (Math.abs(bagSwingAngleX) > 0.0005 || Math.abs(bagSwingAngleZ) > 0.0005 || Math.abs(bagSwingVelX) > 0.0005 || Math.abs(bagSwingVelZ) > 0.0005) {
+      bagSwingVelX -= bagSwingAngleX * 4.0 * dt;
+      bagSwingVelZ -= bagSwingAngleZ * 4.0 * dt;
+      bagSwingVelX *= (1 - 2.5 * dt);
+      bagSwingVelZ *= (1 - 2.5 * dt);
+      bagSwingAngleX += bagSwingVelX;
+      bagSwingAngleZ += bagSwingVelZ;
+      bagSwingAngleX = Math.max(-0.4, Math.min(0.4, bagSwingAngleX));
+      bagSwingAngleZ = Math.max(-0.4, Math.min(0.4, bagSwingAngleZ));
+    }
+    bagPivot.rotation.x = bagSwingAngleX;
+    bagPivot.rotation.z = bagSwingAngleZ;
+    // Punch animation
+    if (punchAnim) {
+      const pElapsed = performance.now() - punchAnim.startMs;
+      const pg = punchAnim.glove;
+      if (punchAnim.phase === "strike") {
+        const pt = Math.min(1, pElapsed / punchAnim.strikeDur);
+        const pe = easeOutCubic(pt);
+        if (punchAnim.midPos) {
+          const qa = new THREE.Vector3().lerpVectors(punchAnim.rest, punchAnim.midPos, pe);
+          const qb = new THREE.Vector3().lerpVectors(punchAnim.midPos, punchAnim.hitPos, pe);
+          pg.position.lerpVectors(qa, qb, pe);
+        } else {
+          pg.position.lerpVectors(punchAnim.rest, punchAnim.hitPos, pe);
+        }
+        pg.lookAt(bagCenter.x, pg.position.y, bagCenter.z);
+        if (pt >= 1) {
+          if (!punchAnim.hitDone) {
+            punchAnim.hitDone = true;
+            const pDir = punchAnim.isLeft ? -1 : 1;
+            if (punchAnim.type === "uppercut") {
+              bagSwingVelX += punchAnim.force;
+              bagSwingVelZ -= punchAnim.force * 0.3 * pDir;
+            } else if (punchAnim.type === "hook") {
+              bagSwingVelZ += punchAnim.force * pDir;
+              bagSwingVelX -= punchAnim.force * 0.35;
+            } else {
+              bagSwingVelX -= punchAnim.force;
+              bagSwingVelZ += punchAnim.force * 0.2 * pDir;
+            }
+          }
+          punchAnim.phase = "retract";
+          punchAnim.startMs = performance.now();
+        }
+      } else {
+        const pt2 = Math.min(1, pElapsed / punchAnim.retractDur);
+        const pe2 = easeInOutCubic(pt2);
+        pg.position.lerpVectors(punchAnim.hitPos, punchAnim.rest, pe2);
+        pg.lookAt(bagCenter.x, pg.position.y, bagCenter.z);
+        if (pt2 >= 1) {
+          if (mode !== "bag-view") pg.visible = false;
+          punchAnim = null;
+        }
+      }
+    }
     // Water wall hover reaction: raycast mouse to front wall and amplify ripple.
     if (mode === "room" || mode === "couch-view" || mode === "speaker") {
       raycaster.setFromCamera(pointer, camera);
@@ -7065,13 +8684,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     }
 
     if (mode === "room") {
+      if (welcomeShown) { keys.clear(); }
       const speed = (keys.has("shift") ? 4.0 : 2.2) * dt;
-      if (keys.has("arrowleft")) yaw += dt * 1.4;
-      if (keys.has("arrowright")) yaw -= dt * 1.4;
+      if (keys.has("arrowleft")) yaw -= dt * 1.4;
+      if (keys.has("arrowright")) yaw += dt * 1.4;
       if (keys.has("arrowup")) pitch += dt * 0.8;
       if (keys.has("arrowdown")) pitch -= dt * 0.8;
-      if (mobileLookX !== 0) yaw += mobileLookX * dt * 1.9;
-      if (mobileLookY !== 0) pitch += mobileLookY * dt * 1.2;
+      if (!welcomeShown && mobileLookX !== 0) yaw -= mobileLookX * dt * 1.9;
+      if (!welcomeShown && mobileLookY !== 0) pitch += mobileLookY * dt * 1.2;
       pitch = Math.max(-0.5, Math.min(0.5, pitch));
       const forward = new THREE.Vector3(Math.sin(yaw), 0, -Math.cos(yaw));
       const right = new THREE.Vector3(forward.z, 0, -forward.x);
@@ -7081,7 +8701,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         1
       );
       const moveStrafeInput = THREE.MathUtils.clamp(
-        (keys.has("d") ? 1 : 0) - (keys.has("a") ? 1 : 0) - mobileMoveX,
+        (keys.has("a") ? 1 : 0) - (keys.has("d") ? 1 : 0) + mobileMoveX,
         -1,
         1
       );
@@ -7116,7 +8736,12 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
             setMode("buddha-sequence");
           } else {
           const hitWindow = raycaster.intersectObjects(windowClickable, false);
-          if (hitWindow.length > 0) {
+          const hitCar = carClickable.length > 0 ? raycaster.intersectObjects(carClickable, false) : [];
+          const winDist = hitWindow.length > 0 ? hitWindow[0].distance : Infinity;
+          const carDist = hitCar.length > 0 ? hitCar[0].distance : Infinity;
+          if (hitCar.length > 0 && carDist < winDist) {
+            openCarGame();
+          } else if (hitWindow.length > 0) {
             setMode("window-sequence");
           } else {
           const hitDoor = raycaster.intersectObjects(doorClickable, false);
@@ -7147,12 +8772,22 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
               if (hitLego.length > 0) {
                 setMode("lego-sequence");
               } else {
+              const hitBag = raycaster.intersectObjects(bagClickable, false);
+              if (hitBag.length > 0) {
+                setMode("bag-sequence");
+              } else {
+              const hitPong = raycaster.intersectObjects(pongClickable, false);
+              if (hitPong.length > 0) {
+                setMode("pong-sequence");
+              } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
                 setMode("monitor-enter");
               } else {
                 const hitSpeaker = raycaster.intersectObjects(speakerClickable, false);
                 if (hitSpeaker.length > 0) setMode("speaker");
+              }
+              }
               }
               }
             }
@@ -7167,11 +8802,11 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         }
       }
     } else if (mode === "couch-view") {
-      if (keys.has("arrowleft")) yaw += dt * 1.35;
-      if (keys.has("arrowright")) yaw -= dt * 1.35;
+      if (keys.has("arrowleft")) yaw -= dt * 1.35;
+      if (keys.has("arrowright")) yaw += dt * 1.35;
       if (keys.has("arrowup")) pitch += dt * 0.8;
       if (keys.has("arrowdown")) pitch -= dt * 0.8;
-      if (mobileLookX !== 0) yaw += mobileLookX * dt * 1.9;
+      if (mobileLookX !== 0) yaw -= mobileLookX * dt * 1.9;
       if (mobileLookY !== 0) pitch += mobileLookY * dt * 1.2;
       pitch = Math.max(-0.5, Math.min(0.5, pitch));
       camera.position.copy(couchShotPos);
@@ -7263,6 +8898,123 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         legoSeq = null;
         setMode("lego-view");
       }
+    } else if (mode === "bag-sequence" && bagSeq) {
+      const tbg = Math.min(1, Math.max(0, (performance.now() - bagSeq.start) / bagSeq.duration));
+      const ebg = easeInOutCubic(tbg);
+      camera.position.lerpVectors(bagSeq.fromPos, bagSeq.toPos, ebg);
+      const lkbg = new THREE.Vector3().lerpVectors(bagSeq.fromLook, bagSeq.toLook, ebg);
+      camera.lookAt(lkbg);
+      if (tbg >= 1) {
+        bagSeq = null;
+        setMode("bag-view");
+      }
+    } else if (mode === "bag-view") {
+      camera.position.copy(bagShotPos);
+      camera.lookAt(bagShotLook);
+      if (!punchAnim || punchAnim.glove !== leftGlove) {
+        leftGlove.position.copy(leftGloveRest);
+        leftGlove.position.y += Math.sin(t * 2.0) * 0.02;
+        leftGlove.lookAt(bagCenter.x, leftGlove.position.y, bagCenter.z);
+      }
+      if (!punchAnim || punchAnim.glove !== rightGlove) {
+        rightGlove.position.copy(rightGloveRest);
+        rightGlove.position.y += Math.sin(t * 2.0 + 1.0) * 0.02;
+        rightGlove.lookAt(bagCenter.x, rightGlove.position.y, bagCenter.z);
+      }
+      if (monitorClickPending) {
+        monitorClickPending = false;
+        triggerPunch();
+      }
+    } else if (mode === "pong-sequence" && pongSeq) {
+      const tr = Math.min(1, Math.max(0, (performance.now() - pongSeq.start) / pongSeq.duration));
+      const e = easeInOutCubic(tr);
+      camera.position.lerpVectors(pongSeq.fromPos, pongSeq.toPos, e);
+      const lk = new THREE.Vector3().lerpVectors(pongSeq.fromLook, pongSeq.toLook, e);
+      camera.lookAt(lk);
+      if (tr >= 1) {
+        pongSeq = null;
+        setMode("pong-view");
+      }
+    } else if (mode === "pong-view") {
+      camera.position.copy(pongShotPos);
+      camera.lookAt(pongShotLook);
+
+      if (!pongDifficultyChosen) {
+        if (monitorClickPending) monitorClickPending = false;
+      } else {
+
+      const serveDelay = 800;
+      if (!pongPlaying && performance.now() - pongServeTimer > serveDelay) {
+        pongPlaying = true;
+      }
+
+      // Player paddle movement via keys
+      if (keys.has("arrowleft") || keys.has("a")) pongPlayerZ -= pongPaddleSpeed * dt;
+      if (keys.has("arrowright") || keys.has("d")) pongPlayerZ += pongPaddleSpeed * dt;
+
+      // Mouse / touch continuous tracking — paddle follows pointer
+      {
+        const tgtZ = -pointer.x * pongHalfZ * 4;
+        pongPlayerZ += (tgtZ - pongPlayerZ) * Math.min(1, dt * 24);
+      }
+      pongPlayerZ = Math.max(-pongHalfZ + 0.14, Math.min(pongHalfZ - 0.14, pongPlayerZ));
+      if (monitorClickPending) monitorClickPending = false;
+
+      // CPU AI
+      if (pongPlaying) {
+        const cpuTarget = pongBallZ;
+        if (pongCpuZ < cpuTarget - 0.04) pongCpuZ += pongCpuSpeed * dt;
+        else if (pongCpuZ > cpuTarget + 0.04) pongCpuZ -= pongCpuSpeed * dt;
+        pongCpuZ = Math.max(-pongHalfZ + 0.14, Math.min(pongHalfZ - 0.14, pongCpuZ));
+      }
+
+      // Ball physics
+      if (pongPlaying) {
+        pongBallX += pongBallVX * dt;
+        pongBallZ += pongBallVZ * dt;
+
+        if (pongBallZ > pongHalfZ - 0.03) { pongBallZ = pongHalfZ - 0.03; pongBallVZ *= -1; }
+        if (pongBallZ < -pongHalfZ + 0.03) { pongBallZ = -pongHalfZ + 0.03; pongBallVZ *= -1; }
+
+        const paddleX = ptW / 2 - 0.3;
+        if (pongBallX > paddleX - 0.08 && pongBallVX > 0) {
+          if (Math.abs(pongBallZ - pongPlayerZ) < 0.2) {
+            pongBallVX *= -1.06;
+            pongBallVZ += (pongBallZ - pongPlayerZ) * 3.5;
+            pongBallX = paddleX - 0.08;
+          }
+        }
+        const cpuPaddleX = -ptW / 2 + 0.3;
+        if (pongBallX < cpuPaddleX + 0.08 && pongBallVX < 0) {
+          if (Math.abs(pongBallZ - pongCpuZ) < 0.2) {
+            pongBallVX *= -1.06;
+            pongBallVZ += (pongBallZ - pongCpuZ) * 3.5;
+            pongBallX = cpuPaddleX + 0.08;
+          }
+        }
+
+        const spd = Math.sqrt(pongBallVX * pongBallVX + pongBallVZ * pongBallVZ);
+        const maxSpd = 6.0;
+        if (spd > maxSpd) { pongBallVX *= maxSpd / spd; pongBallVZ *= maxSpd / spd; }
+
+        if (pongBallX > pongHalfW + 0.2) {
+          pongCpuScore++;
+          pongUpdateHud();
+          pongResetBall(-1);
+        }
+        if (pongBallX < -pongHalfW - 0.2) {
+          pongPlayerScore++;
+          pongUpdateHud();
+          pongResetBall(1);
+        }
+      }
+
+      paddlePlayerGroup.position.set(ptW / 2 - 0.3, 0.16, pongPlayerZ);
+      paddleCpuGroup.position.set(-ptW / 2 + 0.3, 0.16, pongCpuZ);
+      pongBall.position.set(pongBallX, 0.06, pongBallZ);
+
+      } // end pongDifficultyChosen
+
     } else if (mode === "chelsea-sequence" && chelseaSeq) {
       const tr = Math.min(1, Math.max(0, (performance.now() - chelseaSeq.start) / chelseaSeq.duration));
       const e =
@@ -7323,6 +9075,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
           setMode("room");
           yaw = 0;
           pitch = -0.02;
+          setTimeout(showWelcomePrompt, 600);
         }
       }
     } else if (mode === "monitor-enter") {
@@ -7384,7 +9137,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         camera.position.z = lerpTo(camera.position.z, speakerWallPos.z, 0.08);
         camera.lookAt(speakerWallLook.x, speakerWallLook.y, speakerWallLook.z);
       }
-    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego") {
+    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong") {
       if (returnAnim) {
         const tr = Math.min(1, Math.max(0, (performance.now() - returnAnim.start) / returnAnim.duration));
         const e = easeInOutCubic(tr);
@@ -7400,6 +9153,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       }
     } else if (mode === "window-view") {
       camera.lookAt(windowShotOutsideLook.x, windowShotOutsideLook.y, windowShotOutsideLook.z);
+      if (monitorClickPending) {
+        monitorClickPending = false;
+        raycaster.setFromCamera(pointer, camera);
+        const hitCar = carClickable.length > 0 ? raycaster.intersectObjects(carClickable, true) : [];
+        if (hitCar.length > 0) {
+          openCarGame();
+        }
+      }
     } else if (mode === "clock-view") {
       camera.lookAt(clockShotLook.x, clockShotLook.y, clockShotLook.z);
     } else if (mode === "mirror-view") {
