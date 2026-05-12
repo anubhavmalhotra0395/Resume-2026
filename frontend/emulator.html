@@ -8,6 +8,19 @@
 <body>
 <div id="game"></div>
 <script>
+  // Intercept localization fetches that 404 on the CDN so EmulatorJS doesn't crash
+  const _fetch = window.fetch;
+  window.fetch = function() {
+    const url = arguments[0];
+    if (typeof url === 'string' && url.includes('/localization/')) {
+      return _fetch.apply(this, arguments).then(function(r) {
+        if (!r.ok) return new Response('{}', {status:200, headers:{'Content-Type':'application/json'}});
+        return r;
+      });
+    }
+    return _fetch.apply(this, arguments);
+  };
+
   const params = new URLSearchParams(window.location.search);
   EJS_player = '#game';
   EJS_core = params.get('core') || 'gb';
