@@ -6520,7 +6520,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     document.getElementById('pong-end-back').addEventListener('click', () => {
       dlg.style.display = 'none';
       pongGameOver = false;
+      pongSeq = null;
+      pongPlaying = false;
       setMode('return-pong');
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
     });
   }
 
