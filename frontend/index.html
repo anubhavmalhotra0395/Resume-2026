@@ -508,6 +508,8 @@
     body.gameboy-view .gameboy-overlay { display: flex; }
     .gameboy-menu {
       width: min(96vw, 480px);
+      max-height: min(92vh, 680px);
+      overflow-y: auto;
       border: 4px solid #1e293b;
       border-radius: 14px;
       background: linear-gradient(180deg, #f0fdf4 0%, #e0f2e9 100%);
@@ -786,11 +788,8 @@
     body.gameboy-view .room-guide,
     body.gameboy-sequence .room-guide,
     body.npc-view .room-guide,
-    body.npc-sequence .room-guide,
-    body.fishtank-view .room-guide,
-    body.fishtank-sequence .room-guide {
-      display: none;
-    }
+    body.npc-sequence .room-guide { display: none !important; }
+
     .room-guide-toggle {
       flex-shrink: 0;
       width: 34px;
@@ -1029,6 +1028,8 @@
       transform: translateX(-50%);
       z-index: 40;
       gap: 8px;
+      align-items: center;
+      justify-content: center;
     }
     .speaker-player-controls {
       display: none;
@@ -1049,6 +1050,7 @@
       text-overflow: ellipsis;
     }
     body.speaker-mode .speaker-player-controls { display: inline-flex; }
+    body.room-mode .app-overlay-toolbar,
     body.monitor-mode .app-overlay-toolbar,
     body.speaker-mode .app-overlay-toolbar,
     body.chelsea-mode .app-overlay-toolbar,
@@ -1072,9 +1074,8 @@
     body.gameboy-view .app-overlay-toolbar,
     body.gameboy-sequence .app-overlay-toolbar,
     body.npc-view .app-overlay-toolbar,
-    body.npc-sequence .app-overlay-toolbar,
-    body.fishtank-view .app-overlay-toolbar,
-    body.fishtank-sequence .app-overlay-toolbar { display: inline-flex; }
+    body.npc-sequence .app-overlay-toolbar { display: flex; }
+
     .retro-btn {
       border: 1px solid #334155;
       background: #dbe2ea;
@@ -1107,9 +1108,8 @@
     body.gameboy-view #enter-monitor-btn,
     body.gameboy-sequence #enter-monitor-btn,
     body.npc-view #enter-monitor-btn,
-    body.npc-sequence #enter-monitor-btn,
-    body.fishtank-view #enter-monitor-btn,
-    body.fishtank-sequence #enter-monitor-btn { display: none; }
+    body.npc-sequence #enter-monitor-btn { display: none; }
+
     body.room-mode #back-room-btn { display: none; }
     body.room-mode.chelsea-sequence #back-room-btn,
     body.chelsea-mode #back-room-btn,
@@ -1132,9 +1132,8 @@
     body.gameboy-view #back-room-btn,
     body.gameboy-sequence #back-room-btn,
     body.npc-view #back-room-btn,
-    body.npc-sequence #back-room-btn,
-    body.fishtank-view #back-room-btn,
-    body.fishtank-sequence #back-room-btn { display: inline-block; }
+    body.npc-sequence #back-room-btn { display: block; }
+
     .mobile-controls {
       position: fixed;
       inset: 0;
@@ -2608,8 +2607,7 @@
       body.gameboy-sequence .mobile-controls,
       body.npc-view .mobile-controls,
       body.npc-sequence .mobile-controls,
-      body.fishtank-view .mobile-controls,
-      body.fishtank-sequence .mobile-controls { display: none; }
+      
     }
   </style>
 </head>
@@ -2662,7 +2660,6 @@
         <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
         <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
         <li><strong>Robot Guide</strong> — cute robot that walks around the room. Click it to ask questions — it'll tell you about the room, controls, games, and the owner!</li>
-        <li><strong>Fish tank</strong> — glass aquarium between the ping pong table and boxing bag. Watch the fish swim and bubbles rise!</li>
         <li><strong>Coffee table</strong> — small wooden table to the right of the couch, near the door corner.</li>
         <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake, Adjustris, Dangan, uCity) or upload your own ROM!</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
@@ -2740,6 +2737,36 @@
       </button>
       <button class="gameboy-game-btn" data-rom="assets/roms/ucity.gbc" data-name="uCity" data-core="gbc">
         <span>uCity</span><span class="game-tag">Sim</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/tobu.gb" data-name="Tobu Tobu Girl">
+        <span>Tobu Tobu Girl</span><span class="game-tag">Platformer</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/gbpong.gb" data-name="Pong">
+        <span>Pong</span><span class="game-tag">Classic</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/spaceinvaders.gb" data-name="Space Invaders">
+        <span>Space Invaders</span><span class="game-tag">Shooter</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/catmario.gbc" data-name="Cat Mario" data-core="gbc">
+        <span>Cat Mario</span><span class="game-tag">Platformer</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/neoracer.gbc" data-name="Neo Racer" data-core="gbc">
+        <span>Neo Racer</span><span class="game-tag">Racing</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/bounce.gb" data-name="Bounce!">
+        <span>Bounce!</span><span class="game-tag">Arcade</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/roadhogfrog.gb" data-name="Roadhog Frog">
+        <span>Roadhog Frog</span><span class="game-tag">Frogger</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/minefield.gbc" data-name="Minefield" data-core="gbc">
+        <span>Minefield</span><span class="game-tag">Puzzle</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/jumpkid.gba" data-name="Jump Kid" data-core="gba">
+        <span>Jump Kid</span><span class="game-tag">Platformer</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/gerbilspace.gba" data-name="Gerbil Space Program" data-core="gba">
+        <span>Gerbil Space Program</span><span class="game-tag">Adventure</span>
       </button>
     </div>
     <button class="gameboy-upload-btn" id="gameboy-upload-btn">Upload Your Own ROM (.gb / .gba)</button>
@@ -5487,6 +5514,13 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.2;
   room.add(floor);
+  const ceiling = new THREE.Mesh(
+    new THREE.PlaneGeometry(20, 20),
+    new THREE.MeshStandardMaterial({ color: 0x87CEEB, roughness: 0.9, metalness: 0.0 })
+  );
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.y = 7.8;
+  room.add(ceiling);
   // Back wall (behind monitor): animated cloudy texture with hover-reactive drift.
   const backWallCanvas = document.createElement("canvas");
   backWallCanvas.width = 1024;
@@ -6231,8 +6265,8 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
 
   // Wall clock (round analog style)
   const clockCanvas = document.createElement("canvas");
-  clockCanvas.width = 512;
-  clockCanvas.height = 512;
+  clockCanvas.width = 1024;
+  clockCanvas.height = 1024;
   const clockCtx = clockCanvas.getContext("2d");
   const clockTex = new THREE.CanvasTexture(clockCanvas);
   const wallClockGroup = new THREE.Group();
@@ -6337,25 +6371,25 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     const now = new Date();
     const cx = clockCanvas.width / 2;
     const cy = clockCanvas.height / 2;
-    const r = 222;
+    const r = 444;
     clockCtx.clearRect(0, 0, clockCanvas.width, clockCanvas.height);
     clockCtx.fillStyle = "#f8fafc";
     clockCtx.beginPath();
     clockCtx.arc(cx, cy, r, 0, Math.PI * 2);
     clockCtx.fill();
     clockCtx.strokeStyle = "#1f2937";
-    clockCtx.lineWidth = 14;
+    clockCtx.lineWidth = 28;
     clockCtx.stroke();
     for (let i = 0; i < 60; i++) {
       const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
-      const len = i % 5 === 0 ? 22 : 10;
-      const inner = r - len - 10;
-      const outer = r - 10;
+      const len = i % 5 === 0 ? 44 : 20;
+      const inner = r - len - 20;
+      const outer = r - 20;
       clockCtx.beginPath();
       clockCtx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
       clockCtx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
       clockCtx.strokeStyle = i % 5 === 0 ? "#111827" : "#64748b";
-      clockCtx.lineWidth = i % 5 === 0 ? 5 : 2;
+      clockCtx.lineWidth = i % 5 === 0 ? 10 : 4;
       clockCtx.stroke();
     }
     const sec = now.getSeconds() + now.getMilliseconds() / 1000;
@@ -6373,11 +6407,11 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       clockCtx.lineCap = "round";
       clockCtx.stroke();
     };
-    drawHand(hrA, 112, 8, "#0f172a");
-    drawHand(minA, 156, 6, "#1e293b");
-    drawHand(secA, 178, 3, "#b91c1c");
+    drawHand(hrA, 224, 16, "#0f172a");
+    drawHand(minA, 312, 12, "#1e293b");
+    drawHand(secA, 356, 6, "#b91c1c");
     clockCtx.beginPath();
-    clockCtx.arc(cx, cy, 8, 0, Math.PI * 2);
+    clockCtx.arc(cx, cy, 16, 0, Math.PI * 2);
     clockCtx.fillStyle = "#111827";
     clockCtx.fill();
     clockTex.needsUpdate = true;
@@ -6446,7 +6480,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const buddhaShotPos = new THREE.Vector3(6.95, 2.0, 1.2);
   const buddhaShotLook = new THREE.Vector3(9.86, 2.25, 3.15);
   // Couch cinematic target: "sitting on couch" view toward room.
-  const couchShotPos = new THREE.Vector3(8.65, -0.18, 3.2);
+  const couchShotPos = new THREE.Vector3(8.35, -0.18, 3.2);
   const couchShotLook = new THREE.Vector3(0.85, 0.32, -0.72);
   // Lego focus shot for easy mini-game interaction.
   // Shelf at ~(8.15, 0.15, -5.86); camera in-room (+Z) centered on shelf so the stand fills the frame.
@@ -6553,7 +6587,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const couchArmR = couchArmL.clone();
   couchArmR.position.x = 1.52;
   couch.add(couchArmR);
-  couch.position.set(9.0, 0, 3.15);
+  couch.position.set(8.7, 0, 3.15);
   couch.rotation.y = -Math.PI / 2;
   room.add(couch);
 
@@ -6571,7 +6605,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     room.add(g);
     return g;
   }
-  const coffeeSideTable = addSideTable(9.1, 1.28);
+  const coffeeSideTable = addSideTable(8.8, 1.28);
 
   const coffeeMaker = new THREE.Group();
   const coffeeBase = new THREE.Mesh(
@@ -6598,7 +6632,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   );
   coffeeCup.position.set(0.28, -0.37, 0);
   coffeeMaker.add(coffeeCup);
-  coffeeMaker.position.set(9.1, 0.02, 1.28);
+  coffeeMaker.position.set(8.8, 0.02, 1.28);
   room.add(coffeeMaker);
   const couchClickable = [couchSeat, couchBack, couchArmL, couchArmR];
   const coffeeMakerClickable = [coffeeBase, coffeeBody, coffeeTop, coffeeCup];
@@ -6696,199 +6730,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   room.add(bagGroup);
   const bagClickable = [bagBody, bagTopCap, bagBottomCap];
 
-  // ── Fish Tank ──
-  const fishTank = new THREE.Group();
-  const tankW = 1.8, tankH = 1.0, tankD = 0.7;
-  const glassMat = new THREE.MeshPhysicalMaterial({
-    color: 0x88ccee, transparent: true, opacity: 0.18,
-    roughness: 0.05, metalness: 0.0, transmission: 0.85,
-    thickness: 0.02, side: THREE.DoubleSide,
-  });
-  const tankFront = new THREE.Mesh(new THREE.PlaneGeometry(tankW, tankH), glassMat);
-  tankFront.position.set(0, 0, tankD / 2);
-  fishTank.add(tankFront);
-  const tankBack = new THREE.Mesh(new THREE.PlaneGeometry(tankW, tankH), glassMat);
-  tankBack.position.set(0, 0, -tankD / 2);
-  tankBack.rotation.y = Math.PI;
-  fishTank.add(tankBack);
-  const tankLeft = new THREE.Mesh(new THREE.PlaneGeometry(tankD, tankH), glassMat);
-  tankLeft.position.set(-tankW / 2, 0, 0);
-  tankLeft.rotation.y = Math.PI / 2;
-  fishTank.add(tankLeft);
-  const tankRight = new THREE.Mesh(new THREE.PlaneGeometry(tankD, tankH), glassMat);
-  tankRight.position.set(tankW / 2, 0, 0);
-  tankRight.rotation.y = -Math.PI / 2;
-  fishTank.add(tankRight);
-  const tankBottom = new THREE.Mesh(
-    new THREE.BoxGeometry(tankW, 0.04, tankD),
-    new THREE.MeshStandardMaterial({ color: 0xd4a76a, roughness: 0.9 })
-  );
-  tankBottom.position.y = -tankH / 2;
-  fishTank.add(tankBottom);
-  const tankFrame = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.5, metalness: 0.3 });
-  const frameParts = [
-    [tankW + 0.06, 0.04, 0.04, 0, tankH / 2, 0],
-    [tankW + 0.06, 0.04, 0.04, 0, -tankH / 2, 0],
-    [0.04, tankH, 0.04, -tankW / 2, 0, tankD / 2],
-    [0.04, tankH, 0.04, tankW / 2, 0, tankD / 2],
-    [0.04, tankH, 0.04, -tankW / 2, 0, -tankD / 2],
-    [0.04, tankH, 0.04, tankW / 2, 0, -tankD / 2],
-  ];
-  frameParts.forEach(([w, h, d, x, y, z]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), tankFrame);
-    f.position.set(x, y, z);
-    fishTank.add(f);
-  });
-  const waterMat = new THREE.MeshPhysicalMaterial({
-    color: 0x2299bb, transparent: true, opacity: 0.35,
-    roughness: 0.1, metalness: 0.0, transmission: 0.6,
-    emissive: 0x115577, emissiveIntensity: 0.15,
-  });
-  const waterMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(tankW - 0.04, tankH - 0.08, tankD - 0.04),
-    waterMat
-  );
-  waterMesh.position.y = 0.02;
-  fishTank.add(waterMesh);
-
-  const sandMat = new THREE.MeshStandardMaterial({ color: 0xe8d5a3, roughness: 0.95 });
-  const sand = new THREE.Mesh(new THREE.BoxGeometry(tankW - 0.06, 0.06, tankD - 0.06), sandMat);
-  sand.position.y = -tankH / 2 + 0.05;
-  fishTank.add(sand);
-
-  const plantColors = [0x2d8a4e, 0x1b6b3a, 0x3da663];
-  for (let pi = 0; pi < 5; pi++) {
-    const ph = 0.15 + Math.random() * 0.25;
-    const plant = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.015, 0.025, ph, 6),
-      new THREE.MeshStandardMaterial({ color: plantColors[pi % 3], roughness: 0.8 })
-    );
-    plant.position.set(
-      -tankW / 2 + 0.15 + Math.random() * (tankW - 0.3),
-      -tankH / 2 + 0.05 + ph / 2,
-      -tankD / 2 + 0.1 + Math.random() * (tankD - 0.2)
-    );
-    plant.rotation.x = (Math.random() - 0.5) * 0.3;
-    plant.rotation.z = (Math.random() - 0.5) * 0.3;
-    fishTank.add(plant);
-  }
-
-  const fishData = [];
-  const fishColors = [0xff6633, 0xffcc00, 0x3399ff, 0xff3366, 0x66ff99];
-  for (let fi = 0; fi < 5; fi++) {
-    const fishGroup = new THREE.Group();
-    const bodyGeo = new THREE.SphereGeometry(0.06, 8, 6);
-    bodyGeo.scale(1.6, 0.9, 0.8);
-    const bodyMesh = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({
-      color: fishColors[fi], roughness: 0.4, metalness: 0.15
-    }));
-    fishGroup.add(bodyMesh);
-    const tailGeo = new THREE.ConeGeometry(0.04, 0.08, 4);
-    const tailMesh = new THREE.Mesh(tailGeo, new THREE.MeshStandardMaterial({
-      color: fishColors[fi], roughness: 0.5
-    }));
-    tailMesh.rotation.z = Math.PI / 2;
-    tailMesh.position.x = -0.1;
-    fishGroup.add(tailMesh);
-    const eyeGeo = new THREE.SphereGeometry(0.012, 6, 4);
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeL.position.set(0.06, 0.015, 0.03);
-    fishGroup.add(eyeL);
-    const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeR.position.set(0.06, 0.015, -0.03);
-    fishGroup.add(eyeR);
-
-    const cx = (Math.random() - 0.5) * (tankW - 0.4);
-    const cy = -tankH / 2 + 0.15 + Math.random() * (tankH - 0.35);
-    const cz = (Math.random() - 0.5) * (tankD - 0.2);
-    fishGroup.position.set(cx, cy, cz);
-    fishGroup.scale.setScalar(0.6 + Math.random() * 0.5);
-    fishTank.add(fishGroup);
-    fishData.push({
-      mesh: fishGroup, tail: tailMesh,
-      cx, cy, cz,
-      rx: 0.3 + Math.random() * 0.3,
-      ry: 0.08 + Math.random() * 0.06,
-      rz: 0.1 + Math.random() * 0.08,
-      sx: 0.4 + Math.random() * 0.6,
-      sy: 0.3 + Math.random() * 0.3,
-      sz: 0.2 + Math.random() * 0.3,
-      phase: Math.random() * Math.PI * 2,
-    });
-  }
-
-  const bubbleGeo = new THREE.SphereGeometry(0.015, 6, 4);
-  const bubbleMat = new THREE.MeshPhysicalMaterial({
-    color: 0xaaddff, transparent: true, opacity: 0.4,
-    roughness: 0.0, metalness: 0.0, transmission: 0.9,
-  });
-  const bubbles = [];
-  for (let bi = 0; bi < 15; bi++) {
-    const b = new THREE.Mesh(bubbleGeo, bubbleMat);
-    b.position.set(
-      (Math.random() - 0.5) * (tankW - 0.3),
-      -tankH / 2 + Math.random() * tankH,
-      (Math.random() - 0.5) * (tankD - 0.2)
-    );
-    b.scale.setScalar(0.5 + Math.random() * 1.0);
-    fishTank.add(b);
-    bubbles.push({ mesh: b, speed: 0.08 + Math.random() * 0.12, wobble: Math.random() * Math.PI * 2 });
-  }
-
-  const tankStand = new THREE.Group();
-  const standTop = new THREE.Mesh(
-    new THREE.BoxGeometry(tankW + 0.1, 0.05, tankD + 0.1),
-    new THREE.MeshStandardMaterial({ color: 0x2c1810, roughness: 0.75, metalness: 0.1 })
-  );
-  standTop.position.y = -tankH / 2 - 0.025;
-  tankStand.add(standTop);
-  const legGeo = new THREE.BoxGeometry(0.06, 0.7, 0.06);
-  const tankLegMat = new THREE.MeshStandardMaterial({ color: 0x2c1810, roughness: 0.8, metalness: 0.1 });
-  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
-    const leg = new THREE.Mesh(legGeo, tankLegMat);
-    leg.position.set(sx * (tankW / 2 - 0.05), -tankH / 2 - 0.05 - 0.35, sz * (tankD / 2 - 0.05));
-    tankStand.add(leg);
-  });
-  fishTank.add(tankStand);
-
-  const tankLight = new THREE.PointLight(0x88ddff, 0.4, 3);
-  tankLight.position.set(0, tankH / 2 + 0.1, 0);
-  fishTank.add(tankLight);
-
-  fishTank.position.set(-8.8, 0.05, 7.8);
-  fishTank.rotation.y = Math.PI / 2;
-  room.add(fishTank);
-
-  const fishTankClickable = new THREE.Mesh(
-    new THREE.BoxGeometry(tankW + 0.2, tankH + 0.2, tankD + 0.2),
-    new THREE.MeshBasicMaterial({ visible: false })
-  );
-  fishTankClickable.position.copy(fishTank.position);
-  room.add(fishTankClickable);
-
-  function updateFishTank(t, dt) {
-    fishData.forEach(fd => {
-      const p = fd.phase + t;
-      fd.mesh.position.x = fd.cx + Math.sin(p * fd.sx) * fd.rx;
-      fd.mesh.position.y = fd.cy + Math.sin(p * fd.sy * 1.3) * fd.ry;
-      fd.mesh.position.z = fd.cz + Math.cos(p * fd.sz) * fd.rz;
-      const dx = Math.cos(p * fd.sx) * fd.rx * fd.sx;
-      const dz = -Math.sin(p * fd.sz) * fd.rz * fd.sz;
-      fd.mesh.rotation.y = Math.atan2(dx, dz);
-      fd.tail.rotation.y = Math.sin(t * 8 + fd.phase) * 0.4;
-    });
-    bubbles.forEach(bd => {
-      bd.mesh.position.y += bd.speed * dt;
-      bd.mesh.position.x += Math.sin(t * 3 + bd.wobble) * 0.002;
-      if (bd.mesh.position.y > tankH / 2 - 0.05) {
-        bd.mesh.position.y = -tankH / 2 + 0.05;
-        bd.mesh.position.x = (Math.random() - 0.5) * (tankW - 0.3);
-        bd.mesh.position.z = (Math.random() - 0.5) * (tankD - 0.2);
-      }
-    });
-  }
-
   // ── Ping Pong Table (bigger, top-down view, flat paddles) ────────
   const pongGroup = new THREE.Group();
   const pongClickable = [];
@@ -6969,14 +6810,14 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   pongBall.position.set(0, 0.06, 0);
   pongGroup.add(pongBall);
 
-  pongGroup.position.set(0.5, -0.4, 6.8);
+  pongGroup.position.set(-7.5, -0.4, 7.5);
   room.add(pongGroup);
 
   const pongLabelMesh = null;
 
   // Side-angle camera — pulled back so both paddles are visible
-  const pongShotPos = new THREE.Vector3(3.2, 1.5, 6.8);
-  const pongShotLook = new THREE.Vector3(0.0, -0.35, 6.8);
+  const pongShotPos = new THREE.Vector3(-3.8, 2.0, 7.5);
+  const pongShotLook = new THREE.Vector3(-7.5, -0.35, 7.5);
 
   let pongSeq = null;
   let pongPlayerScore = 0;
@@ -7178,7 +7019,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     new THREE.MeshBasicMaterial({ map: gbScreenTex })
   );
   gbScreen.rotation.x = -Math.PI / 2;
-  gbScreen.position.set(0, 0.038, -0.1);
+  gbScreen.position.set(0, 0.042, -0.1);
   gameboyGroup.add(gbScreen);
   const gbDpad = new THREE.Group();
   const gbDH = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.012, 0.035), new THREE.MeshStandardMaterial({ color: 0x1a1a2e }));
@@ -7224,10 +7065,10 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     leg.position.set(lx, -0.96, lz);
     coffeeTable.add(leg);
   });
-  coffeeTable.position.set(9.0, 0, 5.8);
+  coffeeTable.position.set(8.7, 0, 5.8);
   room.add(coffeeTable);
 
-  gameboyGroup.position.set(9.0, -0.66, 5.8);
+  gameboyGroup.position.set(8.7, -0.66, 5.8);
   room.add(gameboyGroup);
 
   const gameboyClickable = new THREE.Mesh(
@@ -7238,14 +7079,18 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   gameboyClickable.position.y += 0.05;
   room.add(gameboyClickable);
 
-  const gbShotPos = new THREE.Vector3(9.0, 0.1, 6.7);
-  const gbShotLook = new THREE.Vector3(9.0, -0.68, 5.8);
+  const gbShotPos = new THREE.Vector3(8.7, 0.1, 6.7);
+  const gbShotLook = new THREE.Vector3(8.7, -0.68, 5.8);
   let gbSeq = null;
 
   // Gameboy screen animation
   let gbScreenT = 0;
+  let gbScreenLastDot = -1;
   function updateGbScreen(t) {
     gbScreenT += t;
+    const dotCount = Math.floor(gbScreenT * 2) % 4;
+    if (dotCount === gbScreenLastDot) return;
+    gbScreenLastDot = dotCount;
     gbScreenCtx.fillStyle = '#9bbc0f';
     gbScreenCtx.fillRect(0, 0, 160, 144);
     gbScreenCtx.fillStyle = '#0f380f';
@@ -7254,7 +7099,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     gbScreenCtx.fillText('GAME BOY', 80, 50);
     gbScreenCtx.font = '12px monospace';
     gbScreenCtx.fillText('Click to play!', 80, 80);
-    const dots = '.'.repeat(Math.floor(gbScreenT * 2) % 4);
+    const dots = '.'.repeat(dotCount);
     gbScreenCtx.fillText('▶ ▶ ▶ ' + dots, 80, 110);
     gbScreenTex.needsUpdate = true;
   }
@@ -7342,9 +7187,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   let npcEmotePlaying = false;
   let npcEmoteTimer = 0;
   let npcSeq = null;
-  let fishTankSeq = null;
-  const fishTankShotPos = new THREE.Vector3(-7.5, 0.4, 8.4);
-  const fishTankShotLook = new THREE.Vector3(-8.8, 0.05, 7.8);
   const npcFloorY = -1.2;
 
   const npcWaypoints = [
@@ -7377,16 +7219,15 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const npcSpeed = 1.0;
 
   const npcCircleObs = [
-    { x: 9.0, z: 3.15, r: 2.4 },
-    { x: 9.1, z: 1.28, r: 0.7 },
-    { x: 9.0, z: 5.8, r: 0.9 },
-    { x: 0.5, z: 6.8, r: 2.4 },
+    { x: 8.7, z: 3.15, r: 2.4 },
+    { x: 8.8, z: 1.28, r: 0.7 },
+    { x: 8.7, z: 5.8, r: 0.9 },
+    { x: -7.5, z: 7.5, r: 2.4 },
     { x: -8.8, z: 5.0, r: 1.2 },
     { x: 8.15, z: -5.86, r: 1.0 },
     { x: 6.35, z: -5.35, r: 0.8 },
     { x: 0.9, z: 0.95, r: 2.0 },
     { x: -4.6, z: 2.15, r: 1.5 },
-    { x: -8.8, z: 7.8, r: 1.5 },
   ];
   const npcBoxObs = [
     { cx: 0, cz: -1.2, hw: 4.5, hd: 2.3 },
@@ -8928,10 +8769,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       npcSeq = null;
       closeNpcDialog();
     }
-    if (next !== "fishtank-view" && next !== "fishtank-sequence") {
-      document.body.classList.remove("fishtank-view", "fishtank-sequence");
-      fishTankSeq = null;
-    }
     if (next !== "window-view" && next !== "window-sequence") {
       document.body.classList.remove("window-view", "window-sequence");
       windowSeq = null;
@@ -9254,25 +9091,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       npcSeq = null;
       closeNpcDialog();
       document.body.classList.remove("npc-view", "npc-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
-      document.body.classList.add("room-mode");
-    } else if (next === "fishtank-sequence") {
-      fishTankSeq = {
-        start: performance.now(),
-        duration: 900,
-        fromPos: camera.position.clone(),
-        fromLook: getCurrentLookPoint(),
-        toPos: fishTankShotPos.clone(),
-        toLook: fishTankShotLook.clone(),
-      };
-      document.body.classList.remove("room-mode");
-      document.body.classList.add("fishtank-sequence");
-    } else if (next === "fishtank-view") {
-      fishTankSeq = null;
-      document.body.classList.remove("fishtank-sequence", "room-mode");
-      document.body.classList.add("fishtank-view");
-    } else if (next === "return-fishtank") {
-      fishTankSeq = null;
-      document.body.classList.remove("fishtank-view", "fishtank-sequence");
       document.body.classList.add("room-mode");
     } else if (next === "chelsea") {
       chelseaSeq = null;
@@ -9658,12 +9476,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
       return;
     }
-    if (mode === "fishtank-view" || mode === "fishtank-sequence") {
-      fishTankSeq = null;
-      setMode("return-fishtank");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
-      return;
-    }
     if (mode === "chelsea" || mode === "chelsea-sequence") {
       chelseaSeq = null;
       setMode("return-chelsea");
@@ -9876,7 +9688,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       }
     }
     if (mode === "room" || mode === "gameboy-view" || mode === "gameboy-sequence") updateGbScreen(dt);
-    if (mode === "room" || mode === "couch-view" || mode === "speaker" || mode === "fishtank-view" || mode === "fishtank-sequence") updateFishTank(t, dt);
     updateNpc(dt);
     if (npcClickable && npcModel) {
       npcClickable.position.set(npcModel.position.x, npcModel.position.y + 0.5, npcModel.position.z);
@@ -10087,12 +9898,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
             setMode("buddha-sequence");
           } else {
           const hitWindow = raycaster.intersectObjects(windowClickable, false);
-          const hitCar = carClickable.length > 0 ? raycaster.intersectObjects(carClickable, false) : [];
-          const winDist = hitWindow.length > 0 ? hitWindow[0].distance : Infinity;
-          const carDist = hitCar.length > 0 ? hitCar[0].distance : Infinity;
-          if (hitCar.length > 0 && carDist < winDist) {
-            openCarGame();
-          } else if (hitWindow.length > 0) {
+          if (hitWindow.length > 0) {
             setMode("window-sequence");
           } else {
           const hitDoor = raycaster.intersectObjects(doorClickable, false);
@@ -10139,17 +9945,12 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
               if (hitNpc.length > 0) {
                 setMode("npc-sequence");
               } else {
-              const hitTank = raycaster.intersectObject(fishTankClickable, false);
-              if (hitTank.length > 0) {
-                setMode("fishtank-sequence");
-              } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
                 setMode("monitor-enter");
               } else {
                 const hitSpeaker = raycaster.intersectObjects(speakerClickable, false);
                 if (hitSpeaker.length > 0) setMode("speaker");
-              }
               }
               }
               }
@@ -10321,19 +10122,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       _tmpLook.copy(npcModel.position);
       _tmpLook.y += 0.0;
       camera.lookAt(_tmpLook);
-    } else if (mode === "fishtank-sequence" && fishTankSeq) {
-      const tr = Math.min(1, Math.max(0, (performance.now() - fishTankSeq.start) / fishTankSeq.duration));
-      const e = easeInOutCubic(tr);
-      camera.position.lerpVectors(fishTankSeq.fromPos, fishTankSeq.toPos, e);
-      const lk = _tmpLook.lerpVectors(fishTankSeq.fromLook, fishTankSeq.toLook, e);
-      camera.lookAt(lk);
-      if (tr >= 1) {
-        fishTankSeq = null;
-        setMode("fishtank-view");
-      }
-    } else if (mode === "fishtank-view") {
-      camera.position.copy(fishTankShotPos);
-      camera.lookAt(fishTankShotLook);
     } else if (mode === "pong-sequence" && pongSeq) {
       const tr = Math.min(1, Math.max(0, (performance.now() - pongSeq.start) / pongSeq.duration));
       const e = easeInOutCubic(tr);
@@ -10546,7 +10334,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
         camera.position.z = lerpTo(camera.position.z, speakerWallPos.z, 0.08);
         camera.lookAt(speakerWallLook.x, speakerWallLook.y, speakerWallLook.z);
       }
-    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong" || mode === "return-gameboy" || mode === "return-npc" || mode === "return-fishtank") {
+    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong" || mode === "return-gameboy" || mode === "return-npc") {
       if (returnAnim) {
         const tr = Math.min(1, Math.max(0, (performance.now() - returnAnim.start) / returnAnim.duration));
         const e = easeInOutCubic(tr);
