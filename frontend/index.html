@@ -493,6 +493,129 @@
     }
     body.pong-view .pong-hud { display: block; }
 
+    /* Gameboy emulator overlay */
+    .gameboy-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(10, 15, 20, 0.92);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: "VT323", monospace;
+    }
+    body.gameboy-view .gameboy-overlay { display: flex; }
+    .gameboy-menu {
+      width: min(96vw, 480px);
+      border: 4px solid #1e293b;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #f0fdf4 0%, #e0f2e9 100%);
+      padding: 22px 20px 18px;
+      box-shadow: 0 8px 0 #334155, 0 18px 40px rgba(0,0,0,0.35);
+      text-align: center;
+    }
+    .gameboy-menu h2 {
+      font-size: 28px;
+      color: #0f172a;
+      margin: 0 0 6px;
+    }
+    .gameboy-menu p {
+      font-size: 18px;
+      color: #334155;
+      margin: 0 0 16px;
+    }
+    .gameboy-game-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .gameboy-game-btn {
+      border: 3px solid #1e293b;
+      border-radius: 8px;
+      font-family: "VT323", monospace;
+      font-size: 22px;
+      padding: 12px 16px;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #059669;
+      background: linear-gradient(180deg, #34d399, #10b981);
+      color: #022c22;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 60ms;
+    }
+    .gameboy-game-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #059669; }
+    .gameboy-game-btn .game-tag {
+      font-size: 14px;
+      opacity: 0.65;
+    }
+    .gameboy-upload-btn {
+      border: 3px dashed #94a3b8;
+      border-radius: 8px;
+      font-family: "VT323", monospace;
+      font-size: 20px;
+      padding: 12px 16px;
+      cursor: pointer;
+      background: rgba(241,245,249,0.6);
+      color: #475569;
+      width: 100%;
+      transition: border-color 150ms;
+    }
+    .gameboy-upload-btn:hover { border-color: #10b981; color: #059669; }
+    .gameboy-back-btn {
+      border: 3px solid #1e293b;
+      border-radius: 8px;
+      font-family: "VT323", monospace;
+      font-size: 20px;
+      padding: 8px 22px;
+      background: linear-gradient(180deg, #f1f5f9, #e2e8f0);
+      color: #0f172a;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #94a3b8;
+      margin-top: 8px;
+    }
+    .gameboy-emu-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 201;
+      background: #0a0a0a;
+      display: none;
+      flex-direction: column;
+    }
+    .gameboy-emu-wrap.on { display: flex; }
+    .gameboy-emu-wrap iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+    }
+    .gameboy-emu-toolbar {
+      height: 44px;
+      background: #111;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 12px;
+    }
+    .gameboy-emu-toolbar button {
+      border: 2px solid #334155;
+      border-radius: 6px;
+      font-family: "VT323", monospace;
+      font-size: 18px;
+      padding: 4px 14px;
+      background: #1e293b;
+      color: #e2e8f0;
+      cursor: pointer;
+    }
+    .gameboy-emu-toolbar button:hover { background: #334155; }
+    .gameboy-emu-toolbar .emu-title {
+      font-family: "VT323", monospace;
+      font-size: 18px;
+      color: #94a3b8;
+      flex: 1;
+    }
+
     body.monitor-mode .app-wrapper {
       opacity: 1;
       pointer-events: auto;
@@ -659,7 +782,9 @@
     body.bag-view .room-guide,
     body.bag-sequence .room-guide,
     body.pong-view .room-guide,
-    body.pong-sequence .room-guide {
+    body.pong-sequence .room-guide,
+    body.gameboy-view .room-guide,
+    body.gameboy-sequence .room-guide {
       display: none;
     }
     .room-guide-toggle {
@@ -799,7 +924,9 @@
     body.bag-view .app-overlay-toolbar,
     body.bag-sequence .app-overlay-toolbar,
     body.pong-view .app-overlay-toolbar,
-    body.pong-sequence .app-overlay-toolbar { display: inline-flex; }
+    body.pong-sequence .app-overlay-toolbar,
+    body.gameboy-view .app-overlay-toolbar,
+    body.gameboy-sequence .app-overlay-toolbar { display: inline-flex; }
     .retro-btn {
       border: 1px solid #334155;
       background: #dbe2ea;
@@ -828,7 +955,9 @@
     body.bag-view #enter-monitor-btn,
     body.bag-sequence #enter-monitor-btn,
     body.pong-view #enter-monitor-btn,
-    body.pong-sequence #enter-monitor-btn { display: none; }
+    body.pong-sequence #enter-monitor-btn,
+    body.gameboy-view #enter-monitor-btn,
+    body.gameboy-sequence #enter-monitor-btn { display: none; }
     body.room-mode #back-room-btn { display: none; }
     body.room-mode.chelsea-sequence #back-room-btn,
     body.chelsea-mode #back-room-btn,
@@ -847,7 +976,9 @@
     body.bag-view #back-room-btn,
     body.bag-sequence #back-room-btn,
     body.pong-view #back-room-btn,
-    body.pong-sequence #back-room-btn { display: inline-block; }
+    body.pong-sequence #back-room-btn,
+    body.gameboy-view #back-room-btn,
+    body.gameboy-sequence #back-room-btn { display: inline-block; }
     .mobile-controls {
       position: fixed;
       inset: 0;
@@ -2316,7 +2447,9 @@
       body.pong-view .mobile-controls,
       body.pong-sequence .mobile-controls,
       body.bag-view .mobile-controls,
-      body.bag-sequence .mobile-controls { display: none; }
+      body.bag-sequence .mobile-controls,
+      body.gameboy-view .mobile-controls,
+      body.gameboy-sequence .mobile-controls { display: none; }
     }
   </style>
 </head>
@@ -2368,6 +2501,7 @@
         <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
         <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
         <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
+        <li><strong>Game Boy</strong> — on the side table near the couch. Click to open the emulator, pick a game (2048, Flappy Bird, Snake) or upload your own ROM!</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
         <li><strong>Walls &amp; floor</strong> — granite-style floor. Front wall: animated water, hover ripples. Behind the monitor: sky and clouds, hover drifts clouds. TV wall and quote wall: flowing waves, hover reacts.</li>
         <li><strong>Car</strong> — Moskvich 412 in the garage. Click for Road Rush — a pseudo-3D racing game! Arrow keys or WASD to steer and accelerate. Touch controls on mobile.</li>
@@ -2402,6 +2536,38 @@
   </div>
 </div>
 <div class="pong-hud" id="pong-hud">YOU 0 — 0 Anubhav Malhotra</div>
+
+<div class="gameboy-overlay" id="gameboy-overlay">
+  <div class="gameboy-menu" id="gameboy-menu">
+    <h2>GAME BOY</h2>
+    <p>Select a game to play</p>
+    <div class="gameboy-game-list" id="gameboy-game-list">
+      <button class="gameboy-game-btn" data-rom="assets/roms/2048.gb" data-name="2048">
+        <span>2048</span><span class="game-tag">Puzzle</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/flappybird.gb" data-name="Flappy Bird">
+        <span>Flappy Bird</span><span class="game-tag">Arcade</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/snake.gb" data-name="Snake">
+        <span>Snake</span><span class="game-tag">Classic</span>
+      </button>
+    </div>
+    <button class="gameboy-upload-btn" id="gameboy-upload-btn">Upload Your Own ROM (.gb / .gba)</button>
+    <input type="file" id="gameboy-rom-input" accept=".gb,.gbc,.gba" style="display:none;">
+    <br>
+    <button class="gameboy-back-btn" id="gameboy-menu-back">Back to Room</button>
+  </div>
+</div>
+
+<div class="gameboy-emu-wrap" id="gameboy-emu-wrap">
+  <div class="gameboy-emu-toolbar">
+    <span class="emu-title" id="gameboy-emu-title">Game Boy</span>
+    <button id="gameboy-emu-back-menu">Game Select</button>
+    <button id="gameboy-emu-back-room">Back to Room</button>
+  </div>
+  <iframe id="gameboy-emu-iframe" sandbox="allow-scripts allow-same-origin" title="Game Boy Emulator"></iframe>
+</div>
+
 <div class="car-game-overlay" id="car-game-overlay">
   <canvas id="car-game-canvas"></canvas>
   <div class="car-game-hud" id="car-game-hud">ROAD RUSH</div>
@@ -6586,6 +6752,185 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     if (dlg) dlg.style.display = 'none';
   }
 
+  // ── Gameboy 3D model on the side table ──
+  const gameboyGroup = new THREE.Group();
+  const gbBodyMat = new THREE.MeshStandardMaterial({ color: 0x8b6fc0, roughness: 0.6, metalness: 0.08 });
+  const gbBody = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.64), gbBodyMat);
+  gameboyGroup.add(gbBody);
+  const gbScreenBorder = new THREE.Mesh(
+    new THREE.BoxGeometry(0.32, 0.008, 0.28),
+    new THREE.MeshStandardMaterial({ color: 0x2d2d3a, roughness: 0.5 })
+  );
+  gbScreenBorder.position.set(0, 0.034, -0.1);
+  gameboyGroup.add(gbScreenBorder);
+  const gbScreenCanvas = document.createElement('canvas');
+  gbScreenCanvas.width = 160; gbScreenCanvas.height = 144;
+  const gbScreenCtx = gbScreenCanvas.getContext('2d');
+  gbScreenCtx.fillStyle = '#9bbc0f';
+  gbScreenCtx.fillRect(0, 0, 160, 144);
+  gbScreenCtx.fillStyle = '#0f380f';
+  gbScreenCtx.font = 'bold 18px monospace';
+  gbScreenCtx.textAlign = 'center';
+  gbScreenCtx.fillText('GAME BOY', 80, 50);
+  gbScreenCtx.font = '12px monospace';
+  gbScreenCtx.fillText('Click to play!', 80, 80);
+  gbScreenCtx.fillText('▶ ▶ ▶', 80, 110);
+  const gbScreenTex = new THREE.CanvasTexture(gbScreenCanvas);
+  const gbScreen = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.28, 0.24),
+    new THREE.MeshBasicMaterial({ map: gbScreenTex })
+  );
+  gbScreen.rotation.x = -Math.PI / 2;
+  gbScreen.position.set(0, 0.038, -0.1);
+  gameboyGroup.add(gbScreen);
+  const gbDpad = new THREE.Group();
+  const gbDH = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.012, 0.035), new THREE.MeshStandardMaterial({ color: 0x1a1a2e }));
+  const gbDV = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.012, 0.1), new THREE.MeshStandardMaterial({ color: 0x1a1a2e }));
+  gbDpad.add(gbDH); gbDpad.add(gbDV);
+  gbDpad.position.set(-0.1, 0.034, 0.16);
+  gameboyGroup.add(gbDpad);
+  const gbBtnA = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.012, 12), new THREE.MeshStandardMaterial({ color: 0x9b2335 }));
+  gbBtnA.position.set(0.12, 0.034, 0.13);
+  gameboyGroup.add(gbBtnA);
+  const gbBtnB = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.012, 12), new THREE.MeshStandardMaterial({ color: 0x9b2335 }));
+  gbBtnB.position.set(0.06, 0.034, 0.18);
+  gameboyGroup.add(gbBtnB);
+  const gbLabelCanvas = document.createElement('canvas');
+  gbLabelCanvas.width = 256; gbLabelCanvas.height = 32;
+  const gbLabelCtx = gbLabelCanvas.getContext('2d');
+  gbLabelCtx.fillStyle = '#8b6fc0';
+  gbLabelCtx.fillRect(0, 0, 256, 32);
+  gbLabelCtx.fillStyle = '#ffffff';
+  gbLabelCtx.font = 'bold 20px monospace';
+  gbLabelCtx.textAlign = 'center';
+  gbLabelCtx.fillText('GAME BOY', 128, 22);
+  const gbLabelTex = new THREE.CanvasTexture(gbLabelCanvas);
+  const gbLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.3, 0.04),
+    new THREE.MeshBasicMaterial({ map: gbLabelTex })
+  );
+  gbLabel.rotation.x = -Math.PI / 2;
+  gbLabel.position.set(0, 0.035, -0.28);
+  gameboyGroup.add(gbLabel);
+  gameboyGroup.position.set(7.08, -0.59, 1.28);
+  room.add(gameboyGroup);
+
+  const gameboyClickable = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.2, 0.7),
+    new THREE.MeshBasicMaterial({ visible: false })
+  );
+  gameboyClickable.position.copy(gameboyGroup.position);
+  gameboyClickable.position.y += 0.05;
+  room.add(gameboyClickable);
+
+  const gbShotPos = new THREE.Vector3(7.08, 0.2, 1.28);
+  const gbShotLook = new THREE.Vector3(7.08, -0.6, 1.28);
+  let gbSeq = null;
+
+  // Gameboy screen animation
+  let gbScreenT = 0;
+  function updateGbScreen(t) {
+    gbScreenT += t;
+    gbScreenCtx.fillStyle = '#9bbc0f';
+    gbScreenCtx.fillRect(0, 0, 160, 144);
+    gbScreenCtx.fillStyle = '#0f380f';
+    gbScreenCtx.font = 'bold 18px monospace';
+    gbScreenCtx.textAlign = 'center';
+    gbScreenCtx.fillText('GAME BOY', 80, 50);
+    gbScreenCtx.font = '12px monospace';
+    gbScreenCtx.fillText('Click to play!', 80, 80);
+    const dots = '.'.repeat(Math.floor(gbScreenT * 2) % 4);
+    gbScreenCtx.fillText('▶ ▶ ▶ ' + dots, 80, 110);
+    gbScreenTex.needsUpdate = true;
+  }
+
+  // Emulator logic
+  const gbOverlay = document.getElementById('gameboy-overlay');
+  const gbMenu = document.getElementById('gameboy-menu');
+  const gbGameList = document.getElementById('gameboy-game-list');
+  const gbUploadBtn = document.getElementById('gameboy-upload-btn');
+  const gbRomInput = document.getElementById('gameboy-rom-input');
+  const gbMenuBack = document.getElementById('gameboy-menu-back');
+  const gbEmuWrap = document.getElementById('gameboy-emu-wrap');
+  const gbEmuIframe = document.getElementById('gameboy-emu-iframe');
+  const gbEmuTitle = document.getElementById('gameboy-emu-title');
+  const gbEmuBackMenu = document.getElementById('gameboy-emu-back-menu');
+  const gbEmuBackRoom = document.getElementById('gameboy-emu-back-room');
+
+  function launchEmulator(romUrl, name, core) {
+    if (!gbEmuWrap || !gbEmuIframe) return;
+    gbEmuWrap.classList.add('on');
+    if (gbMenu) gbMenu.style.display = 'none';
+    if (gbEmuTitle) gbEmuTitle.textContent = name || 'Game Boy';
+    const absRomUrl = new URL(romUrl, window.location.href).href;
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0a}#game{width:100%;max-width:100%;height:100%}</style>
+</head><body><div id="game"></div>
+<script>
+  EJS_player='#game';
+  EJS_core='${core || "gb"}';
+  EJS_gameUrl='${absRomUrl}';
+  EJS_pathtodata='https://cdn.emulatorjs.org/stable/data/';
+  EJS_color='#1a1a2e';
+  EJS_startOnLoaded=true;
+  EJS_defaultControls=true;
+<\/script>
+<script src="https://cdn.emulatorjs.org/stable/data/loader.js"><\/script>
+</body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    gbEmuIframe.src = URL.createObjectURL(blob);
+  }
+
+  function stopEmulator() {
+    if (gbEmuIframe) {
+      if (gbEmuIframe.src.startsWith('blob:')) URL.revokeObjectURL(gbEmuIframe.src);
+      gbEmuIframe.src = 'about:blank';
+    }
+    if (gbEmuWrap) gbEmuWrap.classList.remove('on');
+    if (gbMenu) gbMenu.style.display = '';
+  }
+
+  if (gbGameList) {
+    gbGameList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.gameboy-game-btn');
+      if (!btn) return;
+      const rom = btn.getAttribute('data-rom');
+      const name = btn.getAttribute('data-name');
+      const core = rom.endsWith('.gba') ? 'gba' : 'gb';
+      launchEmulator(rom, name, core);
+    });
+  }
+  if (gbUploadBtn && gbRomInput) {
+    gbUploadBtn.addEventListener('click', () => gbRomInput.click());
+    gbRomInput.addEventListener('change', () => {
+      const file = gbRomInput.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const ext = file.name.split('.').pop().toLowerCase();
+      const core = ext === 'gba' ? 'gba' : 'gb';
+      launchEmulator(url, file.name.replace(/\.\w+$/, ''), core);
+      gbRomInput.value = '';
+    });
+  }
+  if (gbEmuBackMenu) {
+    gbEmuBackMenu.addEventListener('click', () => stopEmulator());
+  }
+  if (gbEmuBackRoom) {
+    gbEmuBackRoom.addEventListener('click', () => {
+      stopEmulator();
+      setMode('return-gameboy');
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+    });
+  }
+  if (gbMenuBack) {
+    gbMenuBack.addEventListener('click', () => {
+      stopEmulator();
+      setMode('return-gameboy');
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+    });
+  }
+
   function createBoxingGlove(gc) {
     const gl = new THREE.Group();
     const pad = new THREE.Mesh(
@@ -7854,6 +8199,11 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       hidePongDifficultyDialog();
       hidePongEndDialog();
     }
+    if (next !== "gameboy-view" && next !== "gameboy-sequence") {
+      document.body.classList.remove("gameboy-view", "gameboy-sequence");
+      gbSeq = null;
+      stopEmulator();
+    }
     if (next !== "window-view" && next !== "window-sequence") {
       document.body.classList.remove("window-view", "window-sequence");
       windowSeq = null;
@@ -8126,6 +8476,29 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       setMonitorBooting(false);
       document.body.classList.remove("pong-view", "pong-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
       document.body.classList.add("room-mode");
+    } else if (next === "gameboy-sequence") {
+      gbSeq = {
+        start: performance.now(),
+        duration: 1000,
+        fromPos: camera.position.clone(),
+        fromLook: new THREE.Vector3(0, 0, 0).addVectors(camera.position, new THREE.Vector3(Math.sin(yaw), Math.sin(pitch), -Math.cos(yaw))),
+        toPos: gbShotPos.clone(),
+        toLook: gbShotLook.clone(),
+      };
+      document.body.classList.remove("room-mode");
+      document.body.classList.add("gameboy-sequence");
+    } else if (next === "gameboy-view") {
+      gbSeq = null;
+      document.body.classList.remove("gameboy-sequence");
+      document.body.classList.add("gameboy-view", "room-mode");
+      document.body.classList.remove("monitor-mode", "speaker-mode");
+      camera.position.copy(gbShotPos);
+      camera.lookAt(gbShotLook);
+    } else if (next === "return-gameboy") {
+      gbSeq = null;
+      stopEmulator();
+      document.body.classList.remove("gameboy-view", "gameboy-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode");
     } else if (next === "chelsea") {
       chelseaSeq = null;
       document.body.classList.remove("chelsea-sequence");
@@ -8369,7 +8742,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
     return !!target.closest(
-      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog"
+      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog, .gameboy-overlay, .gameboy-emu-wrap"
     );
   }
 
@@ -8488,6 +8861,13 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       pongSeq = null;
       pongPlaying = false;
       setMode("return-pong");
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      return;
+    }
+    if (mode === "gameboy-view" || mode === "gameboy-sequence") {
+      gbSeq = null;
+      stopEmulator();
+      setMode("return-gameboy");
       beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
       return;
     }
@@ -8694,7 +9074,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       carLabelMesh.position.y = 0.6 + Math.sin(t * 2.0) * 0.06;
       carLabelMesh.lookAt(camera.position);
     }
-    // pongLabelMesh removed (click table directly)
+    updateGbScreen(dt);
     speakerWoofer.scale.setScalar(1 + Math.sin(t * 6.5) * (speakerAudio && !speakerAudio.paused ? 0.03 : 0.005));
     renderWallClock();
     // Boxing bag swing physics
@@ -8954,12 +9334,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
               if (hitPong.length > 0) {
                 setMode("pong-sequence");
               } else {
+              const hitGB = raycaster.intersectObject(gameboyClickable, false);
+              if (hitGB.length > 0) {
+                setMode("gameboy-sequence");
+              } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
                 setMode("monitor-enter");
               } else {
                 const hitSpeaker = raycaster.intersectObjects(speakerClickable, false);
                 if (hitSpeaker.length > 0) setMode("speaker");
+              }
               }
               }
               }
@@ -9099,6 +9484,19 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         monitorClickPending = false;
         triggerPunch();
       }
+    } else if (mode === "gameboy-sequence" && gbSeq) {
+      const tr = Math.min(1, Math.max(0, (performance.now() - gbSeq.start) / gbSeq.duration));
+      const e = easeInOutCubic(tr);
+      camera.position.lerpVectors(gbSeq.fromPos, gbSeq.toPos, e);
+      const lk = new THREE.Vector3().lerpVectors(gbSeq.fromLook, gbSeq.toLook, e);
+      camera.lookAt(lk);
+      if (tr >= 1) {
+        gbSeq = null;
+        setMode("gameboy-view");
+      }
+    } else if (mode === "gameboy-view") {
+      camera.position.copy(gbShotPos);
+      camera.lookAt(gbShotLook);
     } else if (mode === "pong-sequence" && pongSeq) {
       const tr = Math.min(1, Math.max(0, (performance.now() - pongSeq.start) / pongSeq.duration));
       const e = easeInOutCubic(tr);
@@ -9311,7 +9709,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         camera.position.z = lerpTo(camera.position.z, speakerWallPos.z, 0.08);
         camera.lookAt(speakerWallLook.x, speakerWallLook.y, speakerWallLook.z);
       }
-    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong") {
+    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong" || mode === "return-gameboy") {
       if (returnAnim) {
         const tr = Math.min(1, Math.max(0, (performance.now() - returnAnim.start) / returnAnim.duration));
         const e = easeInOutCubic(tr);
