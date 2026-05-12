@@ -2565,7 +2565,7 @@
     <button id="gameboy-emu-back-menu">Game Select</button>
     <button id="gameboy-emu-back-room">Back to Room</button>
   </div>
-  <iframe id="gameboy-emu-iframe" sandbox="allow-scripts allow-same-origin" title="Game Boy Emulator"></iframe>
+  <iframe id="gameboy-emu-iframe" title="Game Boy Emulator"></iframe>
 </div>
 
 <div class="car-game-overlay" id="car-game-overlay">
@@ -6863,30 +6863,14 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     if (gbMenu) gbMenu.style.display = 'none';
     if (gbEmuTitle) gbEmuTitle.textContent = name || 'Game Boy';
     const absRomUrl = new URL(romUrl, window.location.href).href;
-    const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0a}#game{width:100%;max-width:100%;height:100%}</style>
-</head><body><div id="game"></div>
-<script>
-  EJS_player='#game';
-  EJS_core='${core || "gb"}';
-  EJS_gameUrl='${absRomUrl}';
-  EJS_pathtodata='https://cdn.emulatorjs.org/stable/data/';
-  EJS_color='#1a1a2e';
-  EJS_startOnLoaded=true;
-  EJS_defaultControls=true;
-  EJS_Localization={};
-  EJS_disableAutoLang=true;
-<\/script>
-<script src="https://cdn.emulatorjs.org/stable/data/loader.js"><\/script>
-</body></html>`;
-    const blob = new Blob([html], { type: 'text/html' });
-    gbEmuIframe.src = URL.createObjectURL(blob);
+    const emuPage = new URL('emulator.html', window.location.href);
+    emuPage.searchParams.set('rom', absRomUrl);
+    emuPage.searchParams.set('core', core || 'gb');
+    gbEmuIframe.src = emuPage.href;
   }
 
   function stopEmulator() {
     if (gbEmuIframe) {
-      if (gbEmuIframe.src.startsWith('blob:')) URL.revokeObjectURL(gbEmuIframe.src);
       gbEmuIframe.src = 'about:blank';
     }
     if (gbEmuWrap) gbEmuWrap.classList.remove('on');

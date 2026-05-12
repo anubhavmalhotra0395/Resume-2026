@@ -598,6 +598,15 @@ async def clear_ai_session(session_id: str):
 # ---------------------------------------------------------------------------
 # Root
 # ---------------------------------------------------------------------------
+@app.get("/emulator.html")
+async def emulator_page():
+    if settings.frontend_dir.exists():
+        emu = settings.frontend_dir / "emulator.html"
+        if emu.exists():
+            return FileResponse(emu)
+    raise HTTPException(status_code=404, detail="Not found")
+
+
 @app.get("/")
 async def root():
     if settings.frontend_dir.exists():
