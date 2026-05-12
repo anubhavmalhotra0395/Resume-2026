@@ -5362,15 +5362,15 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   scene.background = new THREE.Color(0xd8e2dd);
   const isMobileStart = window.innerWidth <= 900 || window.matchMedia("(pointer: coarse)").matches;
   const camera = new THREE.PerspectiveCamera(isMobileStart ? 62 : 55, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, isMobileStart ? 1.15 : 1.3, isMobileStart ? 5.8 : 7.8);
+  camera.position.set(0, isMobileStart ? 1.15 : 1.3, isMobileStart ? 11.6 : 15.6);
 
   const ambient = new THREE.AmbientLight(0xffffff, 0.62);
   scene.add(ambient);
   const dir = new THREE.DirectionalLight(0xffffff, 1.1);
-  dir.position.set(3, 4, 5);
+  dir.position.set(6, 4, 10);
   scene.add(dir);
-  const fill = new THREE.PointLight(0x8fe8bf, 0.76, 24);
-  fill.position.set(-2, 2, 2);
+  const fill = new THREE.PointLight(0x8fe8bf, 0.76, 48);
+  fill.position.set(-4, 2, 4);
   scene.add(fill);
 
   // Post-processing: bloom
@@ -5478,10 +5478,10 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const floorTileTex = new THREE.CanvasTexture(floorTileCanvas);
   floorTileTex.wrapS = THREE.RepeatWrapping;
   floorTileTex.wrapT = THREE.RepeatWrapping;
-  floorTileTex.repeat.set(2.6, 2.6);
+  floorTileTex.repeat.set(5.2, 5.2);
   floorTileTex.needsUpdate = true;
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 20),
+    new THREE.PlaneGeometry(40, 40),
     new THREE.MeshStandardMaterial({ map: floorTileTex, color: 0xffffff, roughness: 0.78, metalness: 0.04 })
   );
   floor.rotation.x = -Math.PI / 2;
@@ -5534,10 +5534,10 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const backWallTex = new THREE.CanvasTexture(backWallCanvas);
   backWallTex.needsUpdate = true;
   const backWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 10),
+    new THREE.PlaneGeometry(40, 10),
     new THREE.MeshStandardMaterial({ map: backWallTex, color: 0xffffff, roughness: 0.92 })
   );
-  backWall.position.set(0, 2.8, -6);
+  backWall.position.set(0, 2.8, -12);
   room.add(backWall);
 
   // Side + front walls with green architectural accents
@@ -5581,17 +5581,17 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const sideWallTex = new THREE.CanvasTexture(sideWallCanvas);
   sideWallTex.needsUpdate = true;
   const leftWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 10),
+    new THREE.PlaneGeometry(40, 10),
     new THREE.MeshStandardMaterial({ map: sideWallTex, color: 0xffffff, roughness: 0.92, side: THREE.DoubleSide })
   );
-  leftWall.position.set(-9.95, 2.8, -0.4);
+  leftWall.position.set(-19.9, 2.8, -0.8);
   leftWall.rotation.y = Math.PI / 2;
   room.add(leftWall);
   const rightWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 10),
+    new THREE.PlaneGeometry(40, 10),
     new THREE.MeshStandardMaterial({ map: sideWallTex, color: 0xffffff, roughness: 0.92, side: THREE.DoubleSide })
   );
-  rightWall.position.set(9.95, 2.8, -0.4);
+  rightWall.position.set(19.9, 2.8, -0.8);
   rightWall.rotation.y = -Math.PI / 2;
   room.add(rightWall);
   // Front wall: animated water texture with hover-reactive ripple.
@@ -5651,10 +5651,10 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const frontWallTex = new THREE.CanvasTexture(frontWallCanvas);
   frontWallTex.needsUpdate = true;
   const frontWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 10),
+    new THREE.PlaneGeometry(40, 10),
     new THREE.MeshStandardMaterial({ map: frontWallTex, color: 0xffffff, roughness: 0.92, side: THREE.DoubleSide })
   );
-  frontWall.position.set(0, 2.8, 8.8);
+  frontWall.position.set(0, 2.8, 17.6);
   frontWall.rotation.y = Math.PI;
   room.add(frontWall);
 
@@ -5830,7 +5830,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     new THREE.MeshStandardMaterial({ color: 0x78838f, roughness: 0.9 })
   );
   garageCeiling.rotation.x = Math.PI / 2;
-  garageCeiling.position.set(-13.5, 2.6, -2.5);
+  garageCeiling.position.set(-27.0, 2.6, -5.0);
   outside.add(garageCeiling);
 
   // Concrete work pad (near back wall, outside room)
@@ -6191,6 +6191,11 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   outside.add(carLabelMesh);
   carClickable.push(carLabelMesh);
 
+  // Scale outside group positions for bigger room
+  outside.children.forEach(child => {
+    child.position.x *= 2;
+    child.position.z *= 2;
+  });
 
   // Opposite small green door (front wall)
   const doorClickable = [];
@@ -6426,34 +6431,34 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   );
   jersey.position.set(-4.5, 2.6, -5.88);
   room.add(jersey);
-  const jerseyCenter = new THREE.Vector3(-4.5, 2.6, -5.88);
+  const jerseyCenter = new THREE.Vector3(-9.0, 2.6, -11.76);
   /* Jersey beat: close on shirt; bridge: step back & pan toward desk; desk: settle on sheet */
-  const jerseyShotPos = new THREE.Vector3(-4.35, 2.48, -4.35);
+  const jerseyShotPos = new THREE.Vector3(-8.7, 2.48, -8.7);
   const jerseyShotLook = jerseyCenter.clone();
-  const chelseaBridgePos = new THREE.Vector3(-1.2, 1.38, -0.15);
-  const chelseaBridgeLook = new THREE.Vector3(0.45, 0.02, -1.12);
-  const chelseaDeskShotPos = new THREE.Vector3(1.08, 0.58, 0.92);
-  const chelseaDeskShotLook = new THREE.Vector3(0.02, -0.16, -1.26);
+  const chelseaBridgePos = new THREE.Vector3(-2.4, 1.38, -0.3);
+  const chelseaBridgeLook = new THREE.Vector3(0.9, 0.02, -2.24);
+  const chelseaDeskShotPos = new THREE.Vector3(2.16, 0.58, 1.84);
+  const chelseaDeskShotLook = new THREE.Vector3(0.04, -0.16, -2.52);
   // Window cinematic targets (aligned to the remaining left window at z=-3)
-  const windowShotNearPos = new THREE.Vector3(-7.95, 2.45, -2.95);
-  const windowShotNearLook = new THREE.Vector3(-9.82, 2.55, -3.0);
-  const windowShotOutsidePos = new THREE.Vector3(-10.35, 1.72, -2.95);
-  const windowShotOutsideLook = new THREE.Vector3(-13.05, -0.12, -2.5);
-  const clockShotPos = new THREE.Vector3(6.05, 3.18, -4.25);
-  const clockShotLook = new THREE.Vector3(6.25, 3.35, -5.88);
-  const mirrorShotPos = new THREE.Vector3(2.35, 2.0, 6.95);
-  const mirrorShotLook = new THREE.Vector3(2.8, 2.1, 8.66);
-  const buddhaShotPos = new THREE.Vector3(6.95, 2.0, 1.2);
-  const buddhaShotLook = new THREE.Vector3(9.86, 2.25, 3.15);
+  const windowShotNearPos = new THREE.Vector3(-15.9, 2.45, -5.9);
+  const windowShotNearLook = new THREE.Vector3(-19.64, 2.55, -6.0);
+  const windowShotOutsidePos = new THREE.Vector3(-20.7, 1.72, -5.9);
+  const windowShotOutsideLook = new THREE.Vector3(-26.1, -0.12, -5.0);
+  const clockShotPos = new THREE.Vector3(12.1, 3.18, -8.5);
+  const clockShotLook = new THREE.Vector3(12.5, 3.35, -11.76);
+  const mirrorShotPos = new THREE.Vector3(4.7, 2.0, 13.9);
+  const mirrorShotLook = new THREE.Vector3(5.6, 2.1, 17.32);
+  const buddhaShotPos = new THREE.Vector3(13.9, 2.0, 2.4);
+  const buddhaShotLook = new THREE.Vector3(19.72, 2.25, 6.3);
   // Couch cinematic target: "sitting on couch" view toward room.
-  const couchShotPos = new THREE.Vector3(6.65, -0.18, 3.2);
-  const couchShotLook = new THREE.Vector3(0.85, 0.32, -0.72);
+  const couchShotPos = new THREE.Vector3(13.3, -0.18, 6.4);
+  const couchShotLook = new THREE.Vector3(1.7, 0.32, -1.44);
   // Lego focus shot for easy mini-game interaction.
   // Shelf at ~(8.15, 0.15, -5.86); camera in-room (+Z) centered on shelf so the stand fills the frame.
-  const legoShotPos = new THREE.Vector3(8.15, 1.05, -3.55);
-  const legoShotLook = new THREE.Vector3(8.15, 0.56, -5.84);
-  const bagShotPos = new THREE.Vector3(-6.0, 1.2, 5.0);
-  const bagShotLook = new THREE.Vector3(-8.8, 1.15, 5.0);
+  const legoShotPos = new THREE.Vector3(16.3, 1.05, -7.1);
+  const legoShotLook = new THREE.Vector3(16.3, 0.56, -11.68);
+  const bagShotPos = new THREE.Vector3(-12.0, 1.2, 10.0);
+  const bagShotLook = new THREE.Vector3(-17.6, 1.15, 10.0);
 
   // Desk
   const deskTop = new THREE.Mesh(
@@ -6975,8 +6980,8 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const pongLabelMesh = null;
 
   // Side-angle camera — pulled back so both paddles are visible
-  const pongShotPos = new THREE.Vector3(3.2, 1.5, 6.8);
-  const pongShotLook = new THREE.Vector3(0.0, -0.35, 6.8);
+  const pongShotPos = new THREE.Vector3(6.4, 1.5, 13.6);
+  const pongShotLook = new THREE.Vector3(0.0, -0.35, 13.6);
 
   let pongSeq = null;
   let pongPlayerScore = 0;
@@ -7088,7 +7093,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       pongSeq = null;
       pongPlaying = false;
       setMode('return-pong');
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
     });
   }
 
@@ -7238,8 +7243,8 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   gameboyClickable.position.y += 0.05;
   room.add(gameboyClickable);
 
-  const gbShotPos = new THREE.Vector3(6.0, 0.1, 6.7);
-  const gbShotLook = new THREE.Vector3(6.0, -0.68, 5.8);
+  const gbShotPos = new THREE.Vector3(12.0, 0.1, 13.4);
+  const gbShotLook = new THREE.Vector3(12.0, -0.68, 11.6);
   let gbSeq = null;
 
   // Gameboy screen animation
@@ -7321,14 +7326,14 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     gbEmuBackRoom.addEventListener('click', () => {
       stopEmulator();
       setMode('return-gameboy');
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
     });
   }
   if (gbMenuBack) {
     gbMenuBack.addEventListener('click', () => {
       stopEmulator();
       setMode('return-gameboy');
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
     });
   }
 
@@ -7343,54 +7348,54 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   let npcEmoteTimer = 0;
   let npcSeq = null;
   let fishTankSeq = null;
-  const fishTankShotPos = new THREE.Vector3(-4.0, 0.4, 7.6);
-  const fishTankShotLook = new THREE.Vector3(-4.0, 0.05, 6.0);
+  const fishTankShotPos = new THREE.Vector3(-8.0, 0.4, 15.2);
+  const fishTankShotLook = new THREE.Vector3(-8.0, 0.05, 12.0);
   const npcFloorY = -1.2;
 
   const npcWaypoints = [
-    new THREE.Vector3(3.0, npcFloorY, 5.0),
-    new THREE.Vector3(1.5, npcFloorY, 7.0),
-    new THREE.Vector3(-1.0, npcFloorY, 6.0),
-    new THREE.Vector3(-3.0, npcFloorY, 4.0),
-    new THREE.Vector3(-5.0, npcFloorY, 2.0),
-    new THREE.Vector3(-5.0, npcFloorY, 1.0),
-    new THREE.Vector3(5.0, npcFloorY, 1.0),
-    new THREE.Vector3(5.0, npcFloorY, -1.5),
-    new THREE.Vector3(1.5, npcFloorY, -4.0),
-    new THREE.Vector3(2.0, npcFloorY, 3.0),
-    new THREE.Vector3(4.5, npcFloorY, 5.5),
-    new THREE.Vector3(5.5, npcFloorY, 7.5),
-    new THREE.Vector3(3.0, npcFloorY, 8.0),
-    new THREE.Vector3(0.0, npcFloorY, 7.5),
-    new THREE.Vector3(-4.0, npcFloorY, 7.0),
-    new THREE.Vector3(-6.0, npcFloorY, 5.0),
-    new THREE.Vector3(-7.0, npcFloorY, 2.5),
-    new THREE.Vector3(-5.0, npcFloorY, -3.0),
-    new THREE.Vector3(-2.0, npcFloorY, -5.0),
-    new THREE.Vector3(2.0, npcFloorY, -5.5),
-    new THREE.Vector3(5.0, npcFloorY, -4.5),
-    new THREE.Vector3(-7.0, npcFloorY, -1.0),
-    new THREE.Vector3(-5.5, npcFloorY, -5.0),
+    new THREE.Vector3(6.0, npcFloorY, 10.0),
+    new THREE.Vector3(3.0, npcFloorY, 14.0),
+    new THREE.Vector3(-2.0, npcFloorY, 12.0),
+    new THREE.Vector3(-6.0, npcFloorY, 8.0),
+    new THREE.Vector3(-10.0, npcFloorY, 4.0),
+    new THREE.Vector3(-10.0, npcFloorY, 2.0),
+    new THREE.Vector3(10.0, npcFloorY, 2.0),
+    new THREE.Vector3(10.0, npcFloorY, -3.0),
+    new THREE.Vector3(3.0, npcFloorY, -8.0),
+    new THREE.Vector3(4.0, npcFloorY, 6.0),
+    new THREE.Vector3(9.0, npcFloorY, 11.0),
+    new THREE.Vector3(11.0, npcFloorY, 15.0),
+    new THREE.Vector3(6.0, npcFloorY, 16.0),
+    new THREE.Vector3(0.0, npcFloorY, 15.0),
+    new THREE.Vector3(-8.0, npcFloorY, 14.0),
+    new THREE.Vector3(-12.0, npcFloorY, 10.0),
+    new THREE.Vector3(-14.0, npcFloorY, 5.0),
+    new THREE.Vector3(-10.0, npcFloorY, -6.0),
+    new THREE.Vector3(-4.0, npcFloorY, -10.0),
+    new THREE.Vector3(4.0, npcFloorY, -11.0),
+    new THREE.Vector3(10.0, npcFloorY, -9.0),
+    new THREE.Vector3(-14.0, npcFloorY, -2.0),
+    new THREE.Vector3(-11.0, npcFloorY, -10.0),
   ];
   let npcWPIndex = 0;
   let npcWaitTimer = 0;
-  const npcSpeed = 1.0;
+  const npcSpeed = 1.8;
 
   const npcCircleObs = [
-    { x: 7.0, z: 3.15, r: 2.4 },
-    { x: 7.08, z: 1.28, r: 0.7 },
-    { x: 7.08, z: 4.58, r: 0.7 },
-    { x: 6.0, z: 5.8, r: 0.9 },
-    { x: 0.5, z: 6.8, r: 2.4 },
-    { x: -8.8, z: 5.0, r: 1.2 },
-    { x: 8.15, z: -5.86, r: 1.0 },
-    { x: 6.35, z: -5.35, r: 0.8 },
-    { x: 0.9, z: 0.95, r: 2.0 },
-    { x: -4.6, z: 2.15, r: 1.5 },
-    { x: -4.0, z: 6.0, r: 1.3 },
+    { x: 14.0, z: 6.3, r: 4.8 },
+    { x: 14.16, z: 2.56, r: 1.4 },
+    { x: 14.16, z: 9.16, r: 1.4 },
+    { x: 12.0, z: 11.6, r: 1.8 },
+    { x: 1.0, z: 13.6, r: 4.8 },
+    { x: -17.6, z: 10.0, r: 2.4 },
+    { x: 16.3, z: -11.72, r: 2.0 },
+    { x: 12.7, z: -10.7, r: 1.6 },
+    { x: 1.8, z: 1.9, r: 4.0 },
+    { x: -9.2, z: 4.3, r: 3.0 },
+    { x: -8.0, z: 12.0, r: 2.6 },
   ];
   const npcBoxObs = [
-    { cx: 0, cz: -1.2, hw: 4.5, hd: 2.3 },
+    { cx: 0, cz: -2.4, hw: 9.0, hd: 4.6 },
   ];
 
   const npcAnswers = [
@@ -7625,7 +7630,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   }
   if (npcCloseBtn) npcCloseBtn.addEventListener('click', () => {
     setMode('return-npc');
-    beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+    beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
   });
   npcQuestionBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -8153,8 +8158,17 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   speaker.position.set(-4.6, -0.35, 2.15);
   speaker.rotation.y = 0.26;
   room.add(speaker);
+
+  // ── Scale room: double all object x,z positions for a bigger room ──
+  const _roomScaleSkip = new Set([floor, backWall, leftWall, rightWall, frontWall]);
+  room.children.forEach(child => {
+    if (_roomScaleSkip.has(child)) return;
+    child.position.x *= 2;
+    child.position.z *= 2;
+  });
+
   const speakerClickable = [speakerCab, speakerFront, speakerTweeter, speakerWoofer];
-  const speakerHomePos = new THREE.Vector3(-4.6, -0.35, 2.15);
+  const speakerHomePos = new THREE.Vector3(-9.2, -0.35, 4.3);
 
   let speakerAudio = null;
   let speakerVolumeFade = null;
@@ -8742,10 +8756,10 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     roomEntryAnim = {
       start: performance.now(),
       duration: 2800,
-      fromPos: new THREE.Vector3(0.0, 12.5, 4.0),
-      toPos: new THREE.Vector3(0, 1.3, 7.8),
-      fromLook: new THREE.Vector3(0.0, 0.4, 3.0),
-      toLook: new THREE.Vector3(0, 1.28, 6.8),
+      fromPos: new THREE.Vector3(0.0, 12.5, 8.0),
+      toPos: new THREE.Vector3(0, 1.3, 15.6),
+      fromLook: new THREE.Vector3(0.0, 0.4, 6.0),
+      toLook: new THREE.Vector3(0, 1.28, 13.6),
     };
     camera.position.copy(roomEntryAnim.fromPos);
     camera.lookAt(roomEntryAnim.fromLook);
@@ -9596,37 +9610,37 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     if (mode === "window-view" || mode === "window-sequence") {
       windowSeq = null;
       setMode("return-window");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1150);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1150);
       return;
     }
     if (mode === "clock-view" || mode === "clock-sequence") {
       clockSeq = null;
       setMode("return-clock");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "mirror-view" || mode === "mirror-sequence") {
       mirrorSeq = null;
       setMode("return-mirror");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "buddha-view" || mode === "buddha-sequence") {
       buddhaSeq = null;
       setMode("return-buddha");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "couch-view" || mode === "couch-sequence") {
       couchSeq = null;
       setMode("return-couch");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "lego-view" || mode === "lego-sequence") {
       legoSeq = null;
       setMode("return-lego");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 900);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 900);
       return;
     }
     if (mode === "bag-view" || mode === "bag-sequence") {
@@ -9635,55 +9649,55 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       rightGlove.visible = false;
       punchAnim = null;
       setMode("return-bag");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "pong-view" || mode === "pong-sequence") {
       pongSeq = null;
       pongPlaying = false;
       setMode("return-pong");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "gameboy-view" || mode === "gameboy-sequence") {
       gbSeq = null;
       stopEmulator();
       setMode("return-gameboy");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "npc-view" || mode === "npc-sequence") {
       npcSeq = null;
       closeNpcDialog();
       setMode("return-npc");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "fishtank-view" || mode === "fishtank-sequence") {
       fishTankSeq = null;
       setMode("return-fishtank");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1000);
       return;
     }
     if (mode === "chelsea" || mode === "chelsea-sequence") {
       chelseaSeq = null;
       setMode("return-chelsea");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1100);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1100);
       return;
     }
     if (mode === "monitor") {
       setMode("return-monitor");
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1050);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1050);
       return;
     }
     if (mode === "speaker") {
       setMode("return-speaker");
       setSpeakerRoomMix();
-      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1250);
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 15.6), new THREE.Vector3(0, 1.28, 13.6), 1250);
       return;
     }
     setMode("room");
-    camera.position.set(0, 1.3, 7.8);
+    camera.position.set(0, 1.3, 15.6);
     yaw = 0;
     pitch = -0.02;
   });
@@ -10037,7 +10051,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
 
     if (mode === "room") {
       if (welcomeShown) { keys.clear(); }
-      const speed = (keys.has("shift") ? 4.0 : 2.2) * dt;
+      const speed = (keys.has("shift") ? 7.0 : 4.0) * dt;
       if (keys.has("arrowleft")) yaw -= dt * 1.4;
       if (keys.has("arrowright")) yaw += dt * 1.4;
       if (keys.has("arrowup")) pitch += dt * 0.8;
@@ -10063,8 +10077,8 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       if (keys.has("e")) camera.position.y -= speed * 0.6;
       camera.position.y = Math.max(-0.2, Math.min(2.2, camera.position.y));
       // Keep player inside room shell (prevents walking through walls).
-      camera.position.x = Math.max(-8.85, Math.min(8.85, camera.position.x));
-      camera.position.z = Math.max(-5.75, Math.min(8.45, camera.position.z));
+      camera.position.x = Math.max(-17.7, Math.min(17.7, camera.position.x));
+      camera.position.z = Math.max(-11.5, Math.min(16.9, camera.position.z));
       _tmpLook.set(
         camera.position.x + Math.sin(yaw),
         camera.position.y + pitch,
