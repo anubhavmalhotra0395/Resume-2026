@@ -6441,8 +6441,90 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     pongPlaying = false;
   }
 
+  let pongGameOver = false;
+  let pongDeuce = false;
+  let pongAdvantage = '';
+
+  function pongGetStatus() {
+    const p = pongPlayerScore;
+    const c = pongCpuScore;
+    if (p >= 5 && c === 0) return { over: true, msg: 'YOU WON! (Love game!)' };
+    if (c >= 5 && p === 0) return { over: true, msg: 'YOU LOST! (Love game!)' };
+    if (p === 4 && c === 0) return { over: false, status: 'GAME POINT' };
+    if (c === 4 && p === 0) return { over: false, status: 'GAME POINT' };
+    if (p >= 10 && c >= 10) {
+      if (p === c) return { over: false, status: 'DEUCE' };
+      if (p - c === 1) return { over: false, status: 'ADVANTAGE YOU' };
+      if (c - p === 1) return { over: false, status: `ADVANTAGE ${pongOpponentName.toUpperCase()}` };
+      if (p - c >= 2) return { over: true, msg: 'YOU WON!' };
+      if (c - p >= 2) return { over: true, msg: 'YOU LOST!' };
+    }
+    if (p >= 10 && c < 10) return { over: true, msg: 'YOU WON!' };
+    if (c >= 10 && p < 10) return { over: true, msg: 'YOU LOST!' };
+    if (p === 9 && c < 10) return { over: false, status: 'GAME POINT' };
+    if (c === 9 && p < 10) return { over: false, status: 'GAME POINT' };
+    return { over: false, status: '' };
+  }
+
   function pongUpdateHud() {
-    if (pongHudEl) pongHudEl.textContent = `YOU ${pongPlayerScore} — ${pongCpuScore} ${pongOpponentName}`;
+    if (!pongHudEl) return;
+    const s = pongGetStatus();
+    let txt = `YOU ${pongPlayerScore} — ${pongCpuScore} ${pongOpponentName}`;
+    if (s.over) {
+      pongGameOver = true;
+      pongPlaying = false;
+      txt += `\n${s.msg}`;
+      pongHudEl.textContent = txt;
+      pongHudEl.style.whiteSpace = 'pre-line';
+      setTimeout(() => showPongEndDialog(s.msg), 600);
+    } else {
+      if (s.status) txt += `  •  ${s.status}`;
+      pongHudEl.textContent = txt;
+    }
+  }
+
+  function showPongEndDialog(msg) {
+    let dlg = document.getElementById('pong-end-dialog');
+    if (!dlg) {
+      dlg = document.createElement('div');
+      dlg.id = 'pong-end-dialog';
+      dlg.style.cssText = `
+        position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+        width:min(96vw,520px); z-index:226; pointer-events:auto;
+        font-family:"VT323",monospace;
+      `;
+      document.body.appendChild(dlg);
+    }
+    const won = msg.includes('WON');
+    dlg.innerHTML = `
+      <div style="border:4px solid #1e293b;border-radius:14px;background:linear-gradient(180deg,#f0fdf4 0%,#e0f2e9 100%);padding:18px 20px 16px;margin-bottom:18px;box-shadow:0 8px 0 #334155,0 18px 40px rgba(0,0,0,0.35);position:relative;">
+        <div style="font-size:28px;color:${won ? '#059669' : '#dc2626'};line-height:1.35;margin-bottom:8px;text-align:center;">${msg}</div>
+        <div style="font-size:20px;color:#0f172a;text-align:center;margin-bottom:14px;">YOU ${pongPlayerScore} — ${pongCpuScore} ${pongOpponentName}</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button type="button" id="pong-end-rematch" style="border:3px solid #1e293b;border-radius:8px;font-family:'VT323',monospace;font-size:20px;padding:10px 22px;background:linear-gradient(180deg,#34d399,#10b981);color:#022c22;cursor:pointer;box-shadow:0 3px 0 #059669;">Rematch</button>
+          <button type="button" id="pong-end-back" style="border:3px solid #1e293b;border-radius:8px;font-family:'VT323',monospace;font-size:20px;padding:10px 22px;background:linear-gradient(180deg,#f1f5f9,#e2e8f0);color:#0f172a;cursor:pointer;box-shadow:0 3px 0 #94a3b8;">Back to Room</button>
+        </div>
+      </div>
+    `;
+    dlg.style.display = 'block';
+    document.getElementById('pong-end-rematch').addEventListener('click', () => {
+      dlg.style.display = 'none';
+      pongGameOver = false;
+      pongPlayerScore = 0;
+      pongCpuScore = 0;
+      pongDifficultyChosen = false;
+      showPongDifficultyDialog();
+    });
+    document.getElementById('pong-end-back').addEventListener('click', () => {
+      dlg.style.display = 'none';
+      pongGameOver = false;
+      setMode('return-pong');
+    });
+  }
+
+  function hidePongEndDialog() {
+    const dlg = document.getElementById('pong-end-dialog');
+    if (dlg) dlg.style.display = 'none';
   }
 
   function showPongDifficultyDialog() {
@@ -7761,7 +7843,9 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     if (next !== "pong-view" && next !== "pong-sequence") {
       document.body.classList.remove("pong-view", "pong-sequence");
       pongSeq = null;
+      pongGameOver = false;
       hidePongDifficultyDialog();
+      hidePongEndDialog();
     }
     if (next !== "window-view" && next !== "window-sequence") {
       document.body.classList.remove("window-view", "window-sequence");
@@ -8278,7 +8362,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
     return !!target.closest(
-      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog"
+      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog"
     );
   }
 
@@ -9012,7 +9096,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       } else {
 
       const serveDelay = 800;
-      if (!pongPlaying && performance.now() - pongServeTimer > serveDelay) {
+      if (!pongGameOver && !pongPlaying && performance.now() - pongServeTimer > serveDelay) {
         pongPlaying = true;
       }
 
@@ -9065,15 +9149,15 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         const maxSpd = 6.0;
         if (spd > maxSpd) { pongBallVX *= maxSpd / spd; pongBallVZ *= maxSpd / spd; }
 
-        if (pongBallX > pongHalfW + 0.2) {
+        if (!pongGameOver && pongBallX > pongHalfW + 0.2) {
           pongCpuScore++;
           pongUpdateHud();
-          pongResetBall(-1);
+          if (!pongGameOver) pongResetBall(-1);
         }
-        if (pongBallX < -pongHalfW - 0.2) {
+        if (!pongGameOver && pongBallX < -pongHalfW - 0.2) {
           pongPlayerScore++;
           pongUpdateHud();
-          pongResetBall(1);
+          if (!pongGameOver) pongResetBall(1);
         }
       }
 
