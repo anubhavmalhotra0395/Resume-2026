@@ -1,4 +1,4 @@
-import { BufferGeometry } from "/ui/three.module.min.js";
+import { BufferGeometry } from "/three.module.min.js";
 
 // Minimal subset required by GLTFLoader.js in this repo.
 // Based on Three.js BufferGeometryUtils.toTrianglesDrawMode().
