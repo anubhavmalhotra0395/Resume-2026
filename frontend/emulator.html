@@ -8,10 +8,6 @@
 <body>
 <div id="game"></div>
 <script>
-  // Force en-US so EmulatorJS uses built-in English and skips localization fetch
-  Object.defineProperty(navigator, 'language', { get: function() { return 'en-US'; } });
-  Object.defineProperty(navigator, 'languages', { get: function() { return ['en-US', 'en']; } });
-
   var params = new URLSearchParams(window.location.search);
   EJS_player = '#game';
   EJS_core = params.get('core') || 'gb';
@@ -20,6 +16,7 @@
   EJS_color = '#1a1a2e';
   EJS_startOnLoaded = true;
   EJS_defaultControls = true;
+  EJS_language = 'en-US';
 </script>
 <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 </body>
