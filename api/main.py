@@ -43,6 +43,9 @@ app.add_middleware(
 
 if settings.frontend_dir.exists():
     app.mount("/ui", StaticFiles(directory=settings.frontend_dir, html=True), name="frontend")
+    _assets_dir = settings.frontend_dir / "assets"
+    if _assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="root-assets")
 
 # Register metrics endpoint
 register_metrics_endpoint(app)
