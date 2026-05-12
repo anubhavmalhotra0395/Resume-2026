@@ -7064,21 +7064,53 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   }
 
   // ── NPC Robot Guide ──
-  let npcModel = null, npcMixer = null, npcIdleAction = null, npcWalkAction = null;
+  let npcModel = null, npcMixer = null, npcIdleAction = null, npcWalkAction = null, npcDanceAction = null;
   let npcClickable = null;
   let npcTalking = false;
+  let npcDancing = false;
+  let npcDanceTimer = 0;
+  const npcFloorY = -1.2;
+
   const npcWaypoints = [
-    new THREE.Vector3(3.0, -1.2, 5.0),
-    new THREE.Vector3(1.0, -1.2, 6.0),
-    new THREE.Vector3(4.0, -1.2, 3.0),
-    new THREE.Vector3(6.0, -1.2, 2.0),
-    new THREE.Vector3(2.0, -1.2, 2.0),
-    new THREE.Vector3(5.0, -1.2, 6.5),
-    new THREE.Vector3(0.5, -1.2, 4.0),
+    new THREE.Vector3(3.0, npcFloorY, 5.0),
+    new THREE.Vector3(1.5, npcFloorY, 7.0),
+    new THREE.Vector3(-1.0, npcFloorY, 6.0),
+    new THREE.Vector3(-3.0, npcFloorY, 4.0),
+    new THREE.Vector3(-5.0, npcFloorY, 2.0),
+    new THREE.Vector3(-3.0, npcFloorY, 0.0),
+    new THREE.Vector3(-1.0, npcFloorY, -2.0),
+    new THREE.Vector3(1.5, npcFloorY, -4.0),
+    new THREE.Vector3(3.5, npcFloorY, -3.0),
+    new THREE.Vector3(5.0, npcFloorY, -1.0),
+    new THREE.Vector3(4.0, npcFloorY, 1.5),
+    new THREE.Vector3(2.0, npcFloorY, 3.0),
+    new THREE.Vector3(4.5, npcFloorY, 5.5),
+    new THREE.Vector3(5.5, npcFloorY, 7.5),
+    new THREE.Vector3(3.0, npcFloorY, 8.0),
+    new THREE.Vector3(0.0, npcFloorY, 7.5),
+    new THREE.Vector3(-4.0, npcFloorY, 7.0),
+    new THREE.Vector3(-6.0, npcFloorY, 5.0),
+    new THREE.Vector3(-7.0, npcFloorY, 2.5),
+    new THREE.Vector3(-5.0, npcFloorY, -3.0),
+    new THREE.Vector3(-2.0, npcFloorY, -5.0),
+    new THREE.Vector3(2.0, npcFloorY, -5.5),
+    new THREE.Vector3(5.0, npcFloorY, -4.5),
   ];
   let npcWPIndex = 0;
   let npcWaitTimer = 0;
-  const npcSpeed = 1.2;
+  const npcSpeed = 1.0;
+
+  const npcObstacles = [
+    { x: 0, z: -1.2, r: 1.6 },
+    { x: 7.0, z: 3.15, r: 2.2 },
+    { x: 7.08, z: 1.28, r: 0.7 },
+    { x: 7.08, z: 4.58, r: 0.7 },
+    { x: 6.0, z: 5.8, r: 0.8 },
+    { x: 0.5, z: 6.8, r: 2.2 },
+    { x: -8.8, z: 5.0, r: 1.0 },
+    { x: 8.15, z: -5.86, r: 1.0 },
+    { x: 6.35, z: -5.35, r: 0.8 },
+  ];
 
   const npcAnswers = [
     "There's loads to do! Click the monitor for the CV, play ping pong, punch the boxing bag, drive a car in Road Rush, brew coffee, build Lego, play Game Boy games, and more. Just walk around and click things!",
@@ -7088,6 +7120,32 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     "This room belongs to Anubhav Malhotra — a developer who built this whole interactive 3D portfolio. Click the monitor to see the full CV!",
     "Desktop: WASD or arrow keys to move, mouse to look around, Q/E to lean, Shift to run. Click objects to interact. Mobile: left joystick to move, right joystick to look, tap objects to interact."
   ];
+
+  function npcIsInsideObstacle(px, pz) {
+    for (const ob of npcObstacles) {
+      const dx = px - ob.x, dz = pz - ob.z;
+      if (dx * dx + dz * dz < ob.r * ob.r) return true;
+    }
+    return false;
+  }
+
+  function npcPushOutOfObstacles(pos) {
+    for (const ob of npcObstacles) {
+      const dx = pos.x - ob.x, dz = pos.z - ob.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < ob.r * ob.r) {
+        const d = Math.sqrt(d2) || 0.01;
+        pos.x = ob.x + (dx / d) * (ob.r + 0.05);
+        pos.z = ob.z + (dz / d) * (ob.r + 0.05);
+      }
+    }
+  }
+
+  function npcSetWeights(walk, idle, dance) {
+    if (npcWalkAction) npcWalkAction.setEffectiveWeight(walk);
+    if (npcIdleAction) npcIdleAction.setEffectiveWeight(idle);
+    if (npcDanceAction) npcDanceAction.setEffectiveWeight(dance);
+  }
 
   (function loadNpcRobot() {
     const loader = new GLTFLoader();
@@ -7105,7 +7163,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const clips = gltf.animations || [];
       const idleClip = clips.find(c => /idle/i.test(c.name));
       const walkClip = clips.find(c => /walk/i.test(c.name));
-      const waveClip = clips.find(c => /wave/i.test(c.name));
+      const danceClip = clips.find(c => /dance/i.test(c.name));
 
       if (idleClip) {
         npcIdleAction = npcMixer.clipAction(idleClip);
@@ -7115,6 +7173,11 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         npcWalkAction = npcMixer.clipAction(walkClip);
         npcWalkAction.play();
         npcWalkAction.setEffectiveWeight(0);
+      }
+      if (danceClip) {
+        npcDanceAction = npcMixer.clipAction(danceClip);
+        npcDanceAction.play();
+        npcDanceAction.setEffectiveWeight(0);
       }
 
       const hitbox = new THREE.Mesh(
@@ -7128,6 +7191,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
       npcWPIndex = 1;
       npcWaitTimer = 1.0;
+      npcDanceTimer = 12 + Math.random() * 15;
     }, undefined, (err) => { console.warn("NPC Robot load error:", err); });
   })();
 
@@ -7136,15 +7200,32 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     npcMixer.update(dt);
 
     if (npcTalking) {
-      if (npcWalkAction) npcWalkAction.setEffectiveWeight(0);
-      if (npcIdleAction) npcIdleAction.setEffectiveWeight(1);
+      npcSetWeights(0, 1, 0);
+      return;
+    }
+
+    if (npcDancing) {
+      npcDanceTimer -= dt;
+      if (npcDanceTimer <= 0) {
+        npcDancing = false;
+        npcWaitTimer = 0.5;
+        npcDanceTimer = 12 + Math.random() * 15;
+      }
+      npcSetWeights(0, 0, 1);
       return;
     }
 
     if (npcWaitTimer > 0) {
       npcWaitTimer -= dt;
-      if (npcWalkAction) npcWalkAction.setEffectiveWeight(0);
-      if (npcIdleAction) npcIdleAction.setEffectiveWeight(1);
+      npcSetWeights(0, 1, 0);
+      return;
+    }
+
+    npcDanceTimer -= dt;
+    if (npcDanceTimer <= 0 && npcDanceAction) {
+      npcDancing = true;
+      npcDanceTimer = 3.0 + Math.random() * 2.5;
+      npcSetWeights(0, 0, 1);
       return;
     }
 
@@ -7153,24 +7234,45 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     dir.y = 0;
     const dist = dir.length();
 
-    if (dist < 0.15) {
-      npcWPIndex = (npcWPIndex + 1) % npcWaypoints.length;
-      npcWaitTimer = 1.5 + Math.random() * 2.0;
+    if (dist < 0.2) {
+      let next;
+      do {
+        next = Math.floor(Math.random() * npcWaypoints.length);
+      } while (next === npcWPIndex);
+      npcWPIndex = next;
+      npcWaitTimer = 1.0 + Math.random() * 1.5;
       return;
     }
 
     dir.normalize();
     const step = Math.min(npcSpeed * dt, dist);
-    npcModel.position.addScaledVector(dir, step);
+    const nextX = npcModel.position.x + dir.x * step;
+    const nextZ = npcModel.position.z + dir.z * step;
 
-    const angle = Math.atan2(dir.x, dir.z);
-    npcModel.rotation.y = angle;
+    if (npcIsInsideObstacle(nextX, nextZ)) {
+      let next;
+      do {
+        next = Math.floor(Math.random() * npcWaypoints.length);
+      } while (next === npcWPIndex);
+      npcWPIndex = next;
+      npcWaitTimer = 0.3;
+      return;
+    }
 
-    if (npcWalkAction) npcWalkAction.setEffectiveWeight(1);
-    if (npcIdleAction) npcIdleAction.setEffectiveWeight(0);
+    npcModel.position.x = nextX;
+    npcModel.position.z = nextZ;
+    npcPushOutOfObstacles(npcModel.position);
+
+    const targetAngle = Math.atan2(dir.x, dir.z);
+    let angleDiff = targetAngle - npcModel.rotation.y;
+    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+    npcModel.rotation.y += angleDiff * Math.min(1, dt * 8);
+
+    npcSetWeights(1, 0, 0);
 
     if (npcClickable) {
-      npcClickable.position.set(npcModel.position.x, npcModel.position.y + 0.55, npcModel.position.z);
+      npcClickable.position.set(npcModel.position.x, npcModel.position.y + 0.5, npcModel.position.z);
     }
   }
 
