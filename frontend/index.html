@@ -2664,7 +2664,7 @@
         <li><strong>Robot Guide</strong> — cute robot that walks around the room. Click it to ask questions — it'll tell you about the room, controls, games, and the owner!</li>
         <li><strong>Fish tank</strong> — glass aquarium between the ping pong table and boxing bag. Watch the fish swim and bubbles rise!</li>
         <li><strong>Coffee table</strong> — small wooden table to the right of the couch, near the door corner.</li>
-        <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake, Adjustris) or upload your own ROM!</li>
+        <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake, Adjustris, Dangan, uCity) or upload your own ROM!</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
         <li><strong>Walls &amp; floor</strong> — granite-style floor. Front wall: animated water, hover ripples. Behind the monitor: sky and clouds, hover drifts clouds. TV wall and quote wall: flowing waves, hover reacts.</li>
         <li><strong>Car</strong> — Moskvich 412 in the garage. Click for Road Rush — a pseudo-3D racing game! Arrow keys or WASD to steer and accelerate. Touch controls on mobile.</li>
@@ -2734,6 +2734,12 @@
       </button>
       <button class="gameboy-game-btn" data-rom="assets/roms/adjustris.gb" data-name="Adjustris">
         <span>Adjustris</span><span class="game-tag">Tetris</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/dangan.gb" data-name="Dangan">
+        <span>Dangan</span><span class="game-tag">Action</span>
+      </button>
+      <button class="gameboy-game-btn" data-rom="assets/roms/ucity.gbc" data-name="uCity" data-core="gbc">
+        <span>uCity</span><span class="game-tag">Sim</span>
       </button>
     </div>
     <button class="gameboy-upload-btn" id="gameboy-upload-btn">Upload Your Own ROM (.gb / .gba)</button>
@@ -6851,7 +6857,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   tankLight.position.set(0, tankH / 2 + 0.1, 0);
   fishTank.add(tankLight);
 
-  fishTank.position.set(-4.0, 0.55, 6.0);
+  fishTank.position.set(-4.0, 0.05, 6.0);
   room.add(fishTank);
 
   const fishTankClickable = new THREE.Mesh(
@@ -7292,7 +7298,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       if (!btn) return;
       const rom = btn.getAttribute('data-rom');
       const name = btn.getAttribute('data-name');
-      const core = rom.endsWith('.gba') ? 'gba' : 'gb';
+      const core = btn.getAttribute('data-core') || (rom.endsWith('.gba') ? 'gba' : (rom.endsWith('.gbc') ? 'gbc' : 'gb'));
       launchEmulator(rom, name, core);
     });
   }
@@ -7337,8 +7343,8 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   let npcEmoteTimer = 0;
   let npcSeq = null;
   let fishTankSeq = null;
-  const fishTankShotPos = new THREE.Vector3(-4.0, 0.9, 7.6);
-  const fishTankShotLook = new THREE.Vector3(-4.0, 0.55, 6.0);
+  const fishTankShotPos = new THREE.Vector3(-4.0, 0.4, 7.6);
+  const fishTankShotLook = new THREE.Vector3(-4.0, 0.05, 6.0);
   const npcFloorY = -1.2;
 
   const npcWaypoints = [

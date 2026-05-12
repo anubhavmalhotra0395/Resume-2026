@@ -15,8 +15,59 @@
   EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
   EJS_color = '#1a1a2e';
   EJS_startOnLoaded = true;
-  EJS_defaultControls = true;
   EJS_language = 'en-US';
+  EJS_disableAutoLang = true;
+
+  EJS_VirtualGamepadSettings = [
+    {
+      type: "dpad",
+      location: "left",
+      left: "50%",
+      right: "50%",
+      joystickInput: false,
+      inputValues: [4, 5, 6, 7]
+    },
+    {
+      type: "button",
+      text: "A",
+      id: "a",
+      location: "right",
+      left: 40,
+      top: 40,
+      bold: true,
+      input_value: 0
+    },
+    {
+      type: "button",
+      text: "B",
+      id: "b",
+      location: "right",
+      left: -10,
+      top: 70,
+      bold: true,
+      input_value: 1
+    },
+    {
+      type: "button",
+      text: "Start",
+      id: "start",
+      location: "center",
+      left: 60,
+      fontSize: 15,
+      block: true,
+      input_value: 3
+    },
+    {
+      type: "button",
+      text: "Select",
+      id: "select",
+      location: "center",
+      left: -5,
+      fontSize: 15,
+      block: true,
+      input_value: 2
+    }
+  ];
 </script>
 <script src="https://cdn.emulatorjs.org/latest/data/loader.js"></script>
 </body>
