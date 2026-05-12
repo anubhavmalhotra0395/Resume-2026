@@ -8323,7 +8323,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     const d = chelseaFootballCache;
     const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     if (!d && chelseaFootballError) {
-      chelseaTabBody.innerHTML = `<p class="chelsea-muted">Live data unavailable.</p><p>${esc(chelseaFootballError.slice(0, 400))}</p><p class="chelsea-muted">Set APP_FOOTBALL_DATA_API_TOKEN on the server (football-data.org).</p>`;
+      chelseaTabBody.innerHTML = `<p style="text-align:center;font-size:22px;color:#64748b;padding:24px 0;">No data available at the moment.<br><span style="font-size:16px;">Check back later!</span></p>`;
       return;
     }
     if (!d) {
