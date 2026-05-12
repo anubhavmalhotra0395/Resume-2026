@@ -9266,8 +9266,8 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
       document.body.classList.add("fishtank-sequence");
     } else if (next === "fishtank-view") {
       fishTankSeq = null;
-      document.body.classList.remove("fishtank-sequence");
-      document.body.classList.add("fishtank-view", "room-mode");
+      document.body.classList.remove("fishtank-sequence", "room-mode");
+      document.body.classList.add("fishtank-view");
     } else if (next === "return-fishtank") {
       fishTankSeq = null;
       document.body.classList.remove("fishtank-view", "fishtank-sequence");
