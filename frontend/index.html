@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -508,8 +508,9 @@
     body.gameboy-view .gameboy-overlay { display: flex; }
     .gameboy-menu {
       width: min(96vw, 480px);
-      max-height: min(92vh, 680px);
+      max-height: 85vh;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       border: 4px solid #1e293b;
       border-radius: 14px;
       background: linear-gradient(180deg, #f0fdf4 0%, #e0f2e9 100%);
@@ -517,6 +518,10 @@
       box-shadow: 0 8px 0 #334155, 0 18px 40px rgba(0,0,0,0.35);
       text-align: center;
     }
+    .gameboy-menu::-webkit-scrollbar { width: 8px; }
+    .gameboy-menu::-webkit-scrollbar-track { background: #d1fae5; border-radius: 4px; }
+    .gameboy-menu::-webkit-scrollbar-thumb { background: #059669; border-radius: 4px; }
+    .gameboy-menu::-webkit-scrollbar-thumb:hover { background: #047857; }
     .gameboy-menu h2 {
       font-size: 28px;
       color: #0f172a;
@@ -1408,6 +1413,7 @@
       letter-spacing: -0.02em;
       background: linear-gradient(135deg, #0f172a, #0f766e 55%, #10b981);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       text-shadow: 0 0 18px rgba(16,185,129,0.16);
     }
@@ -2606,8 +2612,7 @@
       body.gameboy-view .mobile-controls,
       body.gameboy-sequence .mobile-controls,
       body.npc-view .mobile-controls,
-      body.npc-sequence .mobile-controls,
-      
+      body.npc-sequence .mobile-controls { display: none !important; }
     }
   </style>
 </head>
@@ -2630,43 +2635,38 @@
   <button type="button" class="room-guide-toggle" id="room-guide-toggle" aria-expanded="false" aria-controls="room-guide-panel">Guide</button>
   <div class="room-guide-panel" id="room-guide-panel">
     <div class="room-guide-panel-inner">
-      <div class="room-guide-header">Controls</div>
+      <div class="room-guide-header">How to move</div>
       <div style="border:1px solid #475569;background:#e2e8f0;padding:6px 8px;margin-bottom:10px;font-size:17px;line-height:1.4;">
-        <div style="margin-bottom:4px;font-size:18px;color:#0f766e;font-weight:700;">Desktop</div>
-        <div><strong>W A S D</strong> — walk forward / left / back / right</div>
-        <div><strong>Q / E</strong> — float up / down</div>
-        <div><strong>Arrow keys</strong> — look around</div>
-        <div><strong>Mouse drag</strong> — look around</div>
-        <div><strong>Shift</strong> — sprint</div>
-        <div><strong>Click</strong> — interact with objects</div>
-        <div style="margin-top:4px;font-size:18px;color:#0f766e;font-weight:700;">Mobile</div>
-        <div><strong>Left stick</strong> — move</div>
-        <div><strong>Right stick</strong> — look</div>
+        <div style="margin-bottom:4px;font-size:18px;color:#0f766e;font-weight:700;">On a computer</div>
+        <div><strong>W A S D</strong> — walk around</div>
+        <div><strong>Q / E</strong> — go up / down</div>
+        <div><strong>Arrow keys or mouse drag</strong> — look around</div>
+        <div><strong>Shift</strong> — run faster</div>
+        <div><strong>Click</strong> — tap on stuff to interact</div>
+        <div style="margin-top:4px;font-size:18px;color:#0f766e;font-weight:700;">On a phone</div>
+        <div><strong>Left joystick</strong> — move</div>
+        <div><strong>Right joystick</strong> — look</div>
         <div><strong>Tap</strong> — interact</div>
       </div>
-      <div class="room-guide-header" style="margin-top:4px;">In this room</div>
+      <div class="room-guide-header" style="margin-top:4px;">Things you can do</div>
       <ul class="room-guide-list">
-        <li><strong>Monitor</strong> — click the screen to view the CV / portfolio.</li>
-        <li><strong>Window</strong> — green frame; click for a camera move while the panes open to the outside.</li>
-        <li><strong>Door</strong> — click for an ACCESS DENIED toast.</li>
-        <li><strong>Wall clock</strong> — click for a close-up on the round clock.</li>
-        <li><strong>Mirror</strong> — green frame, clear glass; click to go there. Front camera feeds the mirror surface.</li>
-        <li><strong>Buddha quote</strong> — yellow mat, black text, green frame, “What you think, you become.” Click for a focused shot.</li>
-        <li><strong>Speaker</strong> — music with play / pause, next, previous, and volume. Leaving speaker view lowers volume; audio keeps playing.</li>
-        <li><strong>Lamp</strong> — right-corner lamp toggles warm light.</li>
-        <li><strong>Bonsai</strong> — desk bonsai starts a water animation.</li>
-        <li><strong>Couch + coffee</strong> — yellow couch: seated view with look around; side-table coffee maker for orders; sip animation when the drink is ready.</li>
-        <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
-        <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
-        <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
+        <li><strong>Monitor</strong> — click the screen to check out the CV / portfolio.</li>
+        <li><strong>Window</strong> — click the green window to peek outside.</li>
+        <li><strong>Clock</strong> — click it for a close-up. It shows the real time!</li>
+        <li><strong>Mirror</strong> — click to walk over. It actually reflects your view.</li>
+        <li><strong>Quote frame</strong> — a Buddha quote on the wall. Click to read it up close.</li>
+        <li><strong>Speaker</strong> — plays music! Skip tracks, pause, and change volume.</li>
+        <li><strong>Lamp</strong> — click to turn the warm light on or off.</li>
+        <li><strong>Bonsai</strong> — the little tree on the desk. Click it to water it.</li>
+        <li><strong>Couch</strong> — sit down and chill. There's a coffee maker nearby — order a drink and watch yourself sip it.</li>
+        <li><strong>Lego shelf</strong> — click the numbered bricks in order (1, 2, 3) to build a tiny house. Mess up and you start over!</li>
+        <li><strong>Boxing bag</strong> — the blue bag in the corner. Click to zoom in, then keep clicking to throw punches!</li>
+        <li><strong>Ping Pong</strong> — pick Easy, Medium, or Hard and play against the computer. Move your paddle with the mouse or slide on mobile.</li>
         <li><strong>Robot Guide</strong> — cute robot that walks around the room. Click it to ask questions — it'll tell you about the room, controls, games, and the owner!</li>
-        <li><strong>Coffee table</strong> — small wooden table to the right of the couch, near the door corner.</li>
-        <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake, Adjustris, Dangan, uCity) or upload your own ROM!</li>
-        <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
-        <li><strong>Walls &amp; floor</strong> — granite-style floor. Front wall: animated water, hover ripples. Behind the monitor: sky and clouds, hover drifts clouds. TV wall and quote wall: flowing waves, hover reacts.</li>
-        <li><strong>Car</strong> — Moskvich 412 in the garage. Click for Road Rush — a pseudo-3D racing game! Arrow keys or WASD to steer and accelerate. Touch controls on mobile.</li>
-        <li><strong>Outside</strong> — garage workbench, grill, stacked wood, helmets, axe, bins, and props beyond the window.</li>
-        <li><strong>Toolbar</strong> — Enter Screen and Back To Room when shown.</li>
+        <li><strong>Game Boy</strong> — on the coffee table near the door. Click to play retro games like Pong, Snake, Space Invaders, and more. You can even load your own ROMs!</li>
+        <li><strong>Chelsea shirt</strong> — click the jersey for fixtures, standings, and squad info.</li>
+        <li><strong>Car</strong> — parked outside the window. Click it to play Road Rush, a retro racing game!</li>
+        <li><strong>Door</strong> — nice try, but it's locked.</li>
       </ul>
     </div>
   </div>
@@ -5514,13 +5514,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.2;
   room.add(floor);
-  const ceiling = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshStandardMaterial({ color: 0x87CEEB, roughness: 0.9, metalness: 0.0 })
-  );
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 7.8;
-  room.add(ceiling);
   // Back wall (behind monitor): animated cloudy texture with hover-reactive drift.
   const backWallCanvas = document.createElement("canvas");
   backWallCanvas.width = 1024;
