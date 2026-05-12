@@ -6857,6 +6857,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   fishTank.add(tankLight);
 
   fishTank.position.set(-8.8, 0.05, 7.8);
+  fishTank.rotation.y = Math.PI / 2;
   room.add(fishTank);
 
   const fishTankClickable = new THREE.Mesh(
