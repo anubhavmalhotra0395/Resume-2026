@@ -2501,7 +2501,7 @@
         <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
         <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
         <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
-        <li><strong>Game Boy</strong> — on the side table near the couch. Click to open the emulator, pick a game (2048, Flappy Bird, Snake) or upload your own ROM!</li>
+        <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake) or upload your own ROM!</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
         <li><strong>Walls &amp; floor</strong> — granite-style floor. Front wall: animated water, hover ripples. Behind the monitor: sky and clouds, hover drifts clouds. TV wall and quote wall: flowing waves, hover reacts.</li>
         <li><strong>Car</strong> — Moskvich 412 in the garage. Click for Road Rush — a pseudo-3D racing game! Arrow keys or WASD to steer and accelerate. Touch controls on mobile.</li>
@@ -6821,7 +6821,25 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   gbLabel.rotation.x = -Math.PI / 2;
   gbLabel.position.set(0, 0.035, -0.28);
   gameboyGroup.add(gbLabel);
-  gameboyGroup.position.set(2.2, 0.06, -0.6);
+  // Small coffee table — right of couch, near door corner
+  const coffeeTable = new THREE.Group();
+  const ctTableTop = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.06, 0.55),
+    new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.72, metalness: 0.08 })
+  );
+  ctTableTop.position.y = -0.72;
+  coffeeTable.add(ctTableTop);
+  const ctLegGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.48, 8);
+  const ctLegMat = new THREE.MeshStandardMaterial({ color: 0x3e2b1c, roughness: 0.8, metalness: 0.1 });
+  [[-0.38, -0.2], [0.38, -0.2], [-0.38, 0.2], [0.38, 0.2]].forEach(([lx, lz]) => {
+    const leg = new THREE.Mesh(ctLegGeo, ctLegMat);
+    leg.position.set(lx, -0.96, lz);
+    coffeeTable.add(leg);
+  });
+  coffeeTable.position.set(6.0, 0, 5.8);
+  room.add(coffeeTable);
+
+  gameboyGroup.position.set(6.0, -0.66, 5.8);
   room.add(gameboyGroup);
 
   const gameboyClickable = new THREE.Mesh(
@@ -6832,8 +6850,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   gameboyClickable.position.y += 0.05;
   room.add(gameboyClickable);
 
-  const gbShotPos = new THREE.Vector3(2.2, 0.7, 0.3);
-  const gbShotLook = new THREE.Vector3(2.2, 0.04, -0.6);
+  const gbShotPos = new THREE.Vector3(6.0, 0.1, 6.7);
+  const gbShotLook = new THREE.Vector3(6.0, -0.68, 5.8);
   let gbSeq = null;
 
   // Gameboy screen animation
