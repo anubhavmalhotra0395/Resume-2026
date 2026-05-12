@@ -7082,12 +7082,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     new THREE.Vector3(-1.0, npcFloorY, 6.0),
     new THREE.Vector3(-3.0, npcFloorY, 4.0),
     new THREE.Vector3(-5.0, npcFloorY, 2.0),
-    new THREE.Vector3(-3.0, npcFloorY, 0.0),
-    new THREE.Vector3(-1.0, npcFloorY, -2.0),
+    new THREE.Vector3(-5.0, npcFloorY, 1.0),
+    new THREE.Vector3(5.0, npcFloorY, 1.0),
+    new THREE.Vector3(5.0, npcFloorY, -1.5),
     new THREE.Vector3(1.5, npcFloorY, -4.0),
-    new THREE.Vector3(3.5, npcFloorY, -3.0),
-    new THREE.Vector3(5.0, npcFloorY, -1.0),
-    new THREE.Vector3(4.0, npcFloorY, 1.5),
     new THREE.Vector3(2.0, npcFloorY, 3.0),
     new THREE.Vector3(4.5, npcFloorY, 5.5),
     new THREE.Vector3(5.5, npcFloorY, 7.5),
@@ -7100,21 +7098,25 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     new THREE.Vector3(-2.0, npcFloorY, -5.0),
     new THREE.Vector3(2.0, npcFloorY, -5.5),
     new THREE.Vector3(5.0, npcFloorY, -4.5),
+    new THREE.Vector3(-7.0, npcFloorY, -1.0),
+    new THREE.Vector3(-5.5, npcFloorY, -5.0),
   ];
   let npcWPIndex = 0;
   let npcWaitTimer = 0;
   const npcSpeed = 1.0;
 
-  const npcObstacles = [
-    { x: 0, z: -1.2, r: 1.6 },
-    { x: 7.0, z: 3.15, r: 2.2 },
+  const npcCircleObs = [
+    { x: 7.0, z: 3.15, r: 2.4 },
     { x: 7.08, z: 1.28, r: 0.7 },
     { x: 7.08, z: 4.58, r: 0.7 },
-    { x: 6.0, z: 5.8, r: 0.8 },
-    { x: 0.5, z: 6.8, r: 2.2 },
-    { x: -8.8, z: 5.0, r: 1.0 },
+    { x: 6.0, z: 5.8, r: 0.9 },
+    { x: 0.5, z: 6.8, r: 2.4 },
+    { x: -8.8, z: 5.0, r: 1.2 },
     { x: 8.15, z: -5.86, r: 1.0 },
     { x: 6.35, z: -5.35, r: 0.8 },
+  ];
+  const npcBoxObs = [
+    { cx: 0, cz: -1.2, hw: 4.2, hd: 2.0 },
   ];
 
   const npcAnswers = [
@@ -7127,21 +7129,32 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   ];
 
   function npcIsInsideObstacle(px, pz) {
-    for (const ob of npcObstacles) {
+    for (const ob of npcCircleObs) {
       const dx = px - ob.x, dz = pz - ob.z;
       if (dx * dx + dz * dz < ob.r * ob.r) return true;
+    }
+    for (const ob of npcBoxObs) {
+      if (Math.abs(px - ob.cx) < ob.hw && Math.abs(pz - ob.cz) < ob.hd) return true;
     }
     return false;
   }
 
   function npcPushOutOfObstacles(pos) {
-    for (const ob of npcObstacles) {
+    for (const ob of npcCircleObs) {
       const dx = pos.x - ob.x, dz = pos.z - ob.z;
       const d2 = dx * dx + dz * dz;
       if (d2 < ob.r * ob.r) {
         const d = Math.sqrt(d2) || 0.01;
-        pos.x = ob.x + (dx / d) * (ob.r + 0.05);
-        pos.z = ob.z + (dz / d) * (ob.r + 0.05);
+        pos.x = ob.x + (dx / d) * (ob.r + 0.08);
+        pos.z = ob.z + (dz / d) * (ob.r + 0.08);
+      }
+    }
+    for (const ob of npcBoxObs) {
+      const dx = pos.x - ob.cx, dz = pos.z - ob.cz;
+      if (Math.abs(dx) < ob.hw && Math.abs(dz) < ob.hd) {
+        const pushX = (ob.hw - Math.abs(dx)), pushZ = (ob.hd - Math.abs(dz));
+        if (pushX < pushZ) pos.x += (dx > 0 ? 1 : -1) * (pushX + 0.08);
+        else pos.z += (dz > 0 ? 1 : -1) * (pushZ + 0.08);
       }
     }
   }
@@ -7196,7 +7209,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
       npcWPIndex = 1;
       npcWaitTimer = 1.0;
-      npcDanceTimer = 12 + Math.random() * 15;
+      npcDanceTimer = 10 + Math.random() * 5;
     }, undefined, (err) => { console.warn("NPC Robot load error:", err); });
   })();
 
@@ -7214,7 +7227,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       if (npcDanceTimer <= 0) {
         npcDancing = false;
         npcWaitTimer = 0.5;
-        npcDanceTimer = 12 + Math.random() * 15;
+        npcDanceTimer = 10 + Math.random() * 5;
       }
       npcSetWeights(0, 0, 1);
       return;
