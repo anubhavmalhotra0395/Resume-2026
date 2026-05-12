@@ -6571,8 +6571,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     room.add(g);
     return g;
   }
-  addSideTable(7.08, 4.58);
-  addSideTable(7.08, 1.28);
+  const coffeeSideTable = addSideTable(9.1, 1.28);
 
   const coffeeMaker = new THREE.Group();
   const coffeeBase = new THREE.Mesh(
@@ -6599,7 +6598,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   );
   coffeeCup.position.set(0.28, -0.37, 0);
   coffeeMaker.add(coffeeCup);
-  coffeeMaker.position.set(9.1, -0.16, 1.28);
+  coffeeMaker.position.set(9.1, 0.02, 1.28);
   room.add(coffeeMaker);
   const couchClickable = [couchSeat, couchBack, couchArmL, couchArmR];
   const coffeeMakerClickable = [coffeeBase, coffeeBody, coffeeTop, coffeeCup];
@@ -7379,7 +7378,6 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   const npcCircleObs = [
     { x: 9.0, z: 3.15, r: 2.4 },
     { x: 9.1, z: 1.28, r: 0.7 },
-    { x: 9.1, z: 4.58, r: 0.7 },
     { x: 9.0, z: 5.8, r: 0.9 },
     { x: 0.5, z: 6.8, r: 2.4 },
     { x: -8.8, z: 5.0, r: 1.2 },
