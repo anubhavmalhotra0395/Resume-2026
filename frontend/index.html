@@ -5116,130 +5116,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.2;
   room.add(floor);
-
-  // Ceiling — animated solar system (stars, planets, comets)
-  const ceilCanvas = document.createElement("canvas");
-  ceilCanvas.width = 1024;
-  ceilCanvas.height = 1024;
-  const ceilCtx = ceilCanvas.getContext("2d");
-  const ceilStars = [];
-  for (let i = 0; i < 420; i++) {
-    ceilStars.push({
-      x: Math.random() * 1024,
-      y: Math.random() * 1024,
-      r: Math.random() * 1.6 + 0.3,
-      bri: 0.4 + Math.random() * 0.6,
-      twinkleSpeed: 1.5 + Math.random() * 3,
-      twinkleOffset: Math.random() * Math.PI * 2
-    });
-  }
-  const ceilPlanets = [
-    { dist: 120, speed: 0.15, r: 22, color: "#f59e0b", ring: false },
-    { dist: 200, speed: 0.09, r: 14, color: "#3b82f6", ring: false },
-    { dist: 280, speed: 0.06, r: 18, color: "#ef4444", ring: false },
-    { dist: 350, speed: 0.035, r: 30, color: "#d4a574", ring: true },
-    { dist: 420, speed: 0.022, r: 12, color: "#a78bfa", ring: false },
-  ];
-  const ceilComets = [];
-  for (let i = 0; i < 3; i++) {
-    ceilComets.push({
-      x: Math.random() * 1024,
-      y: Math.random() * 1024,
-      vx: (1.5 + Math.random() * 2) * (Math.random() < 0.5 ? 1 : -1),
-      vy: (1 + Math.random() * 1.5) * (Math.random() < 0.5 ? 1 : -1),
-      tailLen: 30 + Math.random() * 40,
-      life: 0,
-      maxLife: 300 + Math.random() * 300
-    });
-  }
-  function renderCeiling(t) {
-    if (!ceilCtx) return;
-    ceilCtx.fillStyle = "#05060f";
-    ceilCtx.fillRect(0, 0, 1024, 1024);
-
-    const cx = 512, cy = 512;
-
-    ceilCtx.fillStyle = "rgba(251,191,36,0.9)";
-    ceilCtx.shadowColor = "#fbbf24";
-    ceilCtx.shadowBlur = 30;
-    ceilCtx.beginPath();
-    ceilCtx.arc(cx, cy, 34, 0, Math.PI * 2);
-    ceilCtx.fill();
-    ceilCtx.shadowBlur = 0;
-
-    for (const s of ceilStars) {
-      const blink = s.bri * (0.6 + 0.4 * Math.sin(t * s.twinkleSpeed + s.twinkleOffset));
-      ceilCtx.fillStyle = `rgba(255,255,255,${blink})`;
-      ceilCtx.beginPath();
-      ceilCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ceilCtx.fill();
-    }
-
-    for (const p of ceilPlanets) {
-      ceilCtx.strokeStyle = "rgba(255,255,255,0.06)";
-      ceilCtx.lineWidth = 1;
-      ceilCtx.beginPath();
-      ceilCtx.arc(cx, cy, p.dist, 0, Math.PI * 2);
-      ceilCtx.stroke();
-
-      const angle = t * p.speed;
-      const px = cx + Math.cos(angle) * p.dist;
-      const py = cy + Math.sin(angle) * p.dist;
-      ceilCtx.fillStyle = p.color;
-      ceilCtx.shadowColor = p.color;
-      ceilCtx.shadowBlur = 10;
-      ceilCtx.beginPath();
-      ceilCtx.arc(px, py, p.r, 0, Math.PI * 2);
-      ceilCtx.fill();
-      ceilCtx.shadowBlur = 0;
-      if (p.ring) {
-        ceilCtx.strokeStyle = "rgba(255,255,255,0.45)";
-        ceilCtx.lineWidth = 2.5;
-        ceilCtx.beginPath();
-        ceilCtx.ellipse(px, py, p.r * 1.9, p.r * 0.45, 0.3, 0, Math.PI * 2);
-        ceilCtx.stroke();
-      }
-    }
-
-    for (const c of ceilComets) {
-      c.life++;
-      c.x += c.vx;
-      c.y += c.vy;
-      if (c.life > c.maxLife || c.x < -60 || c.x > 1084 || c.y < -60 || c.y > 1084) {
-        c.x = Math.random() * 1024;
-        c.y = Math.random() < 0.5 ? -10 : 1034;
-        c.vx = (1.5 + Math.random() * 2) * (Math.random() < 0.5 ? 1 : -1);
-        c.vy = (1 + Math.random() * 1.5) * (c.y < 0 ? 1 : -1);
-        c.life = 0;
-        c.maxLife = 300 + Math.random() * 300;
-      }
-      const fade = Math.min(1, c.life / 30) * Math.min(1, (c.maxLife - c.life) / 30);
-      const grad = ceilCtx.createLinearGradient(c.x, c.y, c.x - c.vx * c.tailLen * 0.5, c.y - c.vy * c.tailLen * 0.5);
-      grad.addColorStop(0, `rgba(255,255,255,${0.9 * fade})`);
-      grad.addColorStop(1, `rgba(255,255,255,0)`);
-      ceilCtx.strokeStyle = grad;
-      ceilCtx.lineWidth = 2;
-      ceilCtx.beginPath();
-      ceilCtx.moveTo(c.x, c.y);
-      ceilCtx.lineTo(c.x - c.vx * c.tailLen * 0.5, c.y - c.vy * c.tailLen * 0.5);
-      ceilCtx.stroke();
-      ceilCtx.fillStyle = `rgba(255,255,255,${0.95 * fade})`;
-      ceilCtx.beginPath();
-      ceilCtx.arc(c.x, c.y, 2.2, 0, Math.PI * 2);
-      ceilCtx.fill();
-    }
-  }
-  renderCeiling(0);
-  const ceilTex = new THREE.CanvasTexture(ceilCanvas);
-  ceilTex.needsUpdate = true;
-  const ceiling = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshBasicMaterial({ map: ceilTex })
-  );
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 2.8;
-  room.add(ceiling);
-
   // Back wall (behind monitor): animated cloudy texture with hover-reactive drift.
   const backWallCanvas = document.createElement("canvas");
   backWallCanvas.width = 1024;
@@ -8928,8 +8804,6 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     backWallTex.needsUpdate = true;
     renderSideWallWaves(t);
     sideWallTex.needsUpdate = true;
-    renderCeiling(t);
-    ceilTex.needsUpdate = true;
     if (bonsaiWaterAnim) {
       const nowMs = performance.now();
       const raw = Math.min(1, Math.max(0, (nowMs - bonsaiWaterAnim.start) / bonsaiWaterAnim.duration));
