@@ -1,8 +1,6 @@
 {
-  "buildCommand": null,
-  "outputDirectory": "frontend",
   "rewrites": [
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/ui/(.*)", "destination": "/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
