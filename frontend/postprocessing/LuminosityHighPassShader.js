@@ -1,6 +1,6 @@
-import {
+﻿import {
 	Color
-} from '/ui/three.module.min.js';
+} from '/three.module.min.js';
 
 /**
  * Luminosity

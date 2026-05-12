@@ -1,8 +1,8 @@
-import {
+﻿import {
 	Clock,
 	Vector2,
 	WebGLRenderTarget
-} from '/ui/three.module.min.js';
+} from '/three.module.min.js';
 import { CopyShader } from './CopyShader.js';
 import { ShaderPass } from './ShaderPass.js';
 import { MaskPass } from './MaskPass.js';

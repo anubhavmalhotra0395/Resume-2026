@@ -1,9 +1,9 @@
-import {
+﻿import {
 	BufferGeometry,
 	Float32BufferAttribute,
 	OrthographicCamera,
 	Mesh
-} from '/ui/three.module.min.js';
+} from '/three.module.min.js';
 
 class Pass {
 

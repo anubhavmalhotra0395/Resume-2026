@@ -1,4 +1,4 @@
-import {
+﻿import {
 	BufferGeometry,
 	FileLoader,
 	Float32BufferAttribute,
@@ -13,7 +13,7 @@ import {
 	PointsMaterial,
 	Vector3,
 	Color
-} from '/ui/three.module.min.js';
+} from '/three.module.min.js';
 
 // o object_name | g group_name
 const _object_pattern = /^[og]\s*(.+)?/;

@@ -1,4 +1,4 @@
-import {
+﻿import {
 	AdditiveBlending,
 	Color,
 	MeshBasicMaterial,
@@ -7,7 +7,7 @@ import {
 	Vector2,
 	Vector3,
 	WebGLRenderTarget
-} from '/ui/three.module.min.js';
+} from '/three.module.min.js';
 import { Pass, FullScreenQuad } from './Pass.js';
 import { CopyShader } from './CopyShader.js';
 import { LuminosityHighPassShader } from './LuminosityHighPassShader.js';
