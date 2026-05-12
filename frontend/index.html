@@ -923,6 +923,8 @@
       border-radius: 12px;
       padding: 14px 16px;
       color: #0f172a;
+      max-height: min(60vh, 420px);
+      overflow-y: auto;
     }
     .npc-dialog-title {
       font-size: 20px;
@@ -936,7 +938,10 @@
       font-size: 17px;
       line-height: 1.4;
       min-height: 28px;
+      max-height: min(25vh, 160px);
+      overflow-y: auto;
       margin-bottom: 10px;
+      word-wrap: break-word;
     }
     .npc-question-list {
       list-style: none;
@@ -2649,7 +2654,7 @@
 <div class="npc-dialog" id="npc-dialog">
   <div class="npc-dialog-box">
     <div class="npc-dialog-title">Robot Guide</div>
-    <div class="npc-dialog-answer" id="npc-answer">Hey! I patrol this room. Click a question below:</div>
+    <div class="npc-dialog-answer" id="npc-answer">Hey! I patrol this room. Pick a question below:</div>
     <ul class="npc-question-list" id="npc-question-list">
       <li><button class="npc-question-btn" data-q="0">What can I do in this room?</button></li>
       <li><button class="npc-question-btn" data-q="1">Where is the CV / portfolio?</button></li>
@@ -7113,11 +7118,11 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   ];
 
   const npcAnswers = [
-    "There's loads to do! Click the monitor for the CV, play ping pong, punch the boxing bag, drive a car in Road Rush, brew coffee, build Lego, play Game Boy games, and more. Just walk around and click things!",
-    "Click the monitor screen — that's where the CV / portfolio lives. You can also click Enter Screen on the toolbar.",
-    "You've got a few options: the ping pong table near the mirror, the boxing bag by the TV, Road Rush by clicking the car outside, and the Game Boy on the coffee table with 2048, Flappy Bird, Snake, and Adjustris!",
-    "Walk over to the yellow couch area and click the coffee machine on the side table. A menu pops up — pick your drink, wait for the brew, then enjoy the sipping animation!",
-    "This room belongs to Anubhav Malhotra — a developer who built this whole interactive 3D portfolio. Click the monitor to see the full CV!",
+    "There is loads to do! Click the monitor for the CV, play ping pong, punch the boxing bag, drive a car in Road Rush, brew coffee, build Lego, play Game Boy games and more. Just walk around and click things!",
+    "Click the monitor screen - that is where the CV and portfolio lives. You can also click Enter Screen on the toolbar.",
+    "You have got a few options: the ping pong table near the mirror, the boxing bag by the TV, Road Rush by clicking the car outside, and the Game Boy on the coffee table with 2048, Flappy Bird, Snake and Adjustris!",
+    "Walk over to the yellow couch area and click the coffee machine on the side table. A menu pops up - pick your drink, wait for the brew, then enjoy the sipping animation!",
+    "This room belongs to Anubhav Malhotra - a developer who built this whole interactive 3D portfolio. Click the monitor to see the full CV!",
     "Desktop: WASD or arrow keys to move, mouse to look around, Q/E to lean, Shift to run. Click objects to interact. Mobile: left joystick to move, right joystick to look, tap objects to interact."
   ];
 
@@ -7284,7 +7289,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   function openNpcDialog() {
     npcTalking = true;
-    if (npcAnswerEl) npcAnswerEl.textContent = "Hey! I patrol this room. Click a question below:";
+    if (npcAnswerEl) npcAnswerEl.textContent = "Hey! I patrol this room. Pick a question below:";
     if (npcDialog) npcDialog.classList.add('on');
   }
   function closeNpcDialog() {
