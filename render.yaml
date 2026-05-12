@@ -5,7 +5,7 @@ services:
     dockerfilePath: ./infra/Dockerfile.api
     plan: free
     autoDeploy: true
-    healthCheckPath: /
+    healthCheckPath: /healthz
     envVars:
       - key: APP_REDIS_URL
         sync: false
