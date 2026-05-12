@@ -6821,7 +6821,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   gbLabel.rotation.x = -Math.PI / 2;
   gbLabel.position.set(0, 0.035, -0.28);
   gameboyGroup.add(gbLabel);
-  gameboyGroup.position.set(2.2, 0.06, 0.0);
+  gameboyGroup.position.set(2.2, 0.06, -0.6);
   room.add(gameboyGroup);
 
   const gameboyClickable = new THREE.Mesh(
@@ -6832,8 +6832,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   gameboyClickable.position.y += 0.05;
   room.add(gameboyClickable);
 
-  const gbShotPos = new THREE.Vector3(2.2, 0.7, 0.9);
-  const gbShotLook = new THREE.Vector3(2.2, 0.04, 0.0);
+  const gbShotPos = new THREE.Vector3(2.2, 0.7, 0.3);
+  const gbShotLook = new THREE.Vector3(2.2, 0.04, -0.6);
   let gbSeq = null;
 
   // Gameboy screen animation
