@@ -904,6 +904,86 @@
         transition: none;
       }
     }
+    /* NPC Guide dialog */
+    .npc-dialog {
+      display: none;
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 55;
+      width: min(420px, calc(100vw - 32px));
+      font-family: "VT323", monospace;
+      filter: drop-shadow(0 6px 24px rgba(15,23,42,0.35));
+    }
+    .npc-dialog.on { display: block; }
+    .npc-dialog-box {
+      background: linear-gradient(180deg, #f8f9fa 0%, #e8edf4 100%);
+      border: 3px solid #334155;
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: #0f172a;
+    }
+    .npc-dialog-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f766e;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed #64748b;
+      padding-bottom: 4px;
+    }
+    .npc-dialog-answer {
+      font-size: 17px;
+      line-height: 1.4;
+      min-height: 28px;
+      margin-bottom: 10px;
+    }
+    .npc-question-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .npc-question-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      font-family: "VT323", monospace;
+      font-size: 16px;
+      padding: 7px 10px;
+      border: 2px solid #334155;
+      border-radius: 7px;
+      background: linear-gradient(180deg, #f1f5f9 0%, #dbe2ea 100%);
+      color: #0f172a;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .npc-question-btn:hover {
+      background: linear-gradient(180deg, #fff 0%, #e2e8f0 100%);
+    }
+    .npc-close-btn {
+      margin-top: 8px;
+      font-family: "VT323", monospace;
+      font-size: 16px;
+      padding: 5px 16px;
+      border: 2px solid #334155;
+      border-radius: 7px;
+      background: linear-gradient(180deg, #fee2e2 0%, #fca5a5 100%);
+      color: #0f172a;
+      cursor: pointer;
+    }
+    .npc-close-btn:hover {
+      background: linear-gradient(180deg, #fca5a5 0%, #f87171 100%);
+    }
+    @media (max-width: 600px) {
+      .npc-dialog { bottom: 16px; }
+      .npc-dialog-title { font-size: 16px; }
+      .npc-dialog-answer { font-size: 14px; }
+      .npc-question-btn { font-size: 13px; padding: 5px 8px; }
+      .npc-close-btn { font-size: 13px; }
+    }
     .app-overlay-toolbar {
       display: none;
       position: fixed;
@@ -2528,6 +2608,7 @@
         <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
         <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
         <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
+        <li><strong>Soldier NPC</strong> — walks around the room. Click him to ask questions — he'll tell you about the room, controls, games, and the owner!</li>
         <li><strong>Coffee table</strong> — small wooden table to the right of the couch, near the door corner.</li>
         <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake, Adjustris) or upload your own ROM!</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
@@ -2564,6 +2645,22 @@
   </div>
 </div>
 <div class="pong-hud" id="pong-hud">YOU 0 — 0 Anubhav Malhotra</div>
+
+<div class="npc-dialog" id="npc-dialog">
+  <div class="npc-dialog-box">
+    <div class="npc-dialog-title">Soldier Guide</div>
+    <div class="npc-dialog-answer" id="npc-answer">Hey! I patrol this room. Click a question below:</div>
+    <ul class="npc-question-list" id="npc-question-list">
+      <li><button class="npc-question-btn" data-q="0">What can I do in this room?</button></li>
+      <li><button class="npc-question-btn" data-q="1">Where is the CV / portfolio?</button></li>
+      <li><button class="npc-question-btn" data-q="2">What games can I play?</button></li>
+      <li><button class="npc-question-btn" data-q="3">How do I use the coffee machine?</button></li>
+      <li><button class="npc-question-btn" data-q="4">Tell me about the owner</button></li>
+      <li><button class="npc-question-btn" data-q="5">What are the controls?</button></li>
+    </ul>
+    <button class="npc-close-btn" id="npc-close-btn">Close</button>
+  </div>
+</div>
 
 <div class="gameboy-overlay" id="gameboy-overlay">
   <div class="gameboy-menu" id="gameboy-menu">
@@ -6966,6 +7063,148 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     });
   }
 
+  // ── NPC Soldier Guide ──
+  let npcModel = null, npcMixer = null, npcIdleAction = null, npcWalkAction = null;
+  let npcClickable = null;
+  let npcTalking = false;
+  const npcWaypoints = [
+    new THREE.Vector3(3.0, -1.2, 5.0),
+    new THREE.Vector3(1.0, -1.2, 6.0),
+    new THREE.Vector3(4.0, -1.2, 3.0),
+    new THREE.Vector3(6.0, -1.2, 2.0),
+    new THREE.Vector3(2.0, -1.2, 2.0),
+    new THREE.Vector3(5.0, -1.2, 6.5),
+    new THREE.Vector3(0.5, -1.2, 4.0),
+  ];
+  let npcWPIndex = 0;
+  let npcWaitTimer = 0;
+  const npcSpeed = 1.2;
+
+  const npcAnswers = [
+    "There's loads to do! Click the monitor for the CV, play ping pong, punch the boxing bag, drive a car in Road Rush, brew coffee, build Lego, play Game Boy games, and more. Just walk around and click things!",
+    "Click the monitor screen — that's where the CV / portfolio lives. You can also click Enter Screen on the toolbar.",
+    "You've got a few options: the ping pong table near the mirror, the boxing bag by the TV, Road Rush by clicking the car outside, and the Game Boy on the coffee table with 2048, Flappy Bird, Snake, and Adjustris!",
+    "Walk over to the yellow couch area and click the coffee machine on the side table. A menu pops up — pick your drink, wait for the brew, then enjoy the sipping animation!",
+    "This room belongs to Anubhav Malhotra — a developer who built this whole interactive 3D portfolio. Click the monitor to see the full CV!",
+    "Desktop: WASD or arrow keys to move, mouse to look around, Q/E to lean, Shift to run. Click objects to interact. Mobile: left joystick to move, right joystick to look, tap objects to interact."
+  ];
+
+  (function loadNpcSoldier() {
+    const loader = new GLTFLoader();
+    loader.load("/ui/assets/Soldier.glb", (gltf) => {
+      const model = gltf.scene || gltf.scenes?.[0];
+      if (!model) return;
+
+      model.scale.setScalar(0.55);
+      model.position.copy(npcWaypoints[0]);
+      model.traverse((c) => { if (c.isMesh) c.castShadow = true; });
+      room.add(model);
+      npcModel = model;
+
+      npcMixer = new THREE.AnimationMixer(model);
+      const clips = gltf.animations || [];
+      const idleClip = clips.find(c => /idle/i.test(c.name));
+      const walkClip = clips.find(c => /walk/i.test(c.name));
+
+      if (idleClip) {
+        npcIdleAction = npcMixer.clipAction(idleClip);
+        npcIdleAction.play();
+      }
+      if (walkClip) {
+        npcWalkAction = npcMixer.clipAction(walkClip);
+        npcWalkAction.play();
+        npcWalkAction.setEffectiveWeight(0);
+      }
+
+      const hitbox = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 1.1, 0.6),
+        new THREE.MeshBasicMaterial({ visible: false })
+      );
+      hitbox.position.copy(npcWaypoints[0]);
+      hitbox.position.y += 0.55;
+      room.add(hitbox);
+      npcClickable = hitbox;
+
+      npcWPIndex = 1;
+      npcWaitTimer = 1.0;
+    }, undefined, (err) => { console.warn("NPC Soldier load error:", err); });
+  })();
+
+  function updateNpc(dt) {
+    if (!npcModel || !npcMixer) return;
+    npcMixer.update(dt);
+
+    if (npcTalking) {
+      if (npcWalkAction) npcWalkAction.setEffectiveWeight(0);
+      if (npcIdleAction) npcIdleAction.setEffectiveWeight(1);
+      return;
+    }
+
+    if (npcWaitTimer > 0) {
+      npcWaitTimer -= dt;
+      if (npcWalkAction) npcWalkAction.setEffectiveWeight(0);
+      if (npcIdleAction) npcIdleAction.setEffectiveWeight(1);
+      return;
+    }
+
+    const target = npcWaypoints[npcWPIndex];
+    const dir = new THREE.Vector3().subVectors(target, npcModel.position);
+    dir.y = 0;
+    const dist = dir.length();
+
+    if (dist < 0.15) {
+      npcWPIndex = (npcWPIndex + 1) % npcWaypoints.length;
+      npcWaitTimer = 1.5 + Math.random() * 2.0;
+      return;
+    }
+
+    dir.normalize();
+    const step = Math.min(npcSpeed * dt, dist);
+    npcModel.position.addScaledVector(dir, step);
+
+    const angle = Math.atan2(dir.x, dir.z);
+    npcModel.rotation.y = angle;
+
+    if (npcWalkAction) npcWalkAction.setEffectiveWeight(1);
+    if (npcIdleAction) npcIdleAction.setEffectiveWeight(0);
+
+    if (npcClickable) {
+      npcClickable.position.set(npcModel.position.x, npcModel.position.y + 0.55, npcModel.position.z);
+    }
+  }
+
+  // NPC dialog interaction
+  const npcDialog = document.getElementById('npc-dialog');
+  const npcAnswerEl = document.getElementById('npc-answer');
+  const npcCloseBtn = document.getElementById('npc-close-btn');
+  const npcQuestionBtns = document.querySelectorAll('.npc-question-btn');
+
+  function openNpcDialog() {
+    npcTalking = true;
+    if (npcAnswerEl) npcAnswerEl.textContent = "Hey! I patrol this room. Click a question below:";
+    if (npcDialog) npcDialog.classList.add('on');
+  }
+  function closeNpcDialog() {
+    npcTalking = false;
+    if (npcDialog) npcDialog.classList.remove('on');
+  }
+  if (npcCloseBtn) npcCloseBtn.addEventListener('click', closeNpcDialog);
+  npcQuestionBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.q, 10);
+      if (npcAnswerEl && npcAnswers[idx] != null) {
+        npcAnswerEl.textContent = '';
+        let i = 0;
+        const txt = npcAnswers[idx];
+        const typeTimer = setInterval(() => {
+          npcAnswerEl.textContent += txt[i];
+          i++;
+          if (i >= txt.length) clearInterval(typeTimer);
+        }, 18);
+      }
+    });
+  });
+
   function createBoxingGlove(gc) {
     const gl = new THREE.Group();
     const pad = new THREE.Mesh(
@@ -8777,7 +9016,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
     return !!target.closest(
-      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog, .gameboy-overlay, .gameboy-emu-wrap"
+      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog, .gameboy-overlay, .gameboy-emu-wrap, .npc-dialog"
     );
   }
 
@@ -9110,6 +9349,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       carLabelMesh.lookAt(camera.position);
     }
     updateGbScreen(dt);
+    updateNpc(dt);
     speakerWoofer.scale.setScalar(1 + Math.sin(t * 6.5) * (speakerAudio && !speakerAudio.paused ? 0.03 : 0.005));
     renderWallClock();
     // Boxing bag swing physics
@@ -9373,12 +9613,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
               if (hitGB.length > 0) {
                 setMode("gameboy-sequence");
               } else {
+              const hitNpc = npcClickable ? raycaster.intersectObject(npcClickable, false) : [];
+              if (hitNpc.length > 0) {
+                openNpcDialog();
+              } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
                 setMode("monitor-enter");
               } else {
                 const hitSpeaker = raycaster.intersectObjects(speakerClickable, false);
                 if (hitSpeaker.length > 0) setMode("speaker");
+              }
               }
               }
               }
