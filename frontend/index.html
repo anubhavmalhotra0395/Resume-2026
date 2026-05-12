@@ -784,7 +784,9 @@
     body.pong-view .room-guide,
     body.pong-sequence .room-guide,
     body.gameboy-view .room-guide,
-    body.gameboy-sequence .room-guide {
+    body.gameboy-sequence .room-guide,
+    body.npc-view .room-guide,
+    body.npc-sequence .room-guide {
       display: none;
     }
     .room-guide-toggle {
@@ -1066,7 +1068,9 @@
     body.pong-view .app-overlay-toolbar,
     body.pong-sequence .app-overlay-toolbar,
     body.gameboy-view .app-overlay-toolbar,
-    body.gameboy-sequence .app-overlay-toolbar { display: inline-flex; }
+    body.gameboy-sequence .app-overlay-toolbar,
+    body.npc-view .app-overlay-toolbar,
+    body.npc-sequence .app-overlay-toolbar { display: inline-flex; }
     .retro-btn {
       border: 1px solid #334155;
       background: #dbe2ea;
@@ -1097,7 +1101,9 @@
     body.pong-view #enter-monitor-btn,
     body.pong-sequence #enter-monitor-btn,
     body.gameboy-view #enter-monitor-btn,
-    body.gameboy-sequence #enter-monitor-btn { display: none; }
+    body.gameboy-sequence #enter-monitor-btn,
+    body.npc-view #enter-monitor-btn,
+    body.npc-sequence #enter-monitor-btn { display: none; }
     body.room-mode #back-room-btn { display: none; }
     body.room-mode.chelsea-sequence #back-room-btn,
     body.chelsea-mode #back-room-btn,
@@ -1118,7 +1124,9 @@
     body.pong-view #back-room-btn,
     body.pong-sequence #back-room-btn,
     body.gameboy-view #back-room-btn,
-    body.gameboy-sequence #back-room-btn { display: inline-block; }
+    body.gameboy-sequence #back-room-btn,
+    body.npc-view #back-room-btn,
+    body.npc-sequence #back-room-btn { display: inline-block; }
     .mobile-controls {
       position: fixed;
       inset: 0;
@@ -2589,7 +2597,9 @@
       body.bag-view .mobile-controls,
       body.bag-sequence .mobile-controls,
       body.gameboy-view .mobile-controls,
-      body.gameboy-sequence .mobile-controls { display: none; }
+      body.gameboy-sequence .mobile-controls,
+      body.npc-view .mobile-controls,
+      body.npc-sequence .mobile-controls { display: none; }
     }
   </style>
 </head>
@@ -7107,6 +7117,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   let npcDanceTimer = 0;
   let npcEmotePlaying = false;
   let npcEmoteTimer = 0;
+  let npcSeq = null;
   const npcFloorY = -1.2;
 
   const npcWaypoints = [
@@ -7388,7 +7399,10 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     npcTalking = false;
     if (npcDialog) npcDialog.classList.remove('on');
   }
-  if (npcCloseBtn) npcCloseBtn.addEventListener('click', closeNpcDialog);
+  if (npcCloseBtn) npcCloseBtn.addEventListener('click', () => {
+    setMode('return-npc');
+    beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+  });
   npcQuestionBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.q, 10);
@@ -8685,6 +8699,11 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       gbSeq = null;
       stopEmulator();
     }
+    if (next !== "npc-view" && next !== "npc-sequence") {
+      document.body.classList.remove("npc-view", "npc-sequence");
+      npcSeq = null;
+      closeNpcDialog();
+    }
     if (next !== "window-view" && next !== "window-sequence") {
       document.body.classList.remove("window-view", "window-sequence");
       windowSeq = null;
@@ -8979,6 +8998,34 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       gbSeq = null;
       stopEmulator();
       document.body.classList.remove("gameboy-view", "gameboy-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
+      document.body.classList.add("room-mode");
+    } else if (next === "npc-sequence") {
+      if (!npcModel) return;
+      const npcPos = npcModel.position.clone();
+      const npcFaceDir = new THREE.Vector3(Math.sin(npcModel.rotation.y), 0, Math.cos(npcModel.rotation.y));
+      const camPos = npcPos.clone().addScaledVector(npcFaceDir, 1.4);
+      camPos.y = npcPos.y + 0.6;
+      const lookAt = npcPos.clone();
+      lookAt.y += 0.35;
+      npcSeq = {
+        start: performance.now(),
+        duration: 800,
+        fromPos: camera.position.clone(),
+        fromLook: getCurrentLookPoint(),
+        toPos: camPos,
+        toLook: lookAt,
+      };
+      document.body.classList.remove("room-mode");
+      document.body.classList.add("npc-sequence");
+    } else if (next === "npc-view") {
+      npcSeq = null;
+      document.body.classList.remove("npc-sequence");
+      document.body.classList.add("npc-view", "room-mode");
+      openNpcDialog();
+    } else if (next === "return-npc") {
+      npcSeq = null;
+      closeNpcDialog();
+      document.body.classList.remove("npc-view", "npc-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
       document.body.classList.add("room-mode");
     } else if (next === "chelsea") {
       chelseaSeq = null;
@@ -9349,6 +9396,13 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       gbSeq = null;
       stopEmulator();
       setMode("return-gameboy");
+      beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
+      return;
+    }
+    if (mode === "npc-view" || mode === "npc-sequence") {
+      npcSeq = null;
+      closeNpcDialog();
+      setMode("return-npc");
       beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 1000);
       return;
     }
@@ -9819,7 +9873,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
               } else {
               const hitNpc = npcClickable ? raycaster.intersectObject(npcClickable, false) : [];
               if (hitNpc.length > 0) {
-                openNpcDialog();
+                setMode("npc-sequence");
               } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
@@ -9981,6 +10035,23 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     } else if (mode === "gameboy-view") {
       camera.position.copy(gbShotPos);
       camera.lookAt(gbShotLook);
+    } else if (mode === "npc-sequence" && npcSeq) {
+      const tr = Math.min(1, Math.max(0, (performance.now() - npcSeq.start) / npcSeq.duration));
+      const e = easeInOutCubic(tr);
+      camera.position.lerpVectors(npcSeq.fromPos, npcSeq.toPos, e);
+      const lk = _tmpLook.lerpVectors(npcSeq.fromLook, npcSeq.toLook, e);
+      camera.lookAt(lk);
+      if (tr >= 1) {
+        setMode("npc-view");
+      }
+    } else if (mode === "npc-view" && npcModel) {
+      const npcFaceDir = _tmpV1.set(Math.sin(npcModel.rotation.y), 0, Math.cos(npcModel.rotation.y));
+      const camPos = _tmpV2.copy(npcModel.position).addScaledVector(npcFaceDir, 1.4);
+      camPos.y = npcModel.position.y + 0.6;
+      camera.position.copy(camPos);
+      _tmpLook.copy(npcModel.position);
+      _tmpLook.y += 0.35;
+      camera.lookAt(_tmpLook);
     } else if (mode === "pong-sequence" && pongSeq) {
       const tr = Math.min(1, Math.max(0, (performance.now() - pongSeq.start) / pongSeq.duration));
       const e = easeInOutCubic(tr);
@@ -10193,7 +10264,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
         camera.position.z = lerpTo(camera.position.z, speakerWallPos.z, 0.08);
         camera.lookAt(speakerWallLook.x, speakerWallLook.y, speakerWallLook.z);
       }
-    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong" || mode === "return-gameboy") {
+    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong" || mode === "return-gameboy" || mode === "return-npc") {
       if (returnAnim) {
         const tr = Math.min(1, Math.max(0, (performance.now() - returnAnim.start) / returnAnim.duration));
         const e = easeInOutCubic(tr);
