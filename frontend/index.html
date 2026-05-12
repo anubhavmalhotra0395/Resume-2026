@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Anubhav Malhotra Portfolio</title>
-  <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=VT323&display=swap" rel="stylesheet" />
@@ -2839,7 +2839,7 @@
 
     <section class="shared-panel" id="about-panel">
       <div class="about-wrap">
-        <img src="/ui/assets/anubhav.jpg" alt="Anubhav Malhotra" class="about-photo" />
+        <img src="/assets/anubhav.jpg" alt="Anubhav Malhotra" class="about-photo" />
         <div>
           <h2>Anubhav Malhotra</h2>
           <p><strong>Senior Frontend Engineer / Frontend Lead</strong><br/>Bengaluru, India<br/>📞 +91 73849 95155 | ✉ malhotraanubhav0395@gmail.com</p>
@@ -4414,11 +4414,11 @@ if ('IntersectionObserver' in window) {
 }
 </script>
 <script type="module">
-import * as THREE from "/ui/three.module.min.js";
-import { GLTFLoader } from "/ui/models/GLTFLoader.js";
-import { EffectComposer } from "/ui/postprocessing/EffectComposer.js";
-import { RenderPass } from "/ui/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
+import * as THREE from "/three.module.min.js";
+import { GLTFLoader } from "/models/GLTFLoader.js";
+import { EffectComposer } from "/postprocessing/EffectComposer.js";
+import { RenderPass } from "/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
 
 (function () {
   const canvas = document.getElementById('fx-canvas');
@@ -6146,7 +6146,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
     try {
       const loader = new GLTFLoader();
       loader.load(
-        "/ui/assets/moskvich_412.glb",
+        "/assets/moskvich_412.glb",
         (gltf) => {
           const root = gltf.scene || gltf.scenes?.[0];
           if (!root) return;
@@ -7308,7 +7308,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
 
   (function loadNpcRobot() {
     const loader = new GLTFLoader();
-    loader.load("/ui/assets/RobotExpressive.glb", (gltf) => {
+    loader.load("/assets/RobotExpressive.glb", (gltf) => {
       const model = gltf.scene || gltf.scenes?.[0];
       if (!model) return;
 
@@ -7992,11 +7992,11 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
   let speakerAudio = null;
   let speakerVolumeFade = null;
   const speakerPlaylist = [
-    { title: "doctasky - voices", artist: "doctasky", url: "/ui/assets/doctasky%20-%20voices.mp3" },
-    { title: "Ode to You", artist: "Joshua K Lepcha", url: "/ui/assets/Ode%20to%20You.mp3" },
-    { title: "doctasky - skydiving", artist: "doctasky", url: "/ui/assets/doctasky-%20skydiving.mp3" },
-    { title: "doctasky - worlds away", artist: "doctasky", url: "/ui/assets/doctasky%20-%20worlds%20away.mp3" },
-    { title: "doctasky - high and dry", artist: "doctasky", url: "/ui/assets/doctasky%20-%20high%20and%20dry.mp3" },
+    { title: "doctasky - voices", artist: "doctasky", url: "/assets/doctasky%20-%20voices.mp3" },
+    { title: "Ode to You", artist: "Joshua K Lepcha", url: "/assets/Ode%20to%20You.mp3" },
+    { title: "doctasky - skydiving", artist: "doctasky", url: "/assets/doctasky-%20skydiving.mp3" },
+    { title: "doctasky - worlds away", artist: "doctasky", url: "/assets/doctasky%20-%20worlds%20away.mp3" },
+    { title: "doctasky - high and dry", artist: "doctasky", url: "/assets/doctasky%20-%20high%20and%20dry.mp3" },
   ];
   let speakerTrackIndex = 0;
   let speakerUserPaused = false;
