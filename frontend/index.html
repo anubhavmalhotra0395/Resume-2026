@@ -968,6 +968,32 @@
     .npc-question-btn:hover {
       background: linear-gradient(180deg, #fff 0%, #e2e8f0 100%);
     }
+    .npc-actions-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f766e;
+      margin: 8px 0 4px;
+    }
+    .npc-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 4px;
+    }
+    .npc-action-btn {
+      font-family: "VT323", monospace;
+      font-size: 14px;
+      padding: 4px 10px;
+      border: 2px solid #0f766e;
+      border-radius: 7px;
+      background: linear-gradient(180deg, #d1fae5 0%, #a7f3d0 100%);
+      color: #064e3b;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .npc-action-btn:hover {
+      background: linear-gradient(180deg, #a7f3d0 0%, #6ee7b7 100%);
+    }
     .npc-close-btn {
       margin-top: 8px;
       font-family: "VT323", monospace;
@@ -988,6 +1014,8 @@
       .npc-dialog-answer { font-size: 14px; }
       .npc-question-btn { font-size: 13px; padding: 5px 8px; }
       .npc-close-btn { font-size: 13px; }
+      .npc-actions-label { font-size: 12px; }
+      .npc-action-btn { font-size: 12px; padding: 3px 7px; }
     }
     .app-overlay-toolbar {
       display: none;
@@ -2663,6 +2691,17 @@
       <li><button class="npc-question-btn" data-q="4">Tell me about the owner</button></li>
       <li><button class="npc-question-btn" data-q="5">What are the controls?</button></li>
     </ul>
+    <div class="npc-actions-label">Make me do something:</div>
+    <div class="npc-actions" id="npc-actions">
+      <button class="npc-action-btn" data-anim="Dance">Dance</button>
+      <button class="npc-action-btn" data-anim="Jump">Jump</button>
+      <button class="npc-action-btn" data-anim="Wave">Wave</button>
+      <button class="npc-action-btn" data-anim="Punch">Punch</button>
+      <button class="npc-action-btn" data-anim="ThumbsUp">Thumbs Up</button>
+      <button class="npc-action-btn" data-anim="Yes">Nod Yes</button>
+      <button class="npc-action-btn" data-anim="No">Shake No</button>
+      <button class="npc-action-btn" data-anim="Running">Run</button>
+    </div>
     <button class="npc-close-btn" id="npc-close-btn">Close</button>
   </div>
 </div>
@@ -7070,10 +7109,13 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
   // ── NPC Robot Guide ──
   let npcModel = null, npcMixer = null, npcIdleAction = null, npcWalkAction = null, npcDanceAction = null;
+  const npcAllActions = {};
   let npcClickable = null;
   let npcTalking = false;
   let npcDancing = false;
   let npcDanceTimer = 0;
+  let npcEmotePlaying = false;
+  let npcEmoteTimer = 0;
   const npcFloorY = -1.2;
 
   const npcWaypoints = [
@@ -7161,10 +7203,44 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     }
   }
 
+  function npcSetAllWeights(w) {
+    Object.values(npcAllActions).forEach(a => a.setEffectiveWeight(w));
+  }
+
   function npcSetWeights(walk, idle, dance) {
+    npcSetAllWeights(0);
     if (npcWalkAction) npcWalkAction.setEffectiveWeight(walk);
     if (npcIdleAction) npcIdleAction.setEffectiveWeight(idle);
     if (npcDanceAction) npcDanceAction.setEffectiveWeight(dance);
+  }
+
+  function npcPlayEmote(name) {
+    const action = npcAllActions[name];
+    if (!action || !npcMixer) return;
+
+    const looping = ['Dance', 'Running'];
+    if (looping.includes(name)) {
+      npcEmotePlaying = true;
+      npcSetAllWeights(0);
+      action.loop = THREE.LoopRepeat;
+      action.clampWhenFinished = false;
+      action.reset();
+      action.setEffectiveWeight(1);
+      action.play();
+      setTimeout(() => {
+        if (npcEmotePlaying) {
+          npcEmotePlaying = false;
+          npcSetAllWeights(0);
+          if (npcIdleAction) npcIdleAction.setEffectiveWeight(1);
+        }
+      }, 4000);
+    } else {
+      npcEmotePlaying = true;
+      npcSetAllWeights(0);
+      action.reset();
+      action.setEffectiveWeight(1);
+      action.play();
+    }
   }
 
   (function loadNpcRobot() {
@@ -7181,24 +7257,32 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
 
       npcMixer = new THREE.AnimationMixer(model);
       const clips = gltf.animations || [];
-      const idleClip = clips.find(c => /idle/i.test(c.name));
-      const walkClip = clips.find(c => /walk/i.test(c.name));
-      const danceClip = clips.find(c => /dance/i.test(c.name));
 
-      if (idleClip) {
-        npcIdleAction = npcMixer.clipAction(idleClip);
-        npcIdleAction.play();
-      }
-      if (walkClip) {
-        npcWalkAction = npcMixer.clipAction(walkClip);
-        npcWalkAction.play();
-        npcWalkAction.setEffectiveWeight(0);
-      }
-      if (danceClip) {
-        npcDanceAction = npcMixer.clipAction(danceClip);
-        npcDanceAction.play();
-        npcDanceAction.setEffectiveWeight(0);
-      }
+      clips.forEach(clip => {
+        const action = npcMixer.clipAction(clip);
+        npcAllActions[clip.name] = action;
+        const emotes = ['Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp', 'Death'];
+        if (emotes.includes(clip.name)) {
+          action.clampWhenFinished = true;
+          action.loop = THREE.LoopOnce;
+        }
+      });
+
+      npcIdleAction = npcAllActions['Idle'] || null;
+      npcWalkAction = npcAllActions['Walking'] || null;
+      npcDanceAction = npcAllActions['Dance'] || null;
+
+      if (npcIdleAction) npcIdleAction.play();
+      if (npcWalkAction) { npcWalkAction.play(); npcWalkAction.setEffectiveWeight(0); }
+      if (npcDanceAction) { npcDanceAction.play(); npcDanceAction.setEffectiveWeight(0); }
+
+      npcMixer.addEventListener('finished', () => {
+        if (npcEmotePlaying) {
+          npcEmotePlaying = false;
+          npcSetAllWeights(0);
+          if (npcIdleAction) npcIdleAction.setEffectiveWeight(1);
+        }
+      });
 
       const hitbox = new THREE.Mesh(
         new THREE.BoxGeometry(0.6, 1.0, 0.6),
@@ -7218,6 +7302,8 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
   function updateNpc(dt) {
     if (!npcModel || !npcMixer) return;
     npcMixer.update(dt);
+
+    if (npcEmotePlaying) return;
 
     if (npcTalking) {
       npcSetWeights(0, 1, 0);
@@ -7325,6 +7411,13 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
           if (i >= txt.length) clearInterval(typeTimer);
         }, 18);
       }
+    });
+  });
+  document.querySelectorAll('.npc-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const animName = btn.dataset.anim;
+      if (!animName) return;
+      npcPlayEmote(animName);
     });
   });
 
