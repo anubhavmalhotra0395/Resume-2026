@@ -2608,7 +2608,7 @@
         <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
         <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
         <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
-        <li><strong>Soldier NPC</strong> — walks around the room. Click him to ask questions — he'll tell you about the room, controls, games, and the owner!</li>
+        <li><strong>Robot Guide</strong> — cute robot that walks around the room. Click it to ask questions — it'll tell you about the room, controls, games, and the owner!</li>
         <li><strong>Coffee table</strong> — small wooden table to the right of the couch, near the door corner.</li>
         <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake, Adjustris) or upload your own ROM!</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
@@ -2648,7 +2648,7 @@
 
 <div class="npc-dialog" id="npc-dialog">
   <div class="npc-dialog-box">
-    <div class="npc-dialog-title">Soldier Guide</div>
+    <div class="npc-dialog-title">Robot Guide</div>
     <div class="npc-dialog-answer" id="npc-answer">Hey! I patrol this room. Click a question below:</div>
     <ul class="npc-question-list" id="npc-question-list">
       <li><button class="npc-question-btn" data-q="0">What can I do in this room?</button></li>
@@ -7063,7 +7063,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     });
   }
 
-  // ── NPC Soldier Guide ──
+  // ── NPC Robot Guide ──
   let npcModel = null, npcMixer = null, npcIdleAction = null, npcWalkAction = null;
   let npcClickable = null;
   let npcTalking = false;
@@ -7089,13 +7089,13 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
     "Desktop: WASD or arrow keys to move, mouse to look around, Q/E to lean, Shift to run. Click objects to interact. Mobile: left joystick to move, right joystick to look, tap objects to interact."
   ];
 
-  (function loadNpcSoldier() {
+  (function loadNpcRobot() {
     const loader = new GLTFLoader();
-    loader.load("/ui/assets/Soldier.glb", (gltf) => {
+    loader.load("/ui/assets/RobotExpressive.glb", (gltf) => {
       const model = gltf.scene || gltf.scenes?.[0];
       if (!model) return;
 
-      model.scale.setScalar(0.55);
+      model.scale.setScalar(0.38);
       model.position.copy(npcWaypoints[0]);
       model.traverse((c) => { if (c.isMesh) c.castShadow = true; });
       room.add(model);
@@ -7105,6 +7105,7 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       const clips = gltf.animations || [];
       const idleClip = clips.find(c => /idle/i.test(c.name));
       const walkClip = clips.find(c => /walk/i.test(c.name));
+      const waveClip = clips.find(c => /wave/i.test(c.name));
 
       if (idleClip) {
         npcIdleAction = npcMixer.clipAction(idleClip);
@@ -7117,17 +7118,17 @@ import { GLTFLoader } from "/ui/models/GLTFLoader.js";
       }
 
       const hitbox = new THREE.Mesh(
-        new THREE.BoxGeometry(0.6, 1.1, 0.6),
+        new THREE.BoxGeometry(0.6, 1.0, 0.6),
         new THREE.MeshBasicMaterial({ visible: false })
       );
       hitbox.position.copy(npcWaypoints[0]);
-      hitbox.position.y += 0.55;
+      hitbox.position.y += 0.5;
       room.add(hitbox);
       npcClickable = hitbox;
 
       npcWPIndex = 1;
       npcWaitTimer = 1.0;
-    }, undefined, (err) => { console.warn("NPC Soldier load error:", err); });
+    }, undefined, (err) => { console.warn("NPC Robot load error:", err); });
   })();
 
   function updateNpc(dt) {
