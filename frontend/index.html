@@ -872,6 +872,33 @@
     .room-mini-btn:hover {
       background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%);
     }
+    @media (max-width: 600px) {
+      .room-guide-toggle {
+        width: 22px;
+        min-height: 72px;
+        padding: 5px 2px;
+        font-size: 12px;
+        border-radius: 7px 0 0 7px;
+      }
+      .room-guide.is-open .room-guide-panel {
+        width: min(220px, calc(100vw - 32px));
+      }
+      .room-guide-panel-inner {
+        width: min(220px, calc(100vw - 32px));
+        padding: 8px 10px 10px;
+      }
+      .room-guide-header {
+        font-size: 16px;
+        margin: 0 0 5px;
+      }
+      .room-guide-list {
+        font-size: 13px;
+        padding: 0 0 0 14px;
+      }
+      .room-guide-list li {
+        margin-bottom: 5px;
+      }
+    }
     @media (prefers-reduced-motion: reduce) {
       .room-guide-panel {
         transition: none;
@@ -2501,7 +2528,8 @@
         <li><strong>Lego shelf</strong> — shelf or numbered bricks; order <strong>1</strong>, <strong>2</strong>, <strong>3</strong>. Wrong order clears progress. Completing the build shows “Lego created.”</li>
         <li><strong>Boxing bag</strong> — blue heavy bag near the TV corner. Click to zoom in, then click to punch. Jab, hook, uppercut, and cross — the bag swings!</li>
         <li><strong>Ping Pong</strong> — table near the mirror. Click to start, choose your opponent (Easy / Medium / Hard). Move paddle with mouse or slide on mobile. A/D keys also work.</li>
-        <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake) or upload your own ROM!</li>
+        <li><strong>Coffee table</strong> — small wooden table to the right of the couch, near the door corner.</li>
+        <li><strong>Game Boy</strong> — on the coffee table near the door. Click to open the emulator, pick a game (2048, Flappy Bird, Snake, Adjustris) or upload your own ROM!</li>
         <li><strong>Chelsea shirt</strong> — jersey opens the desk sheet: fixtures, table, squad.</li>
         <li><strong>Walls &amp; floor</strong> — granite-style floor. Front wall: animated water, hover ripples. Behind the monitor: sky and clouds, hover drifts clouds. TV wall and quote wall: flowing waves, hover reacts.</li>
         <li><strong>Car</strong> — Moskvich 412 in the garage. Click for Road Rush — a pseudo-3D racing game! Arrow keys or WASD to steer and accelerate. Touch controls on mobile.</li>
