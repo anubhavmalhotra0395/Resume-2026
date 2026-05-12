@@ -10536,7 +10536,7 @@ import { UnrealBloomPass } from "/ui/postprocessing/UnrealBloomPass.js";
         camera.position.z = lerpTo(camera.position.z, speakerWallPos.z, 0.08);
         camera.lookAt(speakerWallLook.x, speakerWallLook.y, speakerWallLook.z);
       }
-    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong" || mode === "return-gameboy" || mode === "return-npc") {
+    } else if (mode === "return-monitor" || mode === "return-speaker" || mode === "return-chelsea" || mode === "return-window" || mode === "return-clock" || mode === "return-mirror" || mode === "return-buddha" || mode === "return-couch" || mode === "return-lego" || mode === "return-bag" || mode === "return-pong" || mode === "return-gameboy" || mode === "return-npc" || mode === "return-fishtank") {
       if (returnAnim) {
         const tr = Math.min(1, Math.max(0, (performance.now() - returnAnim.start) / returnAnim.duration));
         const e = easeInOutCubic(tr);
