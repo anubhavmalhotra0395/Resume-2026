@@ -186,24 +186,71 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 18px;
+      justify-content: flex-start;
+      gap: 0;
       text-align: center;
       box-sizing: border-box;
-      padding: 0 8px;
+      padding: clamp(16px, 5vh, 48px) 14px max(16px, env(safe-area-inset-bottom, 0px));
+    }
+    .startup-splash-cluster {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      flex: 0 0 auto;
+    }
+    .startup-splash-spacer {
+      flex: 1 1 auto;
+      min-height: min(8vh, 56px);
+      width: 100%;
+      pointer-events: none;
     }
     .startup-mobile-hint {
       display: none;
-      max-width: 22rem;
-      margin-top: 8px;
+      max-width: min(22rem, 92vw);
       font-size: clamp(15px, 3.8vw, 20px);
-      line-height: 1.35;
+      line-height: 1.45;
       color: #86efac;
-      opacity: 0.92;
+      opacity: 0.94;
       text-shadow: 0 0 8px rgba(134, 239, 172, 0.45);
+      flex: 0 0 auto;
+      align-self: center;
+      text-align: center;
+      padding: 0 4px 4px;
+    }
+    .startup-mobile-hint strong {
+      color: #bbf7d0;
+      font-weight: 700;
+    }
+    .startup-desktop-tip {
+      display: block;
+      flex: 0 0 auto;
+      max-width: min(36rem, 92vw);
+      margin-top: auto;
+      padding-top: 10px;
+      font-size: clamp(14px, 2vw, 18px);
+      line-height: 1.35;
+      color: #6ee7b7;
+      opacity: 0.85;
+      text-align: center;
     }
     @media (max-width: 900px), (pointer: coarse) {
-      .startup-mobile-hint { display: block; }
+      .startup-splash {
+        padding: clamp(12px, 3vh, 28px) 12px max(20px, env(safe-area-inset-bottom, 0px));
+      }
+      .startup-splash-cluster {
+        gap: 12px;
+      }
+      .startup-splash-spacer {
+        min-height: min(4vh, 28px);
+      }
+      .startup-mobile-hint {
+        display: block;
+        margin-top: 0;
+      }
+      .startup-desktop-tip {
+        display: none;
+      }
     }
     .startup-title {
       font-size: clamp(42px, 6vw, 82px);
@@ -675,9 +722,10 @@
         padding: 22px 16px calc(22px + env(safe-area-inset-bottom, 0px));
       }
       .startup-splash {
-        justify-content: center;
-        gap: 12px;
-        padding: 0 12px env(safe-area-inset-bottom, 0px);
+        padding: clamp(10px, 3vh, 24px) 12px max(18px, env(safe-area-inset-bottom, 0px));
+      }
+      .startup-splash-cluster {
+        gap: 10px;
       }
       .startup-title {
         font-size: clamp(24px, 7.5vw, 38px);
@@ -8877,11 +8925,20 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
           : "Preparing arrival path";
     startupTerminalEl.innerHTML = `
       <div class="startup-splash">
-        <div class="startup-title">Entering Anubhav Malhotra's Space</div>
-        <div class="startup-sub">${status}</div>
-        <div class="startup-progress"><div class="startup-progress-fill" style="width:${pct}%"></div></div>
-        <div class="startup-status">${pct}%</div>
-        <div class="startup-mobile-hint">On your phone: use the <strong>left joystick</strong> to walk, the <strong>right joystick</strong> to look around, and <strong>tap</strong> objects to open them. In games, use the on-screen <strong>A / B / Start / Select</strong> buttons.</div>
+        <div class="startup-splash-cluster">
+          <div class="startup-title">Entering Anubhav Malhotra's Space</div>
+          <div class="startup-sub">${status}</div>
+          <div class="startup-progress"><div class="startup-progress-fill" style="width:${pct}%"></div></div>
+          <div class="startup-status">${pct}%</div>
+        </div>
+        <div class="startup-splash-spacer" aria-hidden="true"></div>
+        <div class="startup-mobile-hint"><strong>On a phone or tablet</strong><br>
+        <strong>Left joystick</strong> — walk around · <strong>Right stick</strong> — look around<br>
+        <strong>Tap</strong> objects (TV, Game Boy, couch…) to use them — tap empty floor to move the reticle<br>
+        Top bar: <strong>Enter Screen</strong> / <strong>Back To Room</strong><br>
+        <strong>Game Boy</strong>: use on-screen <strong>A</strong> <strong>B</strong> <strong>Start</strong> <strong>Select</strong> — after the title, tap <strong>Start</strong> to begin<br>
+        If a tap opens the wrong thing, drag slightly on the sticks first, then tap again</div>
+        <div class="startup-desktop-tip">Keyboard: <strong>W A S D</strong> walk · <strong>Q E</strong> up/down · arrows or mouse drag to look · click objects. Toolbar: <strong>Enter Screen</strong> / <strong>Back To Room</strong>.</div>
       </div>
     `;
   }
