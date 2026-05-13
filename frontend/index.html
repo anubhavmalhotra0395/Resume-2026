@@ -55,6 +55,7 @@
       line-height: 1.6;
       overflow: hidden;
       overscroll-behavior: none;
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='10.5' cy='10.5' r='5.5' fill='%23ffffff' fill-opacity='0.9' stroke='%230f766e' stroke-width='2'/%3E%3Cpath d='M15.5 15.5 L25 25' stroke='%230f766e' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 10 10, auto;
     }
 
     /* ── Layout ─────────────────────────────────────────────── */
@@ -261,6 +262,7 @@
       color: #0f172a;
       line-height: 1.35;
       letter-spacing: 0.02em;
+      text-align: center;
     }
     .welcome-prompt-text .wp-green { color: #0f766e; font-weight: 700; }
     .welcome-prompt-text .wp-highlight {
@@ -276,6 +278,8 @@
       gap: 10px;
       margin-top: 14px;
       flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
     }
     .welcome-prompt-btn {
       border: 3px solid #1e293b;
@@ -1082,13 +1086,49 @@
     body.npc-sequence .app-overlay-toolbar { display: flex; }
 
     .retro-btn {
-      border: 1px solid #334155;
-      background: #dbe2ea;
-      color: #111827;
+      border: 2px solid #1e293b;
+      border-radius: 9px;
+      background: linear-gradient(180deg, #f8fafc 0%, #dbeafe 100%);
+      color: #0f172a;
       font-family: "VT323", monospace;
-      font-size: 20px;
-      padding: 2px 12px;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      padding: 7px 16px 8px;
+      box-shadow: 0 3px 0 #334155, 0 8px 20px rgba(15, 23, 42, 0.18);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
       cursor: pointer;
+      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease;
+    }
+    .retro-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+      box-shadow: 0 4px 0 #334155, 0 12px 26px rgba(15, 23, 42, 0.22);
+    }
+    .retro-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #334155, 0 4px 12px rgba(15, 23, 42, 0.18);
+    }
+    #enter-monitor-btn {
+      background: linear-gradient(180deg, #ccfbf1 0%, #5eead4 100%);
+      border-color: #0f766e;
+      color: #134e4a;
+      box-shadow: 0 3px 0 #0f766e, 0 10px 22px rgba(13, 148, 136, 0.23);
+    }
+    #back-room-btn {
+      background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
+      border-color: #334155;
+      color: #0f172a;
+    }
+    button,
+    [role="button"],
+    .room-guide-toggle,
+    .retro-btn,
+    .welcome-prompt-btn,
+    .npc-action-btn,
+    .npc-question-btn,
+    .npc-close-btn {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M5 2 L23 11 L15 13 L13 21 Z' fill='%230f766e'/%3E%3Cpath d='M13 21 L11 14 L5 2' fill='%2322d3ee' fill-opacity='0.65'/%3E%3C/svg%3E") 4 2, pointer;
     }
     body.monitor-mode #enter-monitor-btn,
     body.speaker-mode #enter-monitor-btn,
@@ -2732,41 +2772,11 @@
       <button class="gameboy-game-btn" data-rom="assets/roms/adjustris.gb" data-name="Adjustris">
         <span>Adjustris</span><span class="game-tag">Tetris</span>
       </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/dangan.gb" data-name="Dangan">
-        <span>Dangan</span><span class="game-tag">Action</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/ucity.gbc" data-name="uCity" data-core="gbc">
-        <span>uCity</span><span class="game-tag">Sim</span>
-      </button>
       <button class="gameboy-game-btn" data-rom="assets/roms/tobu.gb" data-name="Tobu Tobu Girl">
         <span>Tobu Tobu Girl</span><span class="game-tag">Platformer</span>
       </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/gbpong.gb" data-name="Pong">
-        <span>Pong</span><span class="game-tag">Classic</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/spaceinvaders.gb" data-name="Space Invaders">
-        <span>Space Invaders</span><span class="game-tag">Shooter</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/catmario.gbc" data-name="Cat Mario" data-core="gbc">
-        <span>Cat Mario</span><span class="game-tag">Platformer</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/neoracer.gbc" data-name="Neo Racer" data-core="gbc">
-        <span>Neo Racer</span><span class="game-tag">Racing</span>
-      </button>
       <button class="gameboy-game-btn" data-rom="assets/roms/bounce.gb" data-name="Bounce!">
         <span>Bounce!</span><span class="game-tag">Arcade</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/roadhogfrog.gb" data-name="Roadhog Frog">
-        <span>Roadhog Frog</span><span class="game-tag">Frogger</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/minefield.gbc" data-name="Minefield" data-core="gbc">
-        <span>Minefield</span><span class="game-tag">Puzzle</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/jumpkid.gba" data-name="Jump Kid" data-core="gba">
-        <span>Jump Kid</span><span class="game-tag">Platformer</span>
-      </button>
-      <button class="gameboy-game-btn" data-rom="assets/roms/gerbilspace.gba" data-name="Gerbil Space Program" data-core="gba">
-        <span>Gerbil Space Program</span><span class="game-tag">Adventure</span>
       </button>
     </div>
     <button class="gameboy-upload-btn" id="gameboy-upload-btn">Upload Your Own ROM (.gb / .gba)</button>
@@ -5097,6 +5107,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   }
   let doorToastTimer = null;
   let coffeeToastTimer = null;
+  let npcBlockedToastTimer = null;
   let mirrorVideoStream = null;
   let mirrorVideoEl = null;
   let mirrorVideoTexture = null;
@@ -5204,10 +5215,150 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     }, 35);
     setTimeout(() => { clearInterval(typewriterInterval); el.style.opacity = '0'; }, Math.max(2500, message.length * 35 + 1500));
   }
+  function showNpcBlockedToast(message = "wait wait wait... front view is blocked") {
+    let el = document.getElementById('npc-blocked-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'npc-blocked-toast';
+      el.style.cssText = `
+        position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+        width:min(360px, calc(100vw - 24px)); padding:12px 16px;
+        border:4px solid #1e293b; border-radius:14px;
+        background:linear-gradient(180deg,#fef9c3 0%,#fef08a 100%);
+        color:#1f2937; font-family:"VT323",monospace; font-size:20px;
+        line-height:1.35; letter-spacing:0.02em; z-index:224;
+        box-shadow:0 4px 16px rgba(0,0,0,0.3);
+        opacity:0; pointer-events:none; transition:opacity 200ms ease;
+        text-align:center;
+      `;
+      document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.opacity = '1';
+    if (npcBlockedToastTimer) clearTimeout(npcBlockedToastTimer);
+    npcBlockedToastTimer = setTimeout(() => {
+      el.style.opacity = '0';
+    }, 1700);
+  }
   function isCoffeeOrderPanelOpen() {
     const p = document.getElementById("coffee-order-panel");
     if (!p) return false;
     return window.getComputedStyle(p).display !== "none";
+  }
+  function isNpcVisibleFromCamera() {
+    if (!npcModel || !npcClickable) return false;
+    const isNpcObject = (obj) => {
+      let cur = obj;
+      while (cur) {
+        if (cur === npcModel || cur === npcClickable) return true;
+        cur = cur.parent;
+      }
+      return false;
+    };
+    const npcCenter = _tmpV1.set(npcModel.position.x, npcModel.position.y + 0.6, npcModel.position.z);
+    const toNpc = _tmpV2.subVectors(npcCenter, camera.position);
+    const maxDist = toNpc.length();
+    if (maxDist < 0.0001) return true;
+    toNpc.normalize();
+    raycaster.set(camera.position, toNpc);
+    raycaster.near = 0.05;
+    raycaster.far = maxDist - 0.05;
+    const hits = raycaster.intersectObjects(room.children, true);
+    for (const hit of hits) {
+      const obj = hit.object;
+      if (!obj || !obj.visible) continue;
+      if (isNpcObject(obj)) continue;
+      return false;
+    }
+    return true;
+  }
+  function isPointerNearNpcOnScreen() {
+    if (!npcModel) return false;
+    const p = _tmpV3.set(npcModel.position.x, npcModel.position.y + 0.65, npcModel.position.z).project(camera);
+    if (p.z < -1 || p.z > 1) return false;
+    const dx = pointer.x - p.x;
+    const dy = pointer.y - p.y;
+    return (dx * dx + dy * dy) < 0.045;
+  }
+  function isNpcVisibleFromPose(fromPos, lookAtPos) {
+    if (!npcModel || !npcClickable) return false;
+    const isNpcObject = (obj) => {
+      let cur = obj;
+      while (cur) {
+        if (cur === npcModel || cur === npcClickable) return true;
+        cur = cur.parent;
+      }
+      return false;
+    };
+    const dir = _tmpV3.subVectors(lookAtPos, fromPos);
+    const maxDist = dir.length();
+    if (maxDist < 0.0001) return true;
+    dir.normalize();
+    raycaster.set(fromPos, dir);
+    raycaster.near = 0.05;
+    raycaster.far = maxDist - 0.05;
+    const hits = raycaster.intersectObjects(room.children, true);
+    for (const hit of hits) {
+      const obj = hit.object;
+      if (!obj || !obj.visible) continue;
+      if (isNpcObject(obj)) continue;
+      return false;
+    }
+    return true;
+  }
+  function isNpcBlockedByWallFromPose(fromPos, lookAtPos) {
+    const isWallObject = (obj) => {
+      let cur = obj;
+      while (cur) {
+        if (cur === frontWall || cur === backWall || cur === leftWall || cur === rightWall) return true;
+        cur = cur.parent;
+      }
+      return false;
+    };
+    const dir = _tmpV3.subVectors(lookAtPos, fromPos);
+    const maxDist = dir.length();
+    if (maxDist < 0.0001) return false;
+    dir.normalize();
+    raycaster.set(fromPos, dir);
+    raycaster.near = 0.05;
+    raycaster.far = maxDist - 0.05;
+    const hits = raycaster.intersectObjects(room.children, true);
+    for (const hit of hits) {
+      const obj = hit.object;
+      if (!obj || !obj.visible) continue;
+      if (isWallObject(obj)) return true;
+    }
+    return false;
+  }
+  function isNpcBlockedByWallFromCamera() {
+    if (!npcModel) return false;
+    const npcCenter = _tmpV3.set(npcModel.position.x, npcModel.position.y + 0.6, npcModel.position.z);
+    const dir = _tmpV4.subVectors(npcCenter, camera.position);
+    const npcDist = dir.length();
+    if (npcDist < 0.0001) return false;
+    dir.normalize();
+    raycaster.set(camera.position, dir);
+    raycaster.near = 0.05;
+    raycaster.far = npcDist + 0.05;
+    const wallHits = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], true);
+    if (wallHits.length === 0) return false;
+    return wallHits[0].distance < (npcDist - 0.08);
+  }
+  function buildNpcViewPose() {
+    if (!npcModel) return null;
+    const npcPos = _tmpV1.copy(npcModel.position);
+    const toCam = _tmpV2.subVectors(camera.position, npcPos);
+    toCam.y = 0;
+    if (toCam.lengthSq() < 0.01) {
+      toCam.set(Math.sin(npcModel.rotation.y), 0, Math.cos(npcModel.rotation.y));
+    }
+    toCam.normalize();
+    npcModel.rotation.y = Math.atan2(toCam.x, toCam.z);
+    const camPos = npcPos.clone().addScaledVector(toCam, 3.9);
+    camPos.y = npcPos.y + 1.2;
+    const lookAt = npcPos.clone();
+    lookAt.y += 0.05;
+    return { camPos, lookAt };
   }
   function openCoffeeOrderDialog() {
     let panel = document.getElementById("coffee-order-panel");
@@ -6262,6 +6413,9 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   clockCanvas.height = 1024;
   const clockCtx = clockCanvas.getContext("2d");
   const clockTex = new THREE.CanvasTexture(clockCanvas);
+  clockTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  clockTex.minFilter = THREE.LinearMipmapLinearFilter;
+  clockTex.magFilter = THREE.LinearFilter;
   const wallClockGroup = new THREE.Group();
   const wallClockFrame = new THREE.Mesh(
     new THREE.CylinderGeometry(0.62, 0.62, 0.08, 48),
@@ -6366,10 +6520,15 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     const cy = clockCanvas.height / 2;
     const r = 444;
     clockCtx.clearRect(0, 0, clockCanvas.width, clockCanvas.height);
-    clockCtx.fillStyle = "#f8fafc";
+    clockCtx.fillStyle = "#ffffff";
     clockCtx.beginPath();
     clockCtx.arc(cx, cy, r, 0, Math.PI * 2);
     clockCtx.fill();
+    clockCtx.beginPath();
+    clockCtx.arc(cx, cy, r - 34, 0, Math.PI * 2);
+    clockCtx.strokeStyle = "#e2e8f0";
+    clockCtx.lineWidth = 6;
+    clockCtx.stroke();
     clockCtx.strokeStyle = "#1f2937";
     clockCtx.lineWidth = 28;
     clockCtx.stroke();
@@ -6381,7 +6540,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       clockCtx.beginPath();
       clockCtx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
       clockCtx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
-      clockCtx.strokeStyle = i % 5 === 0 ? "#111827" : "#64748b";
+      clockCtx.strokeStyle = i % 5 === 0 ? "#0b1220" : "#475569";
       clockCtx.lineWidth = i % 5 === 0 ? 10 : 4;
       clockCtx.stroke();
     }
@@ -6400,9 +6559,9 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       clockCtx.lineCap = "round";
       clockCtx.stroke();
     };
-    drawHand(hrA, 224, 16, "#0f172a");
-    drawHand(minA, 312, 12, "#1e293b");
-    drawHand(secA, 356, 6, "#b91c1c");
+    drawHand(hrA, 224, 18, "#020617");
+    drawHand(minA, 312, 13, "#0f172a");
+    drawHand(secA, 356, 6, "#991b1b");
     clockCtx.beginPath();
     clockCtx.arc(cx, cy, 16, 0, Math.PI * 2);
     clockCtx.fillStyle = "#111827";
@@ -6575,10 +6734,11 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     new THREE.BoxGeometry(0.3, 0.72, 1.25),
     new THREE.MeshStandardMaterial({ color: 0xd9a406, roughness: 0.9, metalness: 0.02 })
   );
-  couchArmL.position.set(-1.52, -0.67, 0);
+  // Keep armrest just outside seat body to avoid coplanar overlap flicker.
+  couchArmL.position.set(-1.84, -0.67, 0);
   couch.add(couchArmL);
   const couchArmR = couchArmL.clone();
-  couchArmR.position.x = 1.52;
+  couchArmR.position.x = 1.84;
   couch.add(couchArmR);
   couch.position.set(8.7, 0, 3.15);
   couch.rotation.y = -Math.PI / 2;
@@ -7180,6 +7340,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   let npcEmotePlaying = false;
   let npcEmoteTimer = 0;
   let npcSeq = null;
+  let npcViewPose = null;
   const npcFloorY = -1.2;
 
   const npcWaypoints = [
@@ -9059,19 +9220,15 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       document.body.classList.add("room-mode");
     } else if (next === "npc-sequence") {
       if (!npcModel) return;
-      const npcPos = npcModel.position.clone();
-      const npcFaceDir = new THREE.Vector3(Math.sin(npcModel.rotation.y), 0, Math.cos(npcModel.rotation.y));
-      const camPos = npcPos.clone().addScaledVector(npcFaceDir, 4.5);
-      camPos.y = npcPos.y + 1.2;
-      const lookAt = npcPos.clone();
-      lookAt.y += 0.0;
+      npcViewPose = buildNpcViewPose();
+      if (!npcViewPose) return;
       npcSeq = {
         start: performance.now(),
         duration: 800,
         fromPos: camera.position.clone(),
         fromLook: getCurrentLookPoint(),
-        toPos: camPos,
-        toLook: lookAt,
+        toPos: npcViewPose.camPos.clone(),
+        toLook: npcViewPose.lookAt.clone(),
       };
       document.body.classList.remove("room-mode");
       document.body.classList.add("npc-sequence");
@@ -9082,6 +9239,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       openNpcDialog();
     } else if (next === "return-npc") {
       npcSeq = null;
+      npcViewPose = null;
       closeNpcDialog();
       document.body.classList.remove("npc-view", "npc-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
       document.body.classList.add("room-mode");
@@ -9781,9 +9939,11 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       renderSideWallWaves(t);
       sideWallTex.needsUpdate = true;
     } else {
-      frontWallHover = lerpTo(frontWallHover, 0, 0.08);
-      backWallHover = lerpTo(backWallHover, 0, 0.08);
-      sideWallHover = lerpTo(sideWallHover, 0, 0.08);
+      // Keep clouds stable between view modes:
+      // - Don't change hover params while in non-room modes.
+      // - Still re-render the clouds every frame so we don't "jump" on return to `room`.
+      renderBackWallClouds(t);
+      backWallTex.needsUpdate = true;
     }
     if (bonsaiWaterAnim) {
       const nowMs = performance.now();
@@ -9936,7 +10096,14 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
               } else {
               const hitNpc = npcClickable ? raycaster.intersectObject(npcClickable, false) : [];
               if (hitNpc.length > 0) {
-                setMode("npc-sequence");
+                const hitWall = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], false);
+                const npcDist = hitNpc[0].distance;
+                const wallDist = hitWall.length > 0 ? hitWall[0].distance : Infinity;
+                if (wallDist < npcDist - 0.08) {
+                  showNpcBlockedToast("wait wait wait... wall is in front");
+                } else {
+                  setMode("npc-sequence");
+                }
               } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
@@ -10108,13 +10275,17 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
         setMode("npc-view");
       }
     } else if (mode === "npc-view" && npcModel) {
-      const npcFaceDir = _tmpV1.set(Math.sin(npcModel.rotation.y), 0, Math.cos(npcModel.rotation.y));
-      const camPos = _tmpV2.copy(npcModel.position).addScaledVector(npcFaceDir, 4.5);
-      camPos.y = npcModel.position.y + 1.2;
-      camera.position.copy(camPos);
-      _tmpLook.copy(npcModel.position);
-      _tmpLook.y += 0.0;
-      camera.lookAt(_tmpLook);
+      if (!npcViewPose) npcViewPose = buildNpcViewPose();
+      if (!npcViewPose) {
+        setMode("return-npc");
+        beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 900);
+        return;
+      }
+      camera.position.copy(npcViewPose.camPos);
+      camera.lookAt(npcViewPose.lookAt);
+      const toCam = _tmpV1.subVectors(camera.position, npcModel.position);
+      toCam.y = 0;
+      if (toCam.lengthSq() > 0.0001) npcModel.rotation.y = Math.atan2(toCam.x, toCam.z);
     } else if (mode === "pong-sequence" && pongSeq) {
       const tr = Math.min(1, Math.max(0, (performance.now() - pongSeq.start) / pongSeq.duration));
       const e = easeInOutCubic(tr);
@@ -10362,6 +10533,8 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       camera.lookAt(chelseaDeskShotLook.x, chelseaDeskShotLook.y, chelseaDeskShotLook.z);
     }
 
+    const targetBloomStrength = (mode === "clock-view" || mode === "clock-sequence") ? 0.08 : 0.35;
+    bloomPass.strength = lerpTo(bloomPass.strength, targetBloomStrength, 0.12);
     bloomComposer.render();
     requestAnimationFrame(tick);
   }
