@@ -151,6 +151,7 @@
       inset: 0;
       z-index: 300;
       display: none;
+      flex-direction: column;
       background: #000;
       color: #8bff9f;
       font-family: "VT323", monospace;
@@ -167,19 +168,42 @@
       );
       transition: opacity .45s ease;
     }
-    body.startup-loading .startup-loader { display: block; }
+    body.startup-loading .startup-loader { display: flex; }
+    #startup-terminal {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
     .startup-loader.done {
       opacity: 0;
       pointer-events: none;
     }
     .startup-splash {
-      height: 100%;
+      flex: 1;
+      min-height: 0;
+      width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 18px;
       text-align: center;
+      box-sizing: border-box;
+      padding: 0 8px;
+    }
+    .startup-mobile-hint {
+      display: none;
+      max-width: 22rem;
+      margin-top: 8px;
+      font-size: clamp(15px, 3.8vw, 20px);
+      line-height: 1.35;
+      color: #86efac;
+      opacity: 0.92;
+      text-shadow: 0 0 8px rgba(134, 239, 172, 0.45);
+    }
+    @media (max-width: 900px), (pointer: coarse) {
+      .startup-mobile-hint { display: block; }
     }
     .startup-title {
       font-size: clamp(42px, 6vw, 82px);
@@ -653,6 +677,7 @@
       .startup-splash {
         justify-content: center;
         gap: 12px;
+        padding: 0 12px env(safe-area-inset-bottom, 0px);
       }
       .startup-title {
         font-size: clamp(24px, 7.5vw, 38px);
@@ -666,6 +691,10 @@
       }
       .startup-status {
         font-size: 20px;
+      }
+      .startup-mobile-hint {
+        font-size: clamp(13px, 3.5vw, 17px);
+        max-width: 90vw;
       }
     }
 
@@ -8852,6 +8881,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
         <div class="startup-sub">${status}</div>
         <div class="startup-progress"><div class="startup-progress-fill" style="width:${pct}%"></div></div>
         <div class="startup-status">${pct}%</div>
+        <div class="startup-mobile-hint">On your phone: use the <strong>left joystick</strong> to walk, the <strong>right joystick</strong> to look around, and <strong>tap</strong> objects to open them. In games, use the on-screen <strong>A / B / Start / Select</strong> buttons.</div>
       </div>
     `;
   }
