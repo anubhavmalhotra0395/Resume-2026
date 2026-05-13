@@ -17,6 +17,7 @@
   EJS_startOnLoaded = true;
   EJS_language = 'en-US';
   EJS_disableAutoLang = true;
+  EJS_alignStartButton = "center";
 
   EJS_VirtualGamepadSettings = [
     {
@@ -49,25 +50,23 @@
     },
     {
       type: "button",
-      text: "Start",
-      id: "start",
-      location: "center",
-      left: 46,
-      top: 86,
-      fontSize: 15,
-      block: false,
-      input_value: 3
+      text: "Select",
+      id: "select",
+      location: "right",
+      left: 6,
+      top: 118,
+      fontSize: 14,
+      input_value: 2
     },
     {
       type: "button",
-      text: "Select",
-      id: "select",
-      location: "center",
-      left: -46,
-      top: 86,
-      fontSize: 15,
-      block: false,
-      input_value: 2
+      text: "Start",
+      id: "start",
+      location: "right",
+      left: 52,
+      top: 118,
+      fontSize: 14,
+      input_value: 3
     }
   ];
 </script>

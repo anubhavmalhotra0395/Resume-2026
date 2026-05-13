@@ -627,6 +627,48 @@
       flex: 1;
     }
 
+    @media (max-width: 640px) {
+      .gameboy-emu-toolbar {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 44px;
+        justify-content: center;
+        align-items: center;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+        gap: 8px;
+      }
+      .gameboy-emu-toolbar .emu-title {
+        flex: 1 1 100%;
+        text-align: center;
+        font-size: 15px;
+        order: -1;
+      }
+      .gameboy-emu-toolbar button {
+        font-size: 15px;
+        padding: 5px 10px;
+      }
+      .startup-loader {
+        padding: 22px 16px calc(22px + env(safe-area-inset-bottom, 0px));
+      }
+      .startup-splash {
+        justify-content: center;
+        gap: 12px;
+      }
+      .startup-title {
+        font-size: clamp(24px, 7.5vw, 38px);
+        line-height: 1.15;
+      }
+      .startup-sub {
+        font-size: clamp(15px, 4.2vw, 22px);
+      }
+      .startup-progress {
+        width: min(92vw, 100%);
+      }
+      .startup-status {
+        font-size: 20px;
+      }
+    }
+
     body.monitor-mode .app-wrapper {
       opacity: 1;
       pointer-events: auto;
