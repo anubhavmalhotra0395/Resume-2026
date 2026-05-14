@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -1328,16 +1328,34 @@
       font-size: 16px;
     }
     @media (max-width: 640px) {
-      .weather-toggle {
-        top: 8px;
-        left: 8px;
-        padding: 4px;
+      /* Compact square panel: 2×2 grid — kept small so it does not overlap the centered Enter Screen bar. */
+      body.room-mode .weather-toggle {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        width: min(30vw, 118px);
+        height: min(30vw, 118px);
+        box-sizing: border-box;
+        top: max(8px, env(safe-area-inset-top, 0px));
+        left: max(8px, env(safe-area-inset-left, 0px));
+        padding: 5px;
         gap: 4px;
         border-radius: 12px;
+        align-content: stretch;
+        justify-items: stretch;
       }
       .weather-btn {
-        padding: 4px 7px 4px 5px;
-        font-size: 14px;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        min-width: 0;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 2px;
+        font-size: 12px;
         border-radius: 9px;
       }
       .weather-btn .weather-ico,
@@ -3365,7 +3383,7 @@
       </div>
     </section>
 
-    <section class="shared-panel active" id="music-panel">
+    <section class="shared-panel" id="music-panel">
       <div class="music-doc-card">
         <strong>How this helps (simple):</strong><br/>
         Upload your raw vocal + a reference song. The app listens to how the reference vocal is processed, then applies a similar polished sound to your vocal. It saves studio time and helps you get a pro sound without needing a full music producer workflow.
@@ -3886,42 +3904,8 @@ function renderSharedUI() {
 
 function switchSharedTab(tab) {
   if (!sharedUnlocked) return;
-  if (tab === 'music') {
-    if (typeof showDoorDeniedToast === 'function') {
-      showDoorDeniedToast();
-    } else {
-      let el = document.getElementById('door-denied-toast');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'door-denied-toast';
-        el.textContent = 'ACCESS DENIED';
-        el.style.position = 'fixed';
-        el.style.left = '50%';
-        el.style.bottom = '84px';
-        el.style.transform = 'translateX(-50%)';
-        el.style.padding = '10px 16px';
-        el.style.border = '2px solid #7f1d1d';
-        el.style.background = 'rgba(127,29,29,0.92)';
-        el.style.color = '#fee2e2';
-        el.style.fontFamily = '"VT323", monospace';
-        el.style.fontSize = '24px';
-        el.style.letterSpacing = '0.03em';
-        el.style.borderRadius = '6px';
-        el.style.zIndex = '220';
-        el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)';
-        el.style.opacity = '0';
-        el.style.pointerEvents = 'none';
-        el.style.transition = 'opacity 180ms ease';
-        document.body.appendChild(el);
-      }
-      el.style.opacity = '1';
-      setTimeout(() => { el.style.opacity = '0'; }, 1400);
-    }
-    sharedTab = 'about';
-    renderSharedUI();
-    return;
-  }
-  sharedTab = 'about';
+  if (tab !== 'about' && tab !== 'music') return;
+  sharedTab = tab;
   renderSharedUI();
 }
 
