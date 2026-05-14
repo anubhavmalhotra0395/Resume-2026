@@ -980,9 +980,8 @@
       min-width: auto;
       min-height: auto;
       margin: 0;
-      padding: 6px 14px 7px 12px;
+      padding: 6px 14px 7px;
       border: 1px solid var(--hud-btn-bd);
-      border-left: 3px solid #475569;
       border-radius: var(--hud-btn-radius);
       background: var(--hud-btn-neutral);
       color: #0f172a;
@@ -995,20 +994,21 @@
       text-orientation: mixed;
       transform: none;
       text-align: center;
-      box-shadow: var(--hud-btn-sh);
-      text-shadow: var(--hud-btn-tsh);
+      /* Flat shadow only — shared HUD inset + text-shadow reads as a horizontal line through "Guide" on short buttons */
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.06);
+      text-shadow: none;
       transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 160ms ease, border-color 160ms ease;
     }
     .room-guide-toggle:hover {
       background: var(--hud-btn-neutral-hover);
       filter: brightness(1.02);
       transform: translateY(-1px);
-      box-shadow: var(--hud-btn-sh-hover);
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.11), 0 0 0 1px rgba(15, 23, 42, 0.08);
     }
     .room-guide-toggle:active {
       filter: brightness(0.99);
       transform: translateY(1px);
-      box-shadow: var(--hud-btn-sh-press);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(15, 23, 42, 0.07);
     }
     .room-guide-toggle:focus-visible {
       outline: 2px solid #0d9488;
@@ -1210,15 +1210,10 @@
       backdrop-filter: none;
     }
     body.room-mode .app-overlay-toolbar {
-      max-width: min(92vw, 560px);
+      /* Same vertical band as weather / guide; horizontal max-width avoids overlap with side docks */
+      max-width: min(520px, calc(100vw - 2 * clamp(80px, 26vw, 160px)));
       width: max-content;
     }
-    @media (max-width: 640px) {
-      body.room-mode .app-overlay-toolbar {
-        max-width: calc(100vw - 150px);
-      }
-    }
-
     /* Weather toggle — three retro pill buttons */
     .weather-toggle {
       position: fixed;
@@ -1504,20 +1499,6 @@
       transform: translateY(1px);
       box-shadow: var(--hud-btn-sh-press);
     }
-    #enter-monitor-btn {
-      background: var(--hud-btn-primary);
-      border-color: var(--hud-btn-primary-bd);
-      color: #134e4a;
-      box-shadow: var(--hud-btn-primary-sh);
-      cursor: pointer !important;
-    }
-    #enter-monitor-btn:hover {
-      background: var(--hud-btn-primary-hover);
-      box-shadow: var(--hud-btn-primary-sh-hover);
-    }
-    #enter-monitor-btn:active {
-      box-shadow: var(--hud-btn-primary-sh-press);
-    }
     #back-room-btn {
       background: var(--hud-btn-neutral);
       border-color: var(--hud-btn-bd);
@@ -1532,41 +1513,16 @@
     #back-room-btn:active {
       box-shadow: var(--hud-btn-sh-press);
     }
-    button:not(#enter-monitor-btn),
-    [role="button"]:not(#enter-monitor-btn),
+    button,
+    [role="button"],
     .room-guide-toggle,
-    .retro-btn:not(#enter-monitor-btn),
+    .retro-btn,
     .welcome-prompt-btn,
     .npc-action-btn,
     .npc-question-btn,
     .npc-close-btn {
       cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M5 2 L23 11 L15 13 L13 21 Z' fill='%230f766e'/%3E%3Cpath d='M13 21 L11 14 L5 2' fill='%2322d3ee' fill-opacity='0.65'/%3E%3C/svg%3E") 4 2, pointer;
     }
-    body.monitor-mode #enter-monitor-btn,
-    body.speaker-mode #enter-monitor-btn,
-    body.chelsea-mode #enter-monitor-btn,
-    body.chelsea-sequence #enter-monitor-btn,
-    body.clock-view #enter-monitor-btn,
-    body.clock-sequence #enter-monitor-btn,
-    body.mirror-view #enter-monitor-btn,
-    body.mirror-sequence #enter-monitor-btn,
-    body.buddha-view #enter-monitor-btn,
-    body.buddha-sequence #enter-monitor-btn,
-    body.couch-view #enter-monitor-btn,
-    body.couch-sequence #enter-monitor-btn,
-    body.lego-view #enter-monitor-btn,
-    body.lego-sequence #enter-monitor-btn,
-    body.window-sequence #enter-monitor-btn,
-    body.window-view #enter-monitor-btn,
-    body.bag-view #enter-monitor-btn,
-    body.bag-sequence #enter-monitor-btn,
-    body.pong-view #enter-monitor-btn,
-    body.pong-sequence #enter-monitor-btn,
-    body.gameboy-view #enter-monitor-btn,
-    body.gameboy-sequence #enter-monitor-btn,
-    body.npc-view #enter-monitor-btn,
-    body.npc-sequence #enter-monitor-btn { display: none; }
-
     body.room-mode #back-room-btn { display: none; }
     body.room-mode.chelsea-sequence #back-room-btn,
     body.chelsea-mode #back-room-btn,
@@ -2972,7 +2928,7 @@
         top: 59%;
         max-height: 68vh;
       }
-      .app-overlay-toolbar {
+      body:not(.room-mode) .app-overlay-toolbar {
         width: calc(100vw - 12px);
         justify-content: center;
         left: 6px;
@@ -3024,15 +2980,16 @@
         font-size: 15px;
         letter-spacing: 0.02em;
         border-width: 1px;
-        box-shadow: var(--hud-btn-sh);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.06);
+        text-shadow: none;
       }
       .room-guide-toggle:hover {
         transform: translateY(-1px);
-        box-shadow: var(--hud-btn-sh-hover);
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.11), 0 0 0 1px rgba(15, 23, 42, 0.08);
       }
       .room-guide-toggle:active {
         transform: translateY(1px);
-        box-shadow: var(--hud-btn-sh-press);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(15, 23, 42, 0.07);
       }
       .room-guide.is-open .room-guide-panel {
         max-height: min(54vh, 340px);
@@ -3154,7 +3111,6 @@
   </div>
 </div>
 <div class="app-overlay-toolbar" id="app-overlay-toolbar">
-  <button class="retro-btn" id="enter-monitor-btn">Enter Screen</button>
   <button class="retro-btn" id="back-room-btn">Back To Room</button>
   <div class="speaker-player-controls" id="speaker-player-controls" aria-label="Speaker controls">
     <button class="retro-btn" id="speaker-prev-btn" type="button">Prev</button>
@@ -4934,7 +4890,6 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   const startupTerminalEl = document.getElementById('startup-terminal');
   const monitorBootEl = document.getElementById('monitor-boot-screen');
   const monitorBootTerminalEl = document.getElementById('monitor-boot-terminal');
-  const enterBtn = document.getElementById('enter-monitor-btn');
   const backBtn = document.getElementById('back-room-btn');
   const welcomePromptEl = document.getElementById('welcome-prompt');
   const welcomePromptTextEl = document.getElementById('welcome-prompt-text');
@@ -5723,6 +5678,10 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     if (!p) return false;
     return window.getComputedStyle(p).display !== "none";
   }
+  function resetRaycasterDistanceLimits() {
+    raycaster.near = 0;
+    raycaster.far = Infinity;
+  }
   function isNpcVisibleFromCamera() {
     if (!npcModel || !npcClickable) return false;
     const isNpcObject = (obj) => {
@@ -5741,14 +5700,18 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     raycaster.set(camera.position, toNpc);
     raycaster.near = 0.05;
     raycaster.far = maxDist - 0.05;
-    const hits = raycaster.intersectObjects(room.children, true);
-    for (const hit of hits) {
-      const obj = hit.object;
-      if (!obj || !obj.visible) continue;
-      if (isNpcObject(obj)) continue;
-      return false;
+    try {
+      const hits = raycaster.intersectObjects(room.children, true);
+      for (const hit of hits) {
+        const obj = hit.object;
+        if (!obj || !obj.visible) continue;
+        if (isNpcObject(obj)) continue;
+        return false;
+      }
+      return true;
+    } finally {
+      resetRaycasterDistanceLimits();
     }
-    return true;
   }
   function isPointerNearNpcOnScreen() {
     if (!npcModel) return false;
@@ -5775,14 +5738,18 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     raycaster.set(fromPos, dir);
     raycaster.near = 0.05;
     raycaster.far = maxDist - 0.05;
-    const hits = raycaster.intersectObjects(room.children, true);
-    for (const hit of hits) {
-      const obj = hit.object;
-      if (!obj || !obj.visible) continue;
-      if (isNpcObject(obj)) continue;
-      return false;
+    try {
+      const hits = raycaster.intersectObjects(room.children, true);
+      for (const hit of hits) {
+        const obj = hit.object;
+        if (!obj || !obj.visible) continue;
+        if (isNpcObject(obj)) continue;
+        return false;
+      }
+      return true;
+    } finally {
+      resetRaycasterDistanceLimits();
     }
-    return true;
   }
   function isNpcBlockedByWallFromPose(fromPos, lookAtPos) {
     const isWallObject = (obj) => {
@@ -5800,13 +5767,17 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     raycaster.set(fromPos, dir);
     raycaster.near = 0.05;
     raycaster.far = maxDist - 0.05;
-    const hits = raycaster.intersectObjects(room.children, true);
-    for (const hit of hits) {
-      const obj = hit.object;
-      if (!obj || !obj.visible) continue;
-      if (isWallObject(obj)) return true;
+    try {
+      const hits = raycaster.intersectObjects(room.children, true);
+      for (const hit of hits) {
+        const obj = hit.object;
+        if (!obj || !obj.visible) continue;
+        if (isWallObject(obj)) return true;
+      }
+      return false;
+    } finally {
+      resetRaycasterDistanceLimits();
     }
-    return false;
   }
   function isNpcBlockedByWallFromCamera() {
     if (!npcModel) return false;
@@ -5818,9 +5789,13 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     raycaster.set(camera.position, dir);
     raycaster.near = 0.05;
     raycaster.far = npcDist + 0.05;
-    const wallHits = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], true);
-    if (wallHits.length === 0) return false;
-    return wallHits[0].distance < (npcDist - 0.08);
+    try {
+      const wallHits = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], true);
+      if (wallHits.length === 0) return false;
+      return wallHits[0].distance < (npcDist - 0.08);
+    } finally {
+      resetRaycasterDistanceLimits();
+    }
   }
   /** No wall mesh blocks the segment from camera aim to the robot (used for NPC view placement). */
   function isNpcWallRayClear(fromPos, lookAtPos) {
@@ -5831,9 +5806,13 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     raycaster.set(fromPos, dir);
     raycaster.near = 0.03;
     raycaster.far = Math.max(0.06, len - 0.1);
-    const hits = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], true);
-    if (hits.length === 0) return true;
-    return hits[0].distance >= len - 0.22;
+    try {
+      const hits = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], true);
+      if (hits.length === 0) return true;
+      return hits[0].distance >= len - 0.22;
+    } finally {
+      resetRaycasterDistanceLimits();
+    }
   }
   function findClearNpcViewPose() {
     if (!npcModel) return null;
@@ -11002,7 +10981,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
     return !!target.closest(
-      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog, .gameboy-overlay, .gameboy-emu-wrap, .npc-dialog, .weather-toggle"
+      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog, .gameboy-overlay, .gameboy-emu-wrap, .npc-dialog.on, .weather-toggle"
     );
   }
 
@@ -11023,9 +11002,13 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     }
   });
   window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
-  window.addEventListener("mousedown", () => { dragging = true; dragDistance = 0; });
-  window.addEventListener("mouseup", () => (dragging = false));
-  window.addEventListener("mousemove", (e) => {
+  window.addEventListener("pointerdown", (e) => {
+    if (!e.isPrimary) return;
+    dragging = true;
+    dragDistance = 0;
+  }, { passive: true });
+  window.addEventListener("pointermove", (e) => {
+    if (!e.isPrimary) return;
     pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
     if (dragging) {
@@ -11062,7 +11045,9 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   let lastPointerTapMs = 0;
   window.addEventListener("pointerup", (e) => {
     if (!e.isPrimary) return;
-    if (dragDistance > 8) return;
+    const skipTap = dragDistance > 8;
+    dragging = false;
+    if (skipTap) return;
     if (isCoffeeOrderPanelOpen()) return;
     if (shouldIgnoreScenePointerEvent(e.target)) return;
     lastPointerTapMs = performance.now();
@@ -11075,7 +11060,6 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     if (shouldIgnoreScenePointerEvent(e.target)) return;
     queueSceneClick(e.clientX, e.clientY);
   }, { passive: true });
-  if (enterBtn) enterBtn.addEventListener("click", () => setMode("monitor-enter"));
   if (backBtn) backBtn.addEventListener("click", () => {
     if (mode === "window-view" || mode === "window-sequence") {
       windowSeq = null;
@@ -11422,6 +11406,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     // Wall hover + animated texture (only in room-like modes)
     const wallMode = mode === "room" || mode === "couch-view" || mode === "speaker";
     if (wallMode) {
+      resetRaycasterDistanceLimits();
       raycaster.setFromCamera(pointer, camera);
       const hitFrontWall = raycaster.intersectObject(frontWall, false);
       if (hitFrontWall.length > 0 && hitFrontWall[0].uv) {
@@ -11554,6 +11539,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
 
       if (monitorClickPending) {
         monitorClickPending = false;
+        resetRaycasterDistanceLimits();
         raycaster.setFromCamera(pointer, camera);
         const hitJersey = raycaster.intersectObject(jersey, false);
         if (hitJersey.length > 0) {
@@ -11612,17 +11598,19 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
                 setMode("gameboy-sequence");
               } else {
               const hitNpc = npcClickable ? raycaster.intersectObject(npcClickable, false) : [];
+              const hitMonitorNpc = raycaster.intersectObject(screenMesh, false);
               const npcOnScreen = isPointerNearNpcOnScreen && isPointerNearNpcOnScreen();
-              if (hitNpc.length > 0 || npcOnScreen) {
+              /* Screen-space NPC fat-finger must not steal taps that ray-hit the monitor (center of view). */
+              const pickNpc =
+                hitNpc.length > 0 ||
+                (npcOnScreen && hitMonitorNpc.length === 0);
+              if (pickNpc) {
                 setMode("npc-sequence");
-              } else {
-              const hitMonitor = raycaster.intersectObject(screenMesh, false);
-              if (hitMonitor.length > 0) {
+              } else if (hitMonitorNpc.length > 0) {
                 setMode("monitor-enter");
               } else {
                 const hitSpeaker = raycaster.intersectObjects(speakerClickable, false);
                 if (hitSpeaker.length > 0) setMode("speaker");
-              }
               }
               }
               }
@@ -11656,6 +11644,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       camera.lookAt(_tmpLook);
       if (monitorClickPending) {
         monitorClickPending = false;
+        resetRaycasterDistanceLimits();
         raycaster.setFromCamera(pointer, camera);
         const hitCoffeeFromCouch = raycaster.intersectObjects(coffeeMakerClickable, false);
         if (hitCoffeeFromCouch.length > 0) {
@@ -11670,6 +11659,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       camera.lookAt(legoShotLook);
       if (monitorClickPending) {
         monitorClickPending = false;
+        resetRaycasterDistanceLimits();
         raycaster.setFromCamera(pointer, camera);
         const hitLego = raycaster.intersectObjects(legoClickable, false);
         if (hitLego.length > 0) {
@@ -12023,6 +12013,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       camera.lookAt(windowShotOutsideLook.x, windowShotOutsideLook.y, windowShotOutsideLook.z);
       if (monitorClickPending) {
         monitorClickPending = false;
+        resetRaycasterDistanceLimits();
         raycaster.setFromCamera(pointer, camera);
         const hitCar = carClickable.length > 0 ? raycaster.intersectObjects(carClickable, true) : [];
         if (hitCar.length > 0) {
