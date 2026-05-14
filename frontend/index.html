@@ -30,6 +30,22 @@
       --red:       #ef4444;
       --radius:    12px;
       --radius-sm: 8px;
+      /* Room HUD buttons — shared with toolbar, weather, guide, welcome */
+      --hud-btn-radius: 9px;
+      --hud-btn-bd: #1e293b;
+      --hud-btn-bd-soft: #334155;
+      --hud-btn-sh: 0 3px 0 #334155, 0 8px 20px rgba(15, 23, 42, 0.18);
+      --hud-btn-sh-hover: 0 4px 0 #334155, 0 12px 26px rgba(15, 23, 42, 0.22);
+      --hud-btn-sh-press: 0 1px 0 #334155, 0 4px 12px rgba(15, 23, 42, 0.18);
+      --hud-btn-tsh: 0 1px 0 rgba(255, 255, 255, 0.55);
+      --hud-btn-neutral: linear-gradient(180deg, #f8fafc 0%, #dbeafe 100%);
+      --hud-btn-neutral-hover: linear-gradient(180deg, #ffffff 0%, #e8f4fc 100%);
+      --hud-btn-primary: linear-gradient(180deg, #ccfbf1 0%, #5eead4 100%);
+      --hud-btn-primary-hover: linear-gradient(180deg, #d1faf4 0%, #6ee7d6 100%);
+      --hud-btn-primary-bd: #0f766e;
+      --hud-btn-primary-sh: 0 3px 0 #0f766e, 0 10px 22px rgba(13, 148, 136, 0.23);
+      --hud-btn-primary-sh-hover: 0 4px 0 #0d9488, 0 12px 26px rgba(13, 148, 136, 0.28);
+      --hud-btn-primary-sh-press: 0 1px 0 #0f766e, 0 4px 12px rgba(13, 148, 136, 0.2);
     }
 
     html {
@@ -358,28 +374,49 @@
       align-items: center;
     }
     .welcome-prompt-btn {
-      border: 3px solid #1e293b;
-      border-radius: 8px;
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
       font-family: "VT323", monospace;
       font-size: 22px;
-      padding: 8px 18px;
+      padding: 7px 16px 8px;
       cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 0.15s;
+      text-shadow: var(--hud-btn-tsh);
     }
-    .welcome-prompt-btn:active { transform: scale(0.96); }
+    .welcome-prompt-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+    .welcome-prompt-btn:active {
+      transform: translateY(2px);
+    }
     .welcome-prompt-btn.wp-cv {
-      background: linear-gradient(180deg, #34d399, #10b981);
-      color: #022c22;
-      box-shadow: 0 3px 0 #059669;
+      background: var(--hud-btn-primary);
+      color: #134e4a;
+      border-color: var(--hud-btn-primary-bd);
+      box-shadow: var(--hud-btn-primary-sh);
     }
-    .welcome-prompt-btn.wp-cv:hover { background: linear-gradient(180deg, #6ee7b7, #34d399); }
+    .welcome-prompt-btn.wp-cv:hover {
+      background: var(--hud-btn-primary-hover);
+      box-shadow: var(--hud-btn-primary-sh-hover);
+    }
+    .welcome-prompt-btn.wp-cv:active {
+      box-shadow: var(--hud-btn-primary-sh-press);
+    }
     .welcome-prompt-btn.wp-explore {
-      background: linear-gradient(180deg, #e2e8f0, #cbd5e1);
-      color: #1e293b;
-      box-shadow: 0 3px 0 #94a3b8;
+      background: var(--hud-btn-neutral);
+      color: #0f172a;
+      box-shadow: var(--hud-btn-sh);
     }
-    .welcome-prompt-btn.wp-explore:hover { background: linear-gradient(180deg, #f1f5f9, #e2e8f0); }
+    .welcome-prompt-btn.wp-explore:hover {
+      background: var(--hud-btn-neutral-hover);
+      box-shadow: var(--hud-btn-sh-hover);
+    }
+    .welcome-prompt-btn.wp-explore:active {
+      box-shadow: var(--hud-btn-sh-press);
+    }
     .welcome-prompt-cursor {
       display: inline-block;
       width: 12px; height: 3px;
@@ -887,18 +924,27 @@
     }
     .room-guide {
       position: fixed;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 35;
+      top: max(12px, env(safe-area-inset-top, 0px));
+      right: max(12px, env(safe-area-inset-right, 0px));
+      left: auto;
+      bottom: auto;
+      transform: none;
+      z-index: 39;
       display: none;
       font-family: "VT323", monospace;
-      filter: drop-shadow(-4px 6px 16px rgba(15, 23, 42, 0.28));
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(226, 240, 252, 0.96) 100%);
+      box-shadow: var(--hud-btn-sh);
+      backdrop-filter: blur(6px);
     }
     body.room-mode .room-guide {
-      display: flex;
-      flex-direction: row;
-      align-items: stretch;
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
     }
     body.monitor-mode .room-guide,
     body.speaker-mode .room-guide,
@@ -927,28 +973,38 @@
 
     .room-guide-toggle {
       flex-shrink: 0;
-      width: 34px;
-      min-height: 108px;
+      width: auto;
+      min-width: auto;
+      min-height: auto;
       margin: 0;
-      padding: 8px 4px;
-      border: 2px solid #334155;
-      border-right: none;
-      border-radius: 10px 0 0 10px;
-      background: linear-gradient(180deg, #e8edf4 0%, #dbe2ea 45%, #cbd5e1 100%);
+      padding: 5px 12px 6px;
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
+      background: var(--hud-btn-neutral);
       color: #0f172a;
-      font-family: inherit;
-      font-size: 17px;
-      line-height: 1.05;
+      font-family: "VT323", monospace;
+      font-size: 19px;
+      line-height: 1;
       letter-spacing: 0.04em;
       cursor: pointer;
-      writing-mode: vertical-rl;
+      writing-mode: horizontal-tb;
       text-orientation: mixed;
-      transform: rotate(180deg);
+      transform: none;
       text-align: center;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      box-shadow: var(--hud-btn-sh), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      text-shadow: var(--hud-btn-tsh);
+      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 160ms ease;
     }
     .room-guide-toggle:hover {
-      background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+      background: var(--hud-btn-neutral-hover);
+      filter: brightness(1.04);
+      transform: translateY(-1px);
+      box-shadow: var(--hud-btn-sh-hover), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+    .room-guide-toggle:active {
+      filter: brightness(0.98);
+      transform: translateY(2px);
+      box-shadow: var(--hud-btn-sh-press), inset 0 1px 0 rgba(255, 255, 255, 0.5);
     }
     .room-guide-toggle:focus-visible {
       outline: 2px solid #0d9488;
@@ -956,15 +1012,15 @@
     }
     .room-guide-panel {
       width: 0;
+      min-width: 0;
       max-height: min(72vh, 520px);
       overflow: hidden;
-      border: 2px solid #334155;
-      border-right: none;
-      border-radius: 12px 0 0 12px;
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
       background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 55%, #dbe2ea 100%);
       color: #0f172a;
       transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      box-shadow: var(--hud-btn-sh), inset 0 1px 0 rgba(255, 255, 255, 0.5);
     }
     .room-guide.is-open .room-guide-panel {
       width: min(288px, calc(100vw - 48px));
@@ -1009,33 +1065,6 @@
     }
     .room-mini-btn:hover {
       background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%);
-    }
-    @media (max-width: 600px) {
-      .room-guide-toggle {
-        width: 22px;
-        min-height: 72px;
-        padding: 5px 2px;
-        font-size: 12px;
-        border-radius: 7px 0 0 7px;
-      }
-      .room-guide.is-open .room-guide-panel {
-        width: min(220px, calc(100vw - 32px));
-      }
-      .room-guide-panel-inner {
-        width: min(220px, calc(100vw - 32px));
-        padding: 8px 10px 10px;
-      }
-      .room-guide-header {
-        font-size: 16px;
-        margin: 0 0 5px;
-      }
-      .room-guide-list {
-        font-size: 13px;
-        padding: 0 0 0 14px;
-      }
-      .room-guide-list li {
-        margin-bottom: 5px;
-      }
     }
     @media (prefers-reduced-motion: reduce) {
       .room-guide-panel {
@@ -1158,28 +1187,43 @@
     .app-overlay-toolbar {
       display: none;
       position: fixed;
-      top: 18px;
+      top: max(12px, env(safe-area-inset-top, 0px));
       left: 50%;
       transform: translateX(-50%);
       z-index: 40;
       gap: 8px;
       align-items: center;
       justify-content: center;
+      padding: 6px 8px;
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(226, 240, 252, 0.96) 100%);
+      box-shadow: var(--hud-btn-sh);
+      backdrop-filter: blur(6px);
+    }
+    body.room-mode .app-overlay-toolbar {
+      max-width: min(92vw, 560px);
+      width: max-content;
+    }
+    @media (max-width: 640px) {
+      body.room-mode .app-overlay-toolbar {
+        max-width: calc(100vw - 150px);
+      }
     }
 
     /* Weather toggle — three retro pill buttons */
     .weather-toggle {
       position: fixed;
-      top: 18px;
-      left: 16px;
+      top: max(12px, env(safe-area-inset-top, 0px));
+      left: max(12px, env(safe-area-inset-left, 0px));
       z-index: 38;
       display: none;
       gap: 6px;
       padding: 6px;
-      border: 2px solid #1e293b;
-      border-radius: 14px;
-      background: linear-gradient(180deg, rgba(248,250,252,0.92) 0%, rgba(219,226,234,0.92) 100%);
-      box-shadow: 0 3px 0 #334155, 0 10px 22px rgba(15,23,42,0.18);
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(226, 240, 252, 0.96) 100%);
+      box-shadow: var(--hud-btn-sh);
       backdrop-filter: blur(6px);
       font-family: "VT323", monospace;
     }
@@ -1213,29 +1257,34 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 5px 11px 5px 8px;
-      border: 2px solid #1e293b;
-      border-radius: 10px;
-      background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
+      padding: 5px 11px 6px 8px;
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
+      background: var(--hud-btn-neutral);
       color: #0f172a;
-      font-family: inherit;
-      font-size: 17px;
+      font-family: "VT323", monospace;
+      font-size: 19px;
       line-height: 1;
       letter-spacing: 0.04em;
       cursor: pointer;
-      box-shadow: 0 2px 0 #475569;
-      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 200ms ease;
+      box-shadow: var(--hud-btn-sh);
+      text-shadow: var(--hud-btn-tsh);
+      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 200ms ease, border-color 160ms ease, color 160ms ease;
       position: relative;
       overflow: hidden;
     }
     .weather-btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 3px 0 #475569, 0 6px 16px rgba(15,23,42,0.18);
+      box-shadow: var(--hud-btn-sh-hover);
       filter: brightness(1.04);
     }
     .weather-btn:active {
-      transform: translateY(1px);
-      box-shadow: 0 1px 0 #475569;
+      transform: translateY(2px);
+      box-shadow: var(--hud-btn-sh-press);
+    }
+    .weather-btn:focus-visible {
+      outline: 2px solid #0d9488;
+      outline-offset: 2px;
     }
     .weather-btn .weather-ico {
       width: 22px;
@@ -1300,27 +1349,27 @@
     .weather-btn[data-weather="sunny"].active {
       background: linear-gradient(180deg, #fef9c3 0%, #fcd34d 100%);
       border-color: #b45309;
-      box-shadow: 0 3px 0 #b45309, 0 0 0 3px rgba(252,211,77,0.35), 0 6px 22px rgba(245,158,11,0.45);
+      box-shadow: 0 3px 0 #b45309, 0 10px 22px rgba(180, 83, 9, 0.28);
       color: #7c2d12;
     }
     .weather-btn[data-weather="rainy"].active {
       background: linear-gradient(180deg, #dbeafe 0%, #60a5fa 100%);
       border-color: #1e40af;
-      box-shadow: 0 3px 0 #1e40af, 0 0 0 3px rgba(96,165,250,0.35), 0 6px 22px rgba(37,99,235,0.45);
+      box-shadow: 0 3px 0 #1e40af, 0 10px 22px rgba(30, 64, 175, 0.28);
       color: #0c1e4a;
     }
     .weather-btn[data-weather="snowy"].active {
       background: linear-gradient(180deg, #ecfeff 0%, #a5f3fc 100%);
       border-color: #0e7490;
-      box-shadow: 0 3px 0 #0e7490, 0 0 0 3px rgba(165,243,252,0.45), 0 6px 22px rgba(14,116,144,0.4);
+      box-shadow: 0 3px 0 #0e7490, 0 10px 22px rgba(14, 116, 144, 0.26);
       color: #134e4a;
     }
     .weather-btn[data-weather="fire"].active {
       background: linear-gradient(180deg, #fde68a 0%, #f97316 55%, #b91c1c 100%);
       border-color: #7c2d12;
-      box-shadow: 0 3px 0 #7c2d12, 0 0 0 3px rgba(249,115,22,0.42), 0 6px 22px rgba(220,38,38,0.55), 0 0 24px rgba(251,146,60,0.55);
+      box-shadow: 0 3px 0 #7c2d12, 0 10px 22px rgba(124, 45, 18, 0.32);
       color: #fff7ed;
-      text-shadow: 0 1px 0 rgba(0,0,0,0.32);
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
     }
     .weather-btn .weather-lbl {
       font-weight: 700;
@@ -1328,19 +1377,21 @@
       font-size: 16px;
     }
     @media (max-width: 640px) {
-      /* Compact square panel: 2×2 grid — kept small so it does not overlap the centered Enter Screen bar. */
+      /* Compact 2×2 grid — extra-small on phones so it stays clear of Enter Screen / HUD. */
       body.room-mode .weather-toggle {
         display: grid;
         grid-template-columns: 1fr 1fr;
         grid-template-rows: 1fr 1fr;
-        width: min(30vw, 118px);
-        height: min(30vw, 118px);
+        width: min(17vw, 60px);
+        height: min(17vw, 60px);
         box-sizing: border-box;
-        top: max(8px, env(safe-area-inset-top, 0px));
-        left: max(8px, env(safe-area-inset-left, 0px));
-        padding: 5px;
-        gap: 4px;
-        border-radius: 12px;
+        top: max(6px, env(safe-area-inset-top, 0px));
+        left: max(6px, env(safe-area-inset-left, 0px));
+        padding: 2px;
+        gap: 2px;
+        border-radius: calc(var(--hud-btn-radius) - 2px);
+        border: 1px solid var(--hud-btn-bd);
+        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 4px 12px rgba(15, 23, 42, 0.16);
         align-content: stretch;
         justify-items: stretch;
       }
@@ -1354,14 +1405,22 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 4px 2px;
-        font-size: 12px;
-        border-radius: 9px;
+        padding: 1px;
+        font-size: 10px;
+        border-radius: calc(var(--hud-btn-radius) - 3px);
+        border-width: 1px;
+        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 3px 8px rgba(15, 23, 42, 0.12);
+      }
+      .weather-btn:hover {
+        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 4px 12px rgba(15, 23, 42, 0.16);
+      }
+      .weather-btn:active {
+        box-shadow: 0 1px 0 var(--hud-btn-bd-soft), 0 2px 6px rgba(15, 23, 42, 0.12);
       }
       .weather-btn .weather-ico,
       .weather-btn .weather-ico svg {
-        width: 18px;
-        height: 18px;
+        width: 13px;
+        height: 13px;
       }
       .weather-btn .weather-lbl {
         display: none;
@@ -1413,40 +1472,56 @@
     body.npc-sequence .app-overlay-toolbar { display: flex; }
 
     .retro-btn {
-      border: 2px solid #1e293b;
-      border-radius: 9px;
-      background: linear-gradient(180deg, #f8fafc 0%, #dbeafe 100%);
+      border: 2px solid var(--hud-btn-bd);
+      border-radius: var(--hud-btn-radius);
+      background: var(--hud-btn-neutral);
       color: #0f172a;
       font-family: "VT323", monospace;
       font-size: 22px;
       letter-spacing: 0.04em;
       line-height: 1;
       padding: 7px 16px 8px;
-      box-shadow: 0 3px 0 #334155, 0 8px 20px rgba(15, 23, 42, 0.18);
-      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+      box-shadow: var(--hud-btn-sh);
+      text-shadow: var(--hud-btn-tsh);
       cursor: pointer;
       transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease;
     }
     .retro-btn:hover {
       transform: translateY(-1px);
       filter: brightness(1.04);
-      box-shadow: 0 4px 0 #334155, 0 12px 26px rgba(15, 23, 42, 0.22);
+      box-shadow: var(--hud-btn-sh-hover);
     }
     .retro-btn:active {
       transform: translateY(2px);
-      box-shadow: 0 1px 0 #334155, 0 4px 12px rgba(15, 23, 42, 0.18);
+      box-shadow: var(--hud-btn-sh-press);
     }
     #enter-monitor-btn {
-      background: linear-gradient(180deg, #ccfbf1 0%, #5eead4 100%);
-      border-color: #0f766e;
+      background: var(--hud-btn-primary);
+      border-color: var(--hud-btn-primary-bd);
       color: #134e4a;
-      box-shadow: 0 3px 0 #0f766e, 0 10px 22px rgba(13, 148, 136, 0.23);
+      box-shadow: var(--hud-btn-primary-sh);
       cursor: pointer !important;
     }
+    #enter-monitor-btn:hover {
+      background: var(--hud-btn-primary-hover);
+      box-shadow: var(--hud-btn-primary-sh-hover);
+    }
+    #enter-monitor-btn:active {
+      box-shadow: var(--hud-btn-primary-sh-press);
+    }
     #back-room-btn {
-      background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
-      border-color: #334155;
+      background: var(--hud-btn-neutral);
+      border-color: var(--hud-btn-bd);
       color: #0f172a;
+      box-shadow: var(--hud-btn-sh);
+      text-shadow: var(--hud-btn-tsh);
+    }
+    #back-room-btn:hover {
+      background: var(--hud-btn-neutral-hover);
+      box-shadow: var(--hud-btn-sh-hover);
+    }
+    #back-room-btn:active {
+      box-shadow: var(--hud-btn-sh-press);
     }
     button:not(#enter-monitor-btn),
     [role="button"]:not(#enter-monitor-btn),
@@ -2735,10 +2810,6 @@
       .chelsea-tab-body {
         max-height: 34vh;
       }
-      .room-guide.is-open .room-guide-panel,
-      .room-guide-panel-inner {
-        width: min(320px, calc(100vw - 42px));
-      }
       .shared-title {
         font-size: 20px;
       }
@@ -2787,27 +2858,12 @@
         margin-bottom: 12px;
       }
       .app-overlay-toolbar {
-        top: 8px;
+        top: max(8px, env(safe-area-inset-top, 0px));
         gap: 6px;
       }
       .retro-btn {
         font-size: 18px;
         padding: 2px 9px;
-      }
-      .room-guide-toggle {
-        width: 30px;
-        min-height: 96px;
-        font-size: 15px;
-      }
-      .room-guide.is-open .room-guide-panel,
-      .room-guide-panel-inner {
-        width: min(270px, calc(100vw - 36px));
-      }
-      .room-guide-header {
-        font-size: 20px;
-      }
-      .room-guide-list {
-        font-size: 17px;
       }
       .chelsea-desk-shell {
         width: 94vw;
@@ -2880,18 +2936,6 @@
         min-height: 104px;
         padding: 14px 12px;
       }
-      .room-guide-toggle {
-        width: 28px;
-        min-height: 88px;
-        font-size: 14px;
-      }
-      .room-guide.is-open .room-guide-panel,
-      .room-guide-panel-inner {
-        width: min(232px, calc(100vw - 30px));
-      }
-      .room-guide-list {
-        font-size: 16px;
-      }
       .chelsea-desk-shell {
         bottom: 2.5%;
       }
@@ -2957,7 +3001,69 @@
         max-height: 64vh;
       }
     }
+
+    /* Room guide: compact dock on small viewports / touch */
     @media (max-width: 900px), (pointer: coarse) {
+      .room-guide {
+        top: max(8px, env(safe-area-inset-top, 0px));
+        right: max(8px, env(safe-area-inset-right, 0px));
+        padding: 4px;
+        gap: 4px;
+      }
+      .room-guide-toggle {
+        padding: 4px 9px 5px;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+        border-width: 1px;
+        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 4px 12px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      }
+      .room-guide-toggle:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 5px 14px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      }
+      .room-guide-toggle:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 0 var(--hud-btn-bd-soft), 0 2px 8px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      }
+      .room-guide-panel {
+        border-width: 1px;
+        max-height: min(54vh, 340px);
+      }
+      .room-guide.is-open .room-guide-panel,
+      .room-guide-panel-inner {
+        width: min(198px, calc(100vw - 22px));
+      }
+      .room-guide-panel-inner {
+        padding: 5px 7px 7px;
+        max-height: min(54vh, 340px);
+      }
+      .room-guide-header {
+        font-size: 13px;
+        margin: 0 0 3px;
+        padding-bottom: 3px;
+      }
+      .room-guide-list {
+        font-size: 11px;
+        line-height: 1.28;
+        padding: 0 0 0 12px;
+      }
+      .room-guide-list li {
+        margin-bottom: 3px;
+      }
+      .room-guide-list li strong {
+        font-weight: 700;
+      }
+      .room-guide-move {
+        padding: 4px 6px !important;
+        margin-bottom: 6px !important;
+        font-size: 11px !important;
+        line-height: 1.28 !important;
+      }
+      .room-guide-move > div:first-child,
+      .room-guide-move > div[style*="margin-top:4px"] {
+        font-size: 12px !important;
+      }
+
       body.room-mode .mobile-controls { display: flex; }
       body.monitor-mode .mobile-controls,
       body.speaker-mode .mobile-controls,
@@ -3004,7 +3110,7 @@
   <div class="room-guide-panel" id="room-guide-panel">
     <div class="room-guide-panel-inner">
       <div class="room-guide-header">How to move</div>
-      <div style="border:1px solid #475569;background:#e2e8f0;padding:6px 8px;margin-bottom:10px;font-size:17px;line-height:1.4;">
+      <div class="room-guide-move" style="border:1px solid #475569;background:#e2e8f0;padding:6px 8px;margin-bottom:10px;font-size:17px;line-height:1.4;">
         <div style="margin-bottom:4px;font-size:18px;color:#0f766e;font-weight:700;">On a computer</div>
         <div><strong>W A S D</strong> — walk around</div>
         <div><strong>Q / E</strong> — go up / down</div>
@@ -3759,6 +3865,11 @@
       <span style="font-size:11px; font-weight:400; color:var(--text3); margin-left:6px;">off by default — enable to add more processing</span>
     </div>
     <div class="options-grid" id="options-grid">
+      <label class="option-toggle" id="opt-ml-refine">
+        <input type="checkbox" id="enable_ml_refine" onchange="syncToggle('opt-ml-refine',this)" />
+        <div class="toggle-dot"></div>
+        <span class="option-toggle-text">RVC / ML vocal refine</span>
+      </label>
       <label class="option-toggle" id="opt-spectral">
         <input type="checkbox" id="use_spectral_refiner" onchange="syncToggle('opt-spectral',this)" />
         <div class="toggle-dot"></div>
@@ -4718,7 +4829,7 @@ document.getElementById('submit').addEventListener('click', async () => {
   form.append('enable_parallel_comp',    document.getElementById('enable_parallel_comp').checked);
   form.append('enable_ms_eq',            document.getElementById('enable_ms_eq').checked);
   // Optional enhancement toggles
-  form.append('ml_refine',              false);
+  form.append('ml_refine',              document.getElementById('enable_ml_refine').checked);
   form.append('use_spectral_refiner',   document.getElementById('use_spectral_refiner').checked);
   form.append('enable_transient_shaper', document.getElementById('enable_transient_shaper').checked);
   form.append('enable_multiband',       document.getElementById('enable_multiband').checked);
@@ -8708,8 +8819,9 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   const WEATHER_MAX_Z = 7.4;
   const WEATHER_TOP_Y = 5.6;
   const WEATHER_FLOOR_Y = -1.18;
-  const RAIN_COUNT = quality === 'high' ? 1320 : 720;
-  const SNOW_COUNT = quality === 'high' ? 1600 : 900;
+  const wxParticleMult = isMobileDevice ? 0.5 : 1;
+  const RAIN_COUNT = Math.max(1, Math.round((quality === 'high' ? 1320 : 720) * wxParticleMult));
+  const SNOW_COUNT = Math.max(1, Math.round((quality === 'high' ? 1600 : 900) * wxParticleMult));
   const SPLASH_COUNT = quality === 'high' ? 70 : 40;
   const RAIN_TILT_X = 0.45;
   const RAIN_LEN = 0.55;
@@ -9160,6 +9272,14 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     weatherGroup.add(beam);
     heatBeams.push(beam);
   }
+
+  // Decorative weather meshes must never participate in picking; otherwise
+  // future broad raycasts (or engine changes) could steal clicks after weather toggles.
+  weatherGroup.traverse((obj) => {
+    if (obj.type === "Mesh" || obj.type === "Line" || obj.type === "LineSegments" || obj.type === "Points") {
+      obj.raycast = () => {};
+    }
+  });
 
   // Fire flicker — a tinted, fast-cycling light boost (like lightning, but
   // gentle, continuous, and warm).
@@ -10874,7 +10994,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   function shouldIgnoreScenePointerEvent(target) {
     if (!(target instanceof Element)) return false;
     return !!target.closest(
-      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog, .gameboy-overlay, .gameboy-emu-wrap, .npc-dialog"
+      ".room-guide, .app-overlay-toolbar, .mobile-controls, .app-wrapper, .chelsea-desk-shell, #coffee-order-panel, .welcome-prompt, .car-game-overlay, #pong-difficulty-dialog, #pong-end-dialog, .gameboy-overlay, .gameboy-emu-wrap, .npc-dialog, .weather-toggle"
     );
   }
 
