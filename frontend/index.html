@@ -55,7 +55,7 @@
       line-height: 1.6;
       overflow: hidden;
       overscroll-behavior: none;
-      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='10.5' cy='10.5' r='5.5' fill='%23ffffff' fill-opacity='0.9' stroke='%230f766e' stroke-width='2'/%3E%3Cpath d='M15.5 15.5 L25 25' stroke='%230f766e' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 10 10, auto;
+      cursor: default;
     }
 
     /* ── Layout ─────────────────────────────────────────────── */
@@ -236,17 +236,22 @@
     }
     @media (max-width: 900px), (pointer: coarse) {
       .startup-splash {
-        padding: clamp(12px, 3vh, 28px) 12px max(20px, env(safe-area-inset-bottom, 0px));
+        justify-content: center;
+        gap: 14px;
+        padding: clamp(12px, 4vh, 32px) 16px max(24px, calc(12px + env(safe-area-inset-bottom, 0px)));
       }
       .startup-splash-cluster {
-        gap: 12px;
+        gap: 10px;
       }
       .startup-splash-spacer {
-        min-height: min(4vh, 28px);
+        display: none !important;
       }
       .startup-mobile-hint {
         display: block;
         margin-top: 0;
+        padding: 14px 12px 0;
+        border-top: 1px solid rgba(139, 255, 159, 0.22);
+        max-width: min(20rem, 88vw);
       }
       .startup-desktop-tip {
         display: none;
@@ -741,8 +746,10 @@
         font-size: 20px;
       }
       .startup-mobile-hint {
-        font-size: clamp(13px, 3.5vw, 17px);
-        max-width: 90vw;
+        font-size: clamp(14px, 3.8vw, 17px);
+        max-width: 88vw;
+        padding: 12px 10px 0;
+        line-height: 1.35;
       }
     }
 
@@ -1159,6 +1166,162 @@
       align-items: center;
       justify-content: center;
     }
+
+    /* Weather toggle — three retro pill buttons */
+    .weather-toggle {
+      position: fixed;
+      top: 18px;
+      left: 16px;
+      z-index: 38;
+      display: none;
+      gap: 6px;
+      padding: 6px;
+      border: 2px solid #1e293b;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(248,250,252,0.92) 0%, rgba(219,226,234,0.92) 100%);
+      box-shadow: 0 3px 0 #334155, 0 10px 22px rgba(15,23,42,0.18);
+      backdrop-filter: blur(6px);
+      font-family: "VT323", monospace;
+    }
+    body.room-mode .weather-toggle { display: inline-flex; }
+    body.monitor-mode .weather-toggle,
+    body.speaker-mode .weather-toggle,
+    body.chelsea-mode .weather-toggle,
+    body.chelsea-sequence .weather-toggle,
+    body.clock-view .weather-toggle,
+    body.clock-sequence .weather-toggle,
+    body.mirror-view .weather-toggle,
+    body.mirror-sequence .weather-toggle,
+    body.buddha-view .weather-toggle,
+    body.buddha-sequence .weather-toggle,
+    body.couch-view .weather-toggle,
+    body.couch-sequence .weather-toggle,
+    body.window-sequence .weather-toggle,
+    body.window-view .weather-toggle,
+    body.lego-view .weather-toggle,
+    body.lego-sequence .weather-toggle,
+    body.bag-view .weather-toggle,
+    body.bag-sequence .weather-toggle,
+    body.pong-view .weather-toggle,
+    body.pong-sequence .weather-toggle,
+    body.gameboy-view .weather-toggle,
+    body.gameboy-sequence .weather-toggle,
+    body.npc-view .weather-toggle,
+    body.npc-sequence .weather-toggle { display: none !important; }
+    body.startup-loading .weather-toggle { display: none !important; }
+    .weather-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px 5px 8px;
+      border: 2px solid #1e293b;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
+      color: #0f172a;
+      font-family: inherit;
+      font-size: 17px;
+      line-height: 1;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      box-shadow: 0 2px 0 #475569;
+      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 200ms ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .weather-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 0 #475569, 0 6px 16px rgba(15,23,42,0.18);
+      filter: brightness(1.04);
+    }
+    .weather-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 #475569;
+    }
+    .weather-btn .weather-ico {
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .weather-btn .weather-ico svg {
+      width: 22px;
+      height: 22px;
+      display: block;
+    }
+    .weather-btn[data-weather="sunny"] .weather-ico svg .ray {
+      transform-origin: 12px 12px;
+      animation: weather-sun-spin 14s linear infinite;
+    }
+    .weather-btn[data-weather="rainy"] .weather-ico svg .drop {
+      animation: weather-rain-fall 1.1s ease-in infinite;
+      transform-origin: center;
+    }
+    .weather-btn[data-weather="rainy"] .weather-ico svg .drop:nth-child(2) { animation-delay: 0.2s; }
+    .weather-btn[data-weather="rainy"] .weather-ico svg .drop:nth-child(3) { animation-delay: 0.55s; }
+    .weather-btn[data-weather="snowy"] .weather-ico svg .flake {
+      transform-origin: 12px 12px;
+      animation: weather-snow-spin 6s linear infinite;
+    }
+    @keyframes weather-sun-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes weather-rain-fall {
+      0%   { transform: translateY(-3px); opacity: 0; }
+      30%  { opacity: 1; }
+      100% { transform: translateY(6px);  opacity: 0; }
+    }
+    @keyframes weather-snow-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .weather-btn[data-weather="sunny"].active {
+      background: linear-gradient(180deg, #fef9c3 0%, #fcd34d 100%);
+      border-color: #b45309;
+      box-shadow: 0 3px 0 #b45309, 0 0 0 3px rgba(252,211,77,0.35), 0 6px 22px rgba(245,158,11,0.45);
+      color: #7c2d12;
+    }
+    .weather-btn[data-weather="rainy"].active {
+      background: linear-gradient(180deg, #dbeafe 0%, #60a5fa 100%);
+      border-color: #1e40af;
+      box-shadow: 0 3px 0 #1e40af, 0 0 0 3px rgba(96,165,250,0.35), 0 6px 22px rgba(37,99,235,0.45);
+      color: #0c1e4a;
+    }
+    .weather-btn[data-weather="snowy"].active {
+      background: linear-gradient(180deg, #ecfeff 0%, #a5f3fc 100%);
+      border-color: #0e7490;
+      box-shadow: 0 3px 0 #0e7490, 0 0 0 3px rgba(165,243,252,0.45), 0 6px 22px rgba(14,116,144,0.4);
+      color: #134e4a;
+    }
+    .weather-btn .weather-lbl {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 16px;
+    }
+    @media (max-width: 640px) {
+      .weather-toggle {
+        top: 8px;
+        left: 8px;
+        padding: 4px;
+        gap: 4px;
+        border-radius: 12px;
+      }
+      .weather-btn {
+        padding: 4px 7px 4px 5px;
+        font-size: 14px;
+        border-radius: 9px;
+      }
+      .weather-btn .weather-ico,
+      .weather-btn .weather-ico svg {
+        width: 18px;
+        height: 18px;
+      }
+      .weather-btn .weather-lbl {
+        display: none;
+      }
+    }
     .speaker-player-controls {
       display: none;
       align-items: center;
@@ -1233,16 +1396,17 @@
       border-color: #0f766e;
       color: #134e4a;
       box-shadow: 0 3px 0 #0f766e, 0 10px 22px rgba(13, 148, 136, 0.23);
+      cursor: pointer !important;
     }
     #back-room-btn {
       background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
       border-color: #334155;
       color: #0f172a;
     }
-    button,
-    [role="button"],
+    button:not(#enter-monitor-btn),
+    [role="button"]:not(#enter-monitor-btn),
     .room-guide-toggle,
-    .retro-btn,
+    .retro-btn:not(#enter-monitor-btn),
     .welcome-prompt-btn,
     .npc-action-btn,
     .npc-question-btn,
@@ -2841,6 +3005,59 @@
     <button class="retro-btn" id="speaker-vol-up-btn" type="button">Vol+</button>
     <span class="speaker-track-label" id="speaker-track-label">Not playing</span>
   </div>
+</div>
+<div class="weather-toggle" id="weather-toggle" role="group" aria-label="Weather control">
+  <button class="weather-btn active" id="weather-btn-sunny" data-weather="sunny" type="button" aria-pressed="true" title="Sunny — clear skies">
+    <span class="weather-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="4.2" fill="#f59e0b" stroke="#b45309" stroke-width="1.2"/>
+        <g class="ray" stroke="#b45309" stroke-width="1.6" stroke-linecap="round">
+          <line x1="12" y1="2" x2="12" y2="5"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="2" y1="12" x2="5" y2="12"/>
+          <line x1="19" y1="12" x2="22" y2="12"/>
+          <line x1="4.6" y1="4.6" x2="6.7" y2="6.7"/>
+          <line x1="17.3" y1="17.3" x2="19.4" y2="19.4"/>
+          <line x1="4.6" y1="19.4" x2="6.7" y2="17.3"/>
+          <line x1="17.3" y1="6.7" x2="19.4" y2="4.6"/>
+        </g>
+      </svg>
+    </span>
+    <span class="weather-lbl">Sunny</span>
+  </button>
+  <button class="weather-btn" id="weather-btn-rainy" data-weather="rainy" type="button" aria-pressed="false" title="Rainy — let it pour">
+    <span class="weather-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M6 13.5a4.2 4.2 0 0 1 .9-8.3 5.2 5.2 0 0 1 10 1A3.8 3.8 0 0 1 17.5 14H6Z" fill="#cbd5e1" stroke="#475569" stroke-width="1.2" stroke-linejoin="round"/>
+        <g fill="#2563eb" stroke="#1e40af" stroke-width="0.8">
+          <path class="drop" d="M8.5 16.3l-1.1 2.7a1.2 1.2 0 0 0 2.2 0z"/>
+          <path class="drop" d="M12 17.1l-1.1 2.7a1.2 1.2 0 0 0 2.2 0z"/>
+          <path class="drop" d="M15.5 16.3l-1.1 2.7a1.2 1.2 0 0 0 2.2 0z"/>
+        </g>
+      </svg>
+    </span>
+    <span class="weather-lbl">Rainy</span>
+  </button>
+  <button class="weather-btn" id="weather-btn-snowy" data-weather="snowy" type="button" aria-pressed="false" title="Snowy — let it snow">
+    <span class="weather-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <g class="flake" stroke="#0e7490" stroke-width="1.4" stroke-linecap="round">
+          <line x1="12" y1="3" x2="12" y2="21"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/>
+          <line x1="18.4" y1="5.6" x2="5.6" y2="18.4"/>
+        </g>
+        <g stroke="#0e7490" stroke-width="1.2" stroke-linecap="round" fill="none">
+          <path d="M12 5.4 L10.6 7  M12 5.4 L13.4 7"/>
+          <path d="M12 18.6 L10.6 17 M12 18.6 L13.4 17"/>
+          <path d="M5.4 12 L7 10.6 M5.4 12 L7 13.4"/>
+          <path d="M18.6 12 L17 10.6 M18.6 12 L17 13.4"/>
+        </g>
+        <circle cx="12" cy="12" r="1.4" fill="#22d3ee" stroke="#0e7490" stroke-width="0.6"/>
+      </svg>
+    </span>
+    <span class="weather-lbl">Snowy</span>
+  </button>
 </div>
 <div class="mobile-controls" id="mobile-controls" aria-label="Mobile room controls">
   <div class="mobile-joystick-zone" id="mobile-joystick-zone" aria-label="Move joystick">
@@ -5463,21 +5680,60 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     if (wallHits.length === 0) return false;
     return wallHits[0].distance < (npcDist - 0.08);
   }
-  function buildNpcViewPose() {
+  /** No wall mesh blocks the segment from camera aim to the robot (used for NPC view placement). */
+  function isNpcWallRayClear(fromPos, lookAtPos) {
+    const dir = _tmpV4.subVectors(lookAtPos, fromPos);
+    const len = dir.length();
+    if (len < 0.001) return true;
+    dir.normalize();
+    raycaster.set(fromPos, dir);
+    raycaster.near = 0.03;
+    raycaster.far = Math.max(0.06, len - 0.1);
+    const hits = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], true);
+    if (hits.length === 0) return true;
+    return hits[0].distance >= len - 0.22;
+  }
+  function findClearNpcViewPose() {
     if (!npcModel) return null;
-    const npcPos = _tmpV1.copy(npcModel.position);
-    const toCam = _tmpV2.subVectors(camera.position, npcPos);
+    const npcPos = npcModel.position;
+    const toCam = _tmpV1.subVectors(camera.position, npcPos);
     toCam.y = 0;
     if (toCam.lengthSq() < 0.01) {
       toCam.set(Math.sin(npcModel.rotation.y), 0, Math.cos(npcModel.rotation.y));
     }
-    toCam.normalize();
-    npcModel.rotation.y = Math.atan2(toCam.x, toCam.z);
-    const camPos = npcPos.clone().addScaledVector(toCam, 3.9);
-    camPos.y = npcPos.y + 1.2;
-    const lookAt = npcPos.clone();
-    lookAt.y += 0.05;
-    return { camPos, lookAt };
+    const baseAngle = Math.atan2(toCam.x, toCam.z);
+    const lookAt = new THREE.Vector3(npcPos.x, npcPos.y + 0.7, npcPos.z);
+    const dists = [4.2, 3.4, 5.0, 2.8, 6.0, 5.6, 6.8, 2.4, 7.4];
+    const yHeights = [1.22, 1.4, 1.05, 0.85, 1.6];
+    const step = Math.PI / 18;
+    const angleOffsets = [0];
+    for (let i = 1; i <= 18; i++) {
+      angleOffsets.push(i * step, -i * step);
+    }
+    const clampCam = (v) => {
+      v.x = THREE.MathUtils.clamp(v.x, -8.75, 8.75);
+      v.y = THREE.MathUtils.clamp(v.y, 0.35, 2.2);
+      v.z = THREE.MathUtils.clamp(v.z, -5.65, 8.4);
+      return v;
+    };
+    for (let di = 0; di < dists.length; di++) {
+      for (let yi = 0; yi < yHeights.length; yi++) {
+        for (let ai = 0; ai < angleOffsets.length; ai++) {
+          const ang = baseAngle + angleOffsets[ai];
+          const cam = new THREE.Vector3(
+            npcPos.x + Math.sin(ang) * dists[di],
+            npcPos.y + yHeights[yi],
+            npcPos.z + Math.cos(ang) * dists[di]
+          );
+          clampCam(cam);
+          if (isNpcWallRayClear(cam, lookAt)) {
+            npcModel.rotation.y = ang;
+            return { camPos: cam.clone(), lookAt: lookAt.clone() };
+          }
+        }
+      }
+    }
+    return null;
   }
   function openCoffeeOrderDialog() {
     let panel = document.getElementById("coffee-order-panel");
@@ -8419,6 +8675,661 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   const starsObj = new THREE.Points(starsGeo, starsMat);
   scene.add(starsObj);
 
+  // ─── Weather system (sunny / rainy / snowy) ──────────────────────────
+  // Particles live inside the room space. Rain is drawn as tilted line
+  // segments for a streaky look, snow is a soft point cloud, and splashes
+  // are a small pool of ring meshes reused as drops hit the floor.
+  const WEATHER_MIN_X = -9.4;
+  const WEATHER_MAX_X = 9.4;
+  const WEATHER_MIN_Z = -5.6;
+  const WEATHER_MAX_Z = 7.4;
+  const WEATHER_TOP_Y = 5.6;
+  const WEATHER_FLOOR_Y = -1.18;
+  const RAIN_COUNT = quality === 'high' ? 1320 : 720;
+  const SNOW_COUNT = quality === 'high' ? 1600 : 900;
+  const SPLASH_COUNT = quality === 'high' ? 70 : 40;
+  const RAIN_TILT_X = 0.45;
+  const RAIN_LEN = 0.55;
+
+  const weatherGroup = new THREE.Group();
+  weatherGroup.renderOrder = 5;
+  scene.add(weatherGroup);
+
+  const rainGeo = new THREE.BufferGeometry();
+  const rainPositions = new Float32Array(RAIN_COUNT * 6);
+  const rainSpeeds = new Float32Array(RAIN_COUNT);
+  for (let i = 0; i < RAIN_COUNT; i++) {
+    const x = THREE.MathUtils.lerp(WEATHER_MIN_X, WEATHER_MAX_X, Math.random());
+    const z = THREE.MathUtils.lerp(WEATHER_MIN_Z, WEATHER_MAX_Z, Math.random());
+    const y = THREE.MathUtils.lerp(WEATHER_FLOOR_Y, WEATHER_TOP_Y, Math.random());
+    const i6 = i * 6;
+    rainPositions[i6 + 0] = x + RAIN_TILT_X * RAIN_LEN;
+    rainPositions[i6 + 1] = y + RAIN_LEN;
+    rainPositions[i6 + 2] = z;
+    rainPositions[i6 + 3] = x;
+    rainPositions[i6 + 4] = y;
+    rainPositions[i6 + 5] = z;
+    rainSpeeds[i] = 11 + Math.random() * 7;
+  }
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+  const rainMat = new THREE.LineBasicMaterial({
+    color: 0xb9d6f2,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const rainLines = new THREE.LineSegments(rainGeo, rainMat);
+  rainLines.frustumCulled = false;
+  rainLines.visible = false;
+  weatherGroup.add(rainLines);
+
+  // Snowflake sprite — soft glowing disc with a hint of cyan core.
+  const snowflakeCanvas = document.createElement('canvas');
+  snowflakeCanvas.width = snowflakeCanvas.height = 64;
+  {
+    const sctx = snowflakeCanvas.getContext('2d');
+    if (sctx) {
+      const g = sctx.createRadialGradient(32, 32, 0, 32, 32, 30);
+      g.addColorStop(0.0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.28, 'rgba(236,254,255,0.92)');
+      g.addColorStop(0.65, 'rgba(186,230,253,0.32)');
+      g.addColorStop(1.0, 'rgba(186,230,253,0)');
+      sctx.fillStyle = g;
+      sctx.fillRect(0, 0, 64, 64);
+    }
+  }
+  const snowflakeTex = new THREE.CanvasTexture(snowflakeCanvas);
+  snowflakeTex.needsUpdate = true;
+
+  const snowGeo = new THREE.BufferGeometry();
+  const snowPositions = new Float32Array(SNOW_COUNT * 3);
+  const snowDriftPhase = new Float32Array(SNOW_COUNT);
+  const snowFallSpeed = new Float32Array(SNOW_COUNT);
+  const snowDriftAmp = new Float32Array(SNOW_COUNT);
+  for (let i = 0; i < SNOW_COUNT; i++) {
+    const i3 = i * 3;
+    snowPositions[i3 + 0] = THREE.MathUtils.lerp(WEATHER_MIN_X, WEATHER_MAX_X, Math.random());
+    snowPositions[i3 + 1] = THREE.MathUtils.lerp(WEATHER_FLOOR_Y, WEATHER_TOP_Y, Math.random());
+    snowPositions[i3 + 2] = THREE.MathUtils.lerp(WEATHER_MIN_Z, WEATHER_MAX_Z, Math.random());
+    snowDriftPhase[i] = Math.random() * Math.PI * 2;
+    snowFallSpeed[i] = 0.32 + Math.random() * 0.55;
+    snowDriftAmp[i] = 0.18 + Math.random() * 0.42;
+  }
+  snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+  const snowMat = new THREE.PointsMaterial({
+    size: 0.13,
+    map: snowflakeTex,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    alphaTest: 0.015,
+    depthWrite: false,
+    sizeAttenuation: true,
+    blending: THREE.NormalBlending,
+  });
+  const snowPoints = new THREE.Points(snowGeo, snowMat);
+  snowPoints.frustumCulled = false;
+  snowPoints.visible = false;
+  weatherGroup.add(snowPoints);
+
+  // Splash ring pool — sits on the floor since the room no longer floods.
+  const splashGeo = new THREE.RingGeometry(0.02, 0.05, 18);
+  const splashes = [];
+  for (let i = 0; i < SPLASH_COUNT; i++) {
+    const m = new THREE.Mesh(
+      splashGeo,
+      new THREE.MeshBasicMaterial({
+        color: 0xc4e0f7,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(0, WEATHER_FLOOR_Y + 0.004, 0);
+    m.visible = false;
+    m.userData = { life: 0, maxLife: 0.55 };
+    weatherGroup.add(m);
+    splashes.push(m);
+  }
+  let splashCursor = 0;
+  function spawnSplash(x, z) {
+    const m = splashes[splashCursor];
+    splashCursor = (splashCursor + 1) % splashes.length;
+    m.position.set(x, WEATHER_FLOOR_Y + 0.006, z);
+    m.scale.setScalar(0.55);
+    m.userData.life = m.userData.maxLife;
+    m.visible = true;
+    if (m.material) m.material.opacity = 0.85;
+  }
+
+  // ── Puddles ──────────────────────────────────────────────────────────
+  // Hand-placed wet spots on the floor that fade in when it rains and
+  // ripple while visible. Positions avoid the main camera focal areas.
+  const PUDDLE_SPOTS = [
+    { x:  3.5, z:  4.5, rx: 1.05, rz: 0.70, rot:  0.20 },
+    { x: -2.5, z:  5.5, rx: 0.85, rz: 1.05, rot: -0.30 },
+    { x: -6.2, z:  2.4, rx: 0.55, rz: 0.50, rot:  0.50 },
+    { x:  5.5, z: -1.0, rx: 0.80, rz: 0.95, rot:  0.00 },
+    { x:  1.2, z:  7.2, rx: 0.95, rz: 0.65, rot:  0.40 },
+    { x: -4.7, z:  6.4, rx: 0.55, rz: 0.45, rot: -0.20 },
+    { x:  6.2, z:  5.7, rx: 0.70, rz: 0.55, rot:  0.60 },
+    { x: -3.2, z: -1.6, rx: 0.65, rz: 0.50, rot:  0.10 },
+    { x:  4.0, z:  2.0, rx: 0.50, rz: 0.55, rot: -0.45 },
+    { x: -1.0, z:  3.0, rx: 0.60, rz: 0.45, rot:  0.30 },
+  ];
+  const puddles = [];
+  for (const s of PUDDLE_SPOTS) {
+    const segs = quality === 'high' ? 20 : 14;
+    const geo = new THREE.PlaneGeometry(s.rx * 2, s.rz * 2, segs, Math.max(10, Math.floor(segs * 0.7)));
+    const refPositions = geo.attributes.position.array.slice();
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x4ea4d8,
+      roughness: 0.18,
+      metalness: 0.55,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const m = new THREE.Mesh(geo, mat);
+    m.rotation.x = -Math.PI / 2;
+    m.rotation.z = s.rot;
+    m.position.set(s.x, WEATHER_FLOOR_Y + 0.008, s.z);
+    m.scale.setScalar(0.0001);
+    m.visible = false;
+    m.renderOrder = 4;
+    m.userData = { ref: refPositions, geo };
+    weatherGroup.add(m);
+    puddles.push(m);
+  }
+
+  // ── Snow piles ───────────────────────────────────────────────────────
+  // Soft mounded hemispheres dotted around the floor. Per-vertex noise
+  // is baked in so each pile looks unique without per-frame cost.
+  const SNOW_PILE_SPOTS = [
+    { x:  2.0, z:  5.0, r: 0.62, h: 0.16 },
+    { x: -3.5, z:  4.5, r: 0.74, h: 0.18 },
+    { x:  5.0, z:  6.0, r: 0.50, h: 0.13 },
+    { x: -6.5, z:  3.0, r: 0.58, h: 0.14 },
+    { x:  6.5, z:  2.0, r: 0.45, h: 0.10 },
+    { x:  0.5, z:  6.5, r: 0.65, h: 0.17 },
+    { x: -5.0, z:  6.5, r: 0.52, h: 0.12 },
+    { x:  3.5, z:  3.0, r: 0.66, h: 0.16 },
+    { x: -1.5, z:  3.0, r: 0.55, h: 0.13 },
+    { x:  7.0, z:  4.5, r: 0.48, h: 0.11 },
+    { x: -7.0, z:  4.5, r: 0.55, h: 0.12 },
+    { x:  4.5, z: -2.0, r: 0.48, h: 0.11 },
+    { x: -3.5, z: -2.5, r: 0.52, h: 0.12 },
+    { x:  1.5, z: -3.5, r: 0.45, h: 0.10 },
+    { x: -2.0, z:  0.5, r: 0.42, h: 0.09 },
+  ];
+  const snowPiles = [];
+  const snowPileMat = new THREE.MeshStandardMaterial({
+    color: 0xf6fbfe,
+    roughness: 0.94,
+    metalness: 0.02,
+    emissive: 0x1d3a55,
+    emissiveIntensity: 0.05,
+  });
+  for (const s of SNOW_PILE_SPOTS) {
+    const widthSegs = quality === 'high' ? 28 : 18;
+    const heightSegs = quality === 'high' ? 16 : 10;
+    const geo = new THREE.SphereGeometry(s.r, widthSegs, heightSegs, 0, Math.PI * 2, 0, Math.PI / 2);
+    const arr = geo.attributes.position.array;
+    const squish = s.h / s.r;
+    for (let i = 0; i < arr.length; i += 3) {
+      const jitter = 1 + (Math.random() - 0.5) * 0.06;
+      arr[i + 0] *= jitter;
+      arr[i + 1] *= squish;
+      arr[i + 2] *= jitter;
+      if (arr[i + 1] < 0.001) arr[i + 1] = 0;
+    }
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, snowPileMat);
+    m.position.set(s.x, WEATHER_FLOOR_Y + 0.002, s.z);
+    m.rotation.y = Math.random() * Math.PI * 2;
+    m.scale.setScalar(0.0001);
+    m.visible = false;
+    weatherGroup.add(m);
+    snowPiles.push(m);
+  }
+
+  // ── Lightning ────────────────────────────────────────────────────────
+  // Two reusable jagged line bolts plus a multi-stage flash envelope
+  // that briefly brightens ambient + directional + window lights. A
+  // strike triggers every 6–18 s while it's raining.
+  const BOLT_COUNT = 2;
+  const BOLT_SEGMENTS = 14;
+  const lightningBolts = [];
+  for (let i = 0; i < BOLT_COUNT; i++) {
+    const verts = new Float32Array(BOLT_SEGMENTS * 6);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xeaf2ff,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const bolt = new THREE.LineSegments(geo, mat);
+    bolt.visible = false;
+    bolt.frustumCulled = false;
+    bolt.renderOrder = 6;
+    bolt.userData = { life: 0, maxLife: 0.22 };
+    weatherGroup.add(bolt);
+    lightningBolts.push(bolt);
+  }
+  let lightningTimer = 4 + Math.random() * 6;
+  let lightningPhase = 0;
+  let lightningPhaseT = 0;
+  let lightningFlash = 0;
+  function fireLightningBolt() {
+    const bolt = lightningBolts[Math.floor(Math.random() * BOLT_COUNT)];
+    const arr = bolt.geometry.attributes.position.array;
+    const x0 = THREE.MathUtils.lerp(WEATHER_MIN_X + 1, WEATHER_MAX_X - 1, Math.random());
+    const z0 = THREE.MathUtils.lerp(WEATHER_MIN_Z + 1, WEATHER_MAX_Z - 1, Math.random());
+    const topY = WEATHER_TOP_Y + 1.2;
+    const botY = WEATHER_FLOOR_Y + 0.2;
+    let prevX = x0;
+    let prevZ = z0;
+    let prevY = topY;
+    for (let i = 0; i < BOLT_SEGMENTS; i++) {
+      const segT = (i + 1) / BOLT_SEGMENTS;
+      const nextY = THREE.MathUtils.lerp(topY, botY, segT);
+      // Bigger horizontal kink in the middle of the bolt for a natural jag.
+      const jitter = 0.85 * (1 - Math.abs(segT - 0.5));
+      const nextX = x0 + (Math.random() - 0.5) * jitter * 2.6;
+      const nextZ = z0 + (Math.random() - 0.5) * jitter * 1.6;
+      const i6 = i * 6;
+      arr[i6 + 0] = prevX;
+      arr[i6 + 1] = prevY;
+      arr[i6 + 2] = prevZ;
+      arr[i6 + 3] = nextX;
+      arr[i6 + 4] = nextY;
+      arr[i6 + 5] = nextZ;
+      prevX = nextX;
+      prevY = nextY;
+      prevZ = nextZ;
+    }
+    bolt.geometry.attributes.position.needsUpdate = true;
+    bolt.material.opacity = 1;
+    bolt.visible = true;
+    bolt.userData.life = bolt.userData.maxLife;
+  }
+
+  // ── Sun rays / god rays ──────────────────────────────────────────────
+  // Five long additive cones from the window, each pulses on its own
+  // timer so beams seem to drift in and out of view.
+  const sunRays = [];
+  const SUN_RAY_COUNT = quality === 'high' ? 6 : 4;
+  const sunRayOrigin = new THREE.Vector3(-9.0, 2.85, -3.0);
+  const sunRayAim = new THREE.Vector3(-2.6, -1.0, -1.0);
+  const _sunDirBase = sunRayAim.clone().sub(sunRayOrigin).normalize();
+  for (let i = 0; i < SUN_RAY_COUNT; i++) {
+    const len = 7.5 + Math.random() * 2.5;
+    const rayGeo = new THREE.CylinderGeometry(0.06, 0.55 + Math.random() * 0.25, len, 24, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(0.13, 0.85, 0.7),
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+    const ray = new THREE.Mesh(rayGeo, mat);
+    const dir = _sunDirBase.clone();
+    dir.x += (Math.random() - 0.5) * 0.32;
+    dir.y += (Math.random() - 0.5) * 0.14;
+    dir.z += (Math.random() - 0.5) * 0.45;
+    dir.normalize();
+    const center = sunRayOrigin.clone().add(dir.clone().multiplyScalar(len / 2));
+    ray.position.copy(center);
+    // Cylinder's narrow top is at local +Y. We point local -Y along the ray
+    // direction so the narrow end stays at the window and the wide end
+    // fans out into the room.
+    const up = new THREE.Vector3(0, -1, 0);
+    ray.quaternion.setFromUnitVectors(up, dir);
+    ray.renderOrder = 7;
+    ray.userData = {
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.22 + Math.random() * 0.18,
+      peak: 0.16 + Math.random() * 0.08,
+    };
+    ray.visible = false;
+    weatherGroup.add(ray);
+    sunRays.push(ray);
+  }
+
+  // Soft golden floor pool where the rays land, for that "warm puddle of
+  // sunlight" feel — pulses in sync with the ray group.
+  const sunPool = new THREE.Mesh(
+    new THREE.CircleGeometry(2.6, 48),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd982,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+  );
+  sunPool.rotation.x = -Math.PI / 2;
+  sunPool.position.set(-3.2, WEATHER_FLOOR_Y + 0.005, -1.4);
+  sunPool.renderOrder = 6;
+  sunPool.visible = false;
+  weatherGroup.add(sunPool);
+  let sunBurstStrength = 0;
+  let sunBurstTimer = 3 + Math.random() * 4;
+
+
+  // Snapshot original lighting/background tints so we can blend back to sunny.
+  const baseSceneBg = scene.background.clone();
+  const baseAmbientIntensity = ambient.intensity;
+  const baseAmbientColor = ambient.color.clone();
+  const baseDirIntensity = dir.intensity;
+  const baseDirColor = dir.color.clone();
+  const baseFillIntensity = fill.intensity;
+  const baseFillColor = fill.color.clone();
+  const baseSunIntensity = windowSun.intensity;
+  const baseSunColor = windowSun.color.clone();
+
+  const WEATHER_PRESETS = {
+    sunny: {
+      bg: baseSceneBg.clone(),
+      ambientI: baseAmbientIntensity,
+      ambientC: baseAmbientColor.clone(),
+      dirI: baseDirIntensity,
+      dirC: baseDirColor.clone(),
+      fillI: baseFillIntensity,
+      fillC: baseFillColor.clone(),
+      sunI: baseSunIntensity,
+      sunC: baseSunColor.clone(),
+      rainOp: 0,
+      snowOp: 0,
+    },
+    rainy: {
+      bg: new THREE.Color(0x6a7889),
+      ambientI: Math.max(0.32, baseAmbientIntensity * 0.62),
+      ambientC: new THREE.Color(0xb8c4d6),
+      dirI: baseDirIntensity * 0.45,
+      dirC: new THREE.Color(0xb6c4d8),
+      fillI: baseFillIntensity * 0.55,
+      fillC: new THREE.Color(0x7da0c4),
+      sunI: baseSunIntensity * 0.3,
+      sunC: new THREE.Color(0x9fb3cc),
+      rainOp: 0.65,
+      snowOp: 0,
+    },
+    snowy: {
+      bg: new THREE.Color(0xdde7ef),
+      ambientI: Math.min(1.05, baseAmbientIntensity * 1.18),
+      ambientC: new THREE.Color(0xeaf3fb),
+      dirI: baseDirIntensity * 0.85,
+      dirC: new THREE.Color(0xdfeaf6),
+      fillI: baseFillIntensity * 0.8,
+      fillC: new THREE.Color(0xbfdaf0),
+      sunI: baseSunIntensity * 0.55,
+      sunC: new THREE.Color(0xdfeaf6),
+      rainOp: 0,
+      snowOp: 0.92,
+    },
+  };
+  let currentWeather = 'sunny';
+  let weatherTarget = WEATHER_PRESETS.sunny;
+  function setWeather(name) {
+    if (!WEATHER_PRESETS[name] || currentWeather === name) return;
+    currentWeather = name;
+    weatherTarget = WEATHER_PRESETS[name];
+    document.querySelectorAll('.weather-btn').forEach((btn) => {
+      const on = btn.dataset.weather === name;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  window.setWeather = setWeather;
+
+  document.querySelectorAll('.weather-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.weather;
+      if (name) setWeather(name);
+    });
+  });
+
+  // Update weather visuals each frame. Cross-fades opacity, drifts particles,
+  // and recycles splashes when drops hit the floor.
+  const _wxColorTmp = new THREE.Color();
+  function updateWeather(dt, t) {
+    const tgt = weatherTarget;
+    const lerpAmt = Math.min(1, dt * 1.6);
+
+    rainMat.opacity = THREE.MathUtils.lerp(rainMat.opacity, tgt.rainOp, lerpAmt);
+    snowMat.opacity = THREE.MathUtils.lerp(snowMat.opacity, tgt.snowOp, lerpAmt);
+    rainLines.visible = rainMat.opacity > 0.002;
+    snowPoints.visible = snowMat.opacity > 0.002;
+
+    if (scene.background && scene.background.isColor) {
+      scene.background.lerp(tgt.bg, lerpAmt * 0.6);
+    }
+    ambient.intensity = THREE.MathUtils.lerp(ambient.intensity, tgt.ambientI, lerpAmt * 0.7);
+    ambient.color.lerp(tgt.ambientC, lerpAmt * 0.6);
+    dir.intensity = THREE.MathUtils.lerp(dir.intensity, tgt.dirI, lerpAmt * 0.7);
+    dir.color.lerp(tgt.dirC, lerpAmt * 0.6);
+    fill.intensity = THREE.MathUtils.lerp(fill.intensity, tgt.fillI, lerpAmt * 0.7);
+    fill.color.lerp(tgt.fillC, lerpAmt * 0.6);
+    windowSun.intensity = THREE.MathUtils.lerp(windowSun.intensity, tgt.sunI, lerpAmt * 0.7);
+    windowSun.color.lerp(tgt.sunC, lerpAmt * 0.6);
+
+    const isRainy = currentWeather === 'rainy';
+    const isSnowy = currentWeather === 'snowy';
+    const isSunny = currentWeather === 'sunny';
+
+    // ── Puddles fade in during rain, with subtle per-puddle ripples ──
+    {
+      const target = isRainy ? 1 : 0.0001;
+      const rate = isRainy ? 0.55 : 0.9;
+      for (let pi = 0; pi < puddles.length; pi++) {
+        const p = puddles[pi];
+        const next = THREE.MathUtils.lerp(p.scale.x, target, Math.min(1, dt * rate));
+        p.scale.setScalar(next);
+        p.visible = next > 0.02;
+        if (p.visible) {
+          p.material.opacity = Math.min(0.78, next * 0.78);
+          const arr = p.userData.geo.attributes.position.array;
+          const ref = p.userData.ref;
+          // Each puddle gets its own phase offset so ripples don't
+          // animate in lockstep across the room.
+          const phx = pi * 1.7;
+          const phz = pi * 0.9;
+          for (let i = 0; i < arr.length; i += 3) {
+            const x0 = ref[i];
+            const y0 = ref[i + 1];
+            arr[i + 2] =
+              Math.sin(t * 1.8 + x0 * 1.7 + phx) * 0.012 +
+              Math.cos(t * 2.4 - y0 * 1.4 + phz) * 0.009;
+          }
+          p.userData.geo.attributes.position.needsUpdate = true;
+        }
+      }
+    }
+
+    // ── Snow piles fade in during snowy weather ──────────────────────
+    {
+      const target = isSnowy ? 1 : 0.0001;
+      const rate = isSnowy ? 0.45 : 0.7;
+      for (let pi = 0; pi < snowPiles.length; pi++) {
+        const sp = snowPiles[pi];
+        const next = THREE.MathUtils.lerp(sp.scale.x, target, Math.min(1, dt * rate));
+        sp.scale.setScalar(next);
+        sp.visible = next > 0.02;
+      }
+    }
+
+    // ── Lightning: timer + multi-stage flash envelope + bolt fades ───
+    if (isRainy) {
+      lightningTimer -= dt;
+      if (lightningTimer <= 0 && lightningPhase === 0) {
+        fireLightningBolt();
+        lightningPhase = 1;
+        lightningPhaseT = 0;
+        lightningTimer = 6 + Math.random() * 12;
+      }
+    } else {
+      lightningPhase = 0;
+      lightningPhaseT = 0;
+      lightningTimer = 4 + Math.random() * 6;
+    }
+    if (lightningPhase > 0) {
+      lightningPhaseT += dt;
+      if (lightningPhase === 1) {
+        lightningFlash = 1.0;
+        if (lightningPhaseT > 0.11) { lightningPhase = 2; lightningPhaseT = 0; }
+      } else if (lightningPhase === 2) {
+        lightningFlash = 0.22;
+        if (lightningPhaseT > 0.06) {
+          lightningPhase = 3;
+          lightningPhaseT = 0;
+          // Roughly 50% of strikes get a quick follow-up bolt.
+          if (Math.random() < 0.5) fireLightningBolt();
+        }
+      } else if (lightningPhase === 3) {
+        lightningFlash = 0.78;
+        if (lightningPhaseT > 0.09) { lightningPhase = 4; lightningPhaseT = 0; }
+      } else if (lightningPhase === 4) {
+        // Smooth exponential fade for the residual glow.
+        lightningFlash = Math.max(0, 0.78 * Math.exp(-lightningPhaseT * 7.5));
+        if (lightningPhaseT > 0.5) { lightningPhase = 0; lightningFlash = 0; }
+      }
+    } else if (lightningFlash > 0) {
+      lightningFlash = Math.max(0, lightningFlash - dt * 6);
+    }
+    // Update bolt fades.
+    for (let i = 0; i < lightningBolts.length; i++) {
+      const b = lightningBolts[i];
+      if (!b.visible) continue;
+      b.userData.life -= dt;
+      if (b.userData.life <= 0) {
+        b.visible = false;
+        b.material.opacity = 0;
+      } else {
+        const lifeT = b.userData.life / b.userData.maxLife;
+        b.material.opacity = Math.pow(lifeT, 0.55);
+      }
+    }
+    // Apply the flash boost on top of the weather-lerped lighting.
+    if (lightningFlash > 0.005) {
+      const boost = lightningFlash;
+      ambient.intensity += boost * 0.55;
+      dir.intensity += boost * 1.05;
+      windowSun.intensity += boost * 0.85;
+      if (scene.background && scene.background.isColor) {
+        scene.background.r = Math.min(1, scene.background.r + boost * 0.18);
+        scene.background.g = Math.min(1, scene.background.g + boost * 0.18);
+        scene.background.b = Math.min(1, scene.background.b + boost * 0.22);
+      }
+    }
+
+    // Rain particles — fall, wind drift, recycle when they hit the floor.
+    const rainSurface = WEATHER_FLOOR_Y;
+    if (rainLines.visible) {
+      const arr = rainGeo.attributes.position.array;
+      const wind = Math.sin(t * 0.4) * 0.04;
+      for (let i = 0; i < RAIN_COUNT; i++) {
+        const i6 = i * 6;
+        const fall = rainSpeeds[i] * dt;
+        arr[i6 + 1] -= fall;
+        arr[i6 + 4] -= fall;
+        arr[i6 + 0] += wind * dt;
+        arr[i6 + 3] += wind * dt;
+        if (arr[i6 + 4] < rainSurface) {
+          if (rainMat.opacity > 0.35 && Math.random() < 0.03) {
+            spawnSplash(arr[i6 + 3], arr[i6 + 5]);
+          }
+          const nx = THREE.MathUtils.lerp(WEATHER_MIN_X, WEATHER_MAX_X, Math.random());
+          const nz = THREE.MathUtils.lerp(WEATHER_MIN_Z, WEATHER_MAX_Z, Math.random());
+          arr[i6 + 0] = nx + RAIN_TILT_X * RAIN_LEN;
+          arr[i6 + 1] = WEATHER_TOP_Y + Math.random() * 0.4 + RAIN_LEN;
+          arr[i6 + 2] = nz;
+          arr[i6 + 3] = nx;
+          arr[i6 + 4] = WEATHER_TOP_Y + Math.random() * 0.4;
+          arr[i6 + 5] = nz;
+        }
+      }
+      rainGeo.attributes.position.needsUpdate = true;
+    }
+
+    // Splashes — life-driven scale up + opacity down.
+    for (let i = 0; i < splashes.length; i++) {
+      const m = splashes[i];
+      if (!m.visible) continue;
+      m.userData.life -= dt;
+      if (m.userData.life <= 0) {
+        m.visible = false;
+        if (m.material) m.material.opacity = 0;
+        continue;
+      }
+      const p = 1 - m.userData.life / m.userData.maxLife;
+      m.scale.setScalar(0.4 + p * 2.6);
+      if (m.material) m.material.opacity = (1 - p) * 0.75;
+    }
+
+    if (snowPoints.visible) {
+      const arr = snowGeo.attributes.position.array;
+      const snowSurface = WEATHER_FLOOR_Y;
+      for (let i = 0; i < SNOW_COUNT; i++) {
+        const i3 = i * 3;
+        const ph = snowDriftPhase[i] + t * 0.65;
+        arr[i3 + 0] += Math.sin(ph * 1.2) * snowDriftAmp[i] * dt;
+        arr[i3 + 1] -= snowFallSpeed[i] * dt;
+        arr[i3 + 2] += Math.cos(ph * 0.9) * snowDriftAmp[i] * 0.6 * dt;
+        if (arr[i3 + 1] < snowSurface) {
+          arr[i3 + 0] = THREE.MathUtils.lerp(WEATHER_MIN_X, WEATHER_MAX_X, Math.random());
+          arr[i3 + 1] = WEATHER_TOP_Y + Math.random() * 0.6;
+          arr[i3 + 2] = THREE.MathUtils.lerp(WEATHER_MIN_Z, WEATHER_MAX_Z, Math.random());
+        } else if (arr[i3 + 0] > WEATHER_MAX_X) {
+          arr[i3 + 0] = WEATHER_MIN_X;
+        } else if (arr[i3 + 0] < WEATHER_MIN_X) {
+          arr[i3 + 0] = WEATHER_MAX_X;
+        }
+      }
+      snowGeo.attributes.position.needsUpdate = true;
+    }
+
+    // ── Sun rays / god-rays: timed bursts during sunny weather ───────
+    sunBurstTimer -= dt;
+    if (sunBurstTimer <= 0 && isSunny) {
+      sunBurstStrength = 0.85 + Math.random() * 0.5;
+      sunBurstTimer = 5 + Math.random() * 7;
+    } else if (!isSunny) {
+      sunBurstStrength = 0;
+    }
+    // Burst envelope decays slowly so the rays linger then fade.
+    sunBurstStrength = Math.max(0, sunBurstStrength - dt * 0.18);
+    let sunMaxOpacity = 0;
+    for (let i = 0; i < sunRays.length; i++) {
+      const r = sunRays[i];
+      const pulse = (Math.sin(t * r.userData.speed + r.userData.phase) + 1) * 0.5;
+      const stagger = (Math.sin(t * 0.3 + i * 0.7) + 1) * 0.5;
+      const targetOp = isSunny ? r.userData.peak * (0.45 + pulse * 0.55) * (0.35 + sunBurstStrength * 0.85) * (0.55 + stagger * 0.45) : 0;
+      r.material.opacity = THREE.MathUtils.lerp(r.material.opacity, targetOp, dt * 1.8);
+      r.visible = r.material.opacity > 0.004;
+      if (r.material.opacity > sunMaxOpacity) sunMaxOpacity = r.material.opacity;
+    }
+    const poolTarget = isSunny ? Math.min(0.38, sunMaxOpacity * 1.6) : 0;
+    sunPool.material.opacity = THREE.MathUtils.lerp(sunPool.material.opacity, poolTarget, dt * 1.5);
+    sunPool.visible = sunPool.material.opacity > 0.004;
+    if (sunPool.visible) {
+      sunPool.position.y = WEATHER_FLOOR_Y + 0.006;
+      sunPool.scale.setScalar(0.85 + Math.sin(t * 0.7) * 0.06);
+    }
+
+    _wxColorTmp.r = 0;
+  }
+
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const keys = new Set();
@@ -8620,7 +9531,8 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
         const home = x.homeTeam?.shortName || x.homeTeam?.name || "?";
         const away = x.awayTeam?.shortName || x.awayTeam?.name || "?";
         const when = x.utcDate ? new Date(x.utcDate).toLocaleString() : "";
-        return `<li><strong>${esc(home)}</strong> vs <strong>${esc(away)}</strong>${when ? ` — ${esc(when)}` : ""}</li>`;
+        const comp = x.competition ? `<span class="chelsea-muted"> · ${esc(x.competition)}</span>` : "";
+        return `<li><strong>${esc(home)}</strong> vs <strong>${esc(away)}</strong>${when ? ` — ${esc(when)}` : ""}${comp}</li>`;
       });
       chelseaTabBody.innerHTML = `<ul>${lines.join("")}</ul>`;
       return;
@@ -8652,8 +9564,115 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     }
   }
 
+  // ── Chelsea data from TheSportsDB (no key, CORS-friendly) ─────────
+  // We hit three public endpoints directly from the browser and shape the
+  // response to match what renderChelseaDeskTab() already expects, so the
+  // UI keeps working without the backend.
+  const TSDB_BASE = "https://www.thesportsdb.com/api/v1/json/3";
+  const TSDB_CHELSEA_ID = 133610;
+  const TSDB_PL_LEAGUE_ID = 4328;
+  // In-session cache so reopening the desk doesn't re-fetch.
+  let chelseaFetchPromise = null;
+  let chelseaCacheTimestamp = 0;
+  const CHELSEA_CACHE_TTL_MS = 5 * 60 * 1000;
+
+  function currentSeasonStrings() {
+    const now = new Date();
+    const month = now.getUTCMonth() + 1;
+    const year = now.getUTCFullYear();
+    const startYear = month >= 7 ? year : year - 1;
+    return [
+      `${startYear}-${startYear + 1}`,
+      `${startYear - 1}-${startYear}`,
+    ];
+  }
+
+  async function fetchTsdbJson(url) {
+    try {
+      const r = await fetch(url, { credentials: "omit", cache: "no-store" });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    }
+  }
+
+  function shapeChelseaFromTsdb(eventsJson, squadJson, standingsJsons) {
+    const events = (eventsJson && Array.isArray(eventsJson.events)) ? eventsJson.events : [];
+    const fixtures_upcoming = events.map((e) => {
+      let utcDate = null;
+      if (e.strTimestamp) {
+        utcDate = e.strTimestamp.includes("T") ? `${e.strTimestamp}Z` : `${e.strTimestamp.replace(" ", "T")}Z`;
+      } else if (e.dateEvent) {
+        utcDate = `${e.dateEvent}T${e.strTime || "00:00:00"}Z`;
+      }
+      return {
+        homeTeam: { shortName: e.strHomeTeam || "", name: e.strHomeTeam || "" },
+        awayTeam: { shortName: e.strAwayTeam || "", name: e.strAwayTeam || "" },
+        utcDate,
+        competition: e.strLeague || "",
+      };
+    });
+
+    const players = (squadJson && Array.isArray(squadJson.player)) ? squadJson.player : [];
+    const squad = players
+      .filter((p) => (p.strStatus || "Active") === "Active")
+      .map((p) => ({ name: p.strPlayer || "", position: p.strPosition || "" }));
+
+    let pl_row = null;
+    for (const sj of standingsJsons) {
+      if (!sj || !Array.isArray(sj.table)) continue;
+      const row = sj.table.find((x) => /chelsea/i.test(x.strTeam || ""));
+      if (!row) continue;
+      pl_row = {
+        position: parseInt(row.intRank, 10) || 0,
+        points: parseInt(row.intPoints, 10) || 0,
+        won: parseInt(row.intWin, 10) || 0,
+        draw: parseInt(row.intDraw, 10) || 0,
+        lost: parseInt(row.intLoss, 10) || 0,
+        goalsFor: parseInt(row.intGoalsFor, 10) || 0,
+        goalsAgainst: parseInt(row.intGoalsAgainst, 10) || 0,
+        goalDifference: parseInt(row.intGoalDifference, 10) || 0,
+        team: { name: row.strTeam || "Chelsea" },
+      };
+      break;
+    }
+
+    return { fixtures_upcoming, squad, premier_league: { table_row: pl_row } };
+  }
+
+  async function fetchChelseaSnapshot() {
+    const seasons = currentSeasonStrings();
+    const [eventsJson, squadJson, ...standingsJsons] = await Promise.all([
+      fetchTsdbJson(`${TSDB_BASE}/eventsnext.php?id=${TSDB_CHELSEA_ID}`),
+      fetchTsdbJson(`${TSDB_BASE}/lookup_all_players.php?id=${TSDB_CHELSEA_ID}`),
+      ...seasons.map((s) => fetchTsdbJson(`${TSDB_BASE}/lookuptable.php?l=${TSDB_PL_LEAGUE_ID}&s=${s}`)),
+    ]);
+
+    const shaped = shapeChelseaFromTsdb(eventsJson, squadJson, standingsJsons);
+    const hasAny =
+      (shaped.fixtures_upcoming && shaped.fixtures_upcoming.length > 0) ||
+      (shaped.squad && shaped.squad.length > 0) ||
+      !!shaped.premier_league?.table_row;
+    if (!hasAny) throw new Error("No Chelsea data returned from TheSportsDB.");
+    return {
+      live: true,
+      demo: false,
+      team: { name: "Chelsea FC", shortName: "Chelsea", tla: "CHE" },
+      source: "https://www.thesportsdb.com/",
+      ...shaped,
+    };
+  }
+
   async function loadChelseaDeskData() {
-    chelseaFootballCache = null;
+    const now = Date.now();
+    const haveFresh = chelseaFootballCache && (now - chelseaCacheTimestamp) < CHELSEA_CACHE_TTL_MS;
+    if (haveFresh) {
+      const activeBtn = chelseaTabRow && chelseaTabRow.querySelector(".chelsea-tab-btn.active");
+      renderChelseaDeskTab((activeBtn && activeBtn.getAttribute("data-chelsea-tab")) || "fixtures");
+      if (chelseaDeskNotice) { chelseaDeskNotice.hidden = true; chelseaDeskNotice.textContent = ""; }
+      return;
+    }
     chelseaFootballError = null;
     const loadingTab =
       (chelseaTabRow && chelseaTabRow.querySelector(".chelsea-tab-btn.active")?.getAttribute("data-chelsea-tab")) ||
@@ -8661,32 +9680,22 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     setChelseaDeskLoading(true);
     renderChelseaDeskTab(loadingTab);
     try {
-      const r = await fetch("/api/chelsea/football");
-      const text = await r.text();
-      if (!r.ok) {
-        chelseaFootballError = text || r.statusText;
-        chelseaFootballCache = null;
-      } else {
-        chelseaFootballCache = JSON.parse(text);
-      }
+      if (!chelseaFetchPromise) chelseaFetchPromise = fetchChelseaSnapshot();
+      chelseaFootballCache = await chelseaFetchPromise;
+      chelseaCacheTimestamp = Date.now();
     } catch (e) {
-      chelseaFootballError = e.message || String(e);
+      chelseaFootballError = e && e.message ? e.message : String(e);
       chelseaFootballCache = null;
     } finally {
+      chelseaFetchPromise = null;
       setChelseaDeskLoading(false);
     }
     const activeBtn = chelseaTabRow && chelseaTabRow.querySelector(".chelsea-tab-btn.active");
     const tab = activeBtn ? activeBtn.getAttribute("data-chelsea-tab") : "fixtures";
     renderChelseaDeskTab(tab || "fixtures");
     if (chelseaDeskNotice) {
-      if (chelseaFootballCache && chelseaFootballCache.demo) {
-        chelseaDeskNotice.hidden = false;
-        chelseaDeskNotice.textContent =
-          chelseaFootballCache.demo_notice || "Demo data — add APP_FOOTBALL_DATA_API_TOKEN for live results.";
-      } else {
-        chelseaDeskNotice.hidden = true;
-        chelseaDeskNotice.textContent = "";
-      }
+      chelseaDeskNotice.hidden = true;
+      chelseaDeskNotice.textContent = "";
     }
   }
 
@@ -8932,12 +9941,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
           <div class="startup-status">${pct}%</div>
         </div>
         <div class="startup-splash-spacer" aria-hidden="true"></div>
-        <div class="startup-mobile-hint"><strong>On a phone or tablet</strong><br>
-        <strong>Left joystick</strong> — walk around · <strong>Right stick</strong> — look around<br>
-        <strong>Tap</strong> objects (TV, Game Boy, couch…) to use them — tap empty floor to move the reticle<br>
-        Top bar: <strong>Enter Screen</strong> / <strong>Back To Room</strong><br>
-        <strong>Game Boy</strong>: use on-screen <strong>A</strong> <strong>B</strong> <strong>Start</strong> <strong>Select</strong> — after the title, tap <strong>Start</strong> to begin<br>
-        If a tap opens the wrong thing, drag slightly on the sticks first, then tap again</div>
+        <div class="startup-mobile-hint"><strong>Move</strong> — left joystick<br><strong>Look</strong> — right stick</div>
         <div class="startup-desktop-tip">Keyboard: <strong>W A S D</strong> walk · <strong>Q E</strong> up/down · arrows or mouse drag to look · click objects. Toolbar: <strong>Enter Screen</strong> / <strong>Back To Room</strong>.</div>
       </div>
     `;
@@ -8993,6 +9997,18 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     wrap.style.height = '';
   }
   function setMode(next) {
+    if (next === "npc-sequence") {
+      if (!npcModel) {
+        showNpcBlockedToast("Bust! Robot isn't ready yet.");
+        return;
+      }
+      const pose = findClearNpcViewPose();
+      if (!pose) {
+        showNpcBlockedToast("Bust! Too cramped — give me some space and try again.");
+        return;
+      }
+      npcViewPose = pose;
+    }
     mode = next;
     const isMobileMode = window.innerWidth <= 1024 || window.matchMedia("(pointer: coarse)").matches;
     if (next === "monitor" || next === "monitor-enter") {
@@ -9348,9 +10364,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       document.body.classList.remove("gameboy-view", "gameboy-sequence", "monitor-mode", "speaker-mode", "chelsea-mode");
       document.body.classList.add("room-mode");
     } else if (next === "npc-sequence") {
-      if (!npcModel) return;
-      npcViewPose = buildNpcViewPose();
-      if (!npcViewPose) return;
+      if (!npcModel || !npcViewPose) return;
       npcSeq = {
         start: performance.now(),
         duration: 800,
@@ -9953,6 +10967,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     windowLeftPivot.rotation.y = leftOpen;
     windowRightPivot.rotation.y = -rightOpen;
     starsObj.rotation.y += dt * 0.03;
+    updateWeather(dt, t);
     fill.position.x = Math.sin(t * 0.6) * 2.2;
     fill.position.z = 2.0 + Math.cos(t * 0.5) * 1.2;
     mug.position.y = 0.02 + Math.sin(t * 1.7) * 0.02;
@@ -10224,15 +11239,9 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
                 setMode("gameboy-sequence");
               } else {
               const hitNpc = npcClickable ? raycaster.intersectObject(npcClickable, false) : [];
-              if (hitNpc.length > 0) {
-                const hitWall = raycaster.intersectObjects([frontWall, backWall, leftWall, rightWall], false);
-                const npcDist = hitNpc[0].distance;
-                const wallDist = hitWall.length > 0 ? hitWall[0].distance : Infinity;
-                if (wallDist < npcDist - 0.08) {
-                  showNpcBlockedToast("wait wait wait... wall is in front");
-                } else {
-                  setMode("npc-sequence");
-                }
+              const npcOnScreen = isPointerNearNpcOnScreen && isPointerNearNpcOnScreen();
+              if (hitNpc.length > 0 || npcOnScreen) {
+                setMode("npc-sequence");
               } else {
               const hitMonitor = raycaster.intersectObject(screenMesh, false);
               if (hitMonitor.length > 0) {
@@ -10404,12 +11413,8 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
         setMode("npc-view");
       }
     } else if (mode === "npc-view" && npcModel) {
-      if (!npcViewPose) npcViewPose = buildNpcViewPose();
-      if (!npcViewPose) {
-        setMode("return-npc");
-        beginReturnAnimation("room", new THREE.Vector3(0, 1.3, 7.8), new THREE.Vector3(0, 1.28, 6.8), 900);
-        return;
-      }
+      if (!npcViewPose) npcViewPose = findClearNpcViewPose();
+      if (!npcViewPose) return;
       camera.position.copy(npcViewPose.camPos);
       camera.lookAt(npcViewPose.lookAt);
       const toCam = _tmpV1.subVectors(camera.position, npcModel.position);
