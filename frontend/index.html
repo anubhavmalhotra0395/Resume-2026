@@ -30,22 +30,25 @@
       --red:       #ef4444;
       --radius:    12px;
       --radius-sm: 8px;
-      /* Room HUD buttons — shared with toolbar, weather, guide, welcome */
-      --hud-btn-radius: 9px;
-      --hud-btn-bd: #1e293b;
-      --hud-btn-bd-soft: #334155;
-      --hud-btn-sh: 0 3px 0 #334155, 0 8px 20px rgba(15, 23, 42, 0.18);
-      --hud-btn-sh-hover: 0 4px 0 #334155, 0 12px 26px rgba(15, 23, 42, 0.22);
-      --hud-btn-sh-press: 0 1px 0 #334155, 0 4px 12px rgba(15, 23, 42, 0.18);
-      --hud-btn-tsh: 0 1px 0 rgba(255, 255, 255, 0.55);
-      --hud-btn-neutral: linear-gradient(180deg, #f8fafc 0%, #dbeafe 100%);
-      --hud-btn-neutral-hover: linear-gradient(180deg, #ffffff 0%, #e8f4fc 100%);
-      --hud-btn-primary: linear-gradient(180deg, #ccfbf1 0%, #5eead4 100%);
-      --hud-btn-primary-hover: linear-gradient(180deg, #d1faf4 0%, #6ee7d6 100%);
-      --hud-btn-primary-bd: #0f766e;
-      --hud-btn-primary-sh: 0 3px 0 #0f766e, 0 10px 22px rgba(13, 148, 136, 0.23);
-      --hud-btn-primary-sh-hover: 0 4px 0 #0d9488, 0 12px 26px rgba(13, 148, 136, 0.28);
-      --hud-btn-primary-sh-press: 0 1px 0 #0f766e, 0 4px 12px rgba(13, 148, 136, 0.2);
+      /* Room HUD — flatter glass pills (avoid double thick borders + stacked docks) */
+      --hud-btn-radius: 8px;
+      --hud-btn-bd: #64748b;
+      --hud-btn-bd-soft: #94a3b8;
+      --hud-btn-sh: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 0 0 1px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.08);
+      --hud-btn-sh-hover: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(15, 23, 42, 0.11);
+      --hud-btn-sh-press: 0 1px 0 rgba(255, 255, 255, 0.55) inset, 0 0 0 1px rgba(15, 23, 42, 0.07), 0 1px 3px rgba(15, 23, 42, 0.1);
+      --hud-btn-tsh: 0 1px 0 rgba(255, 255, 255, 0.75);
+      --hud-btn-neutral: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+      --hud-btn-neutral-hover: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      --hud-btn-primary: linear-gradient(180deg, #ecfdf9 0%, #99f6e4 100%);
+      --hud-btn-primary-hover: linear-gradient(180deg, #f0fdfa 0%, #a7f3d0 100%);
+      --hud-btn-primary-bd: #0d9488;
+      --hud-btn-primary-sh: 0 1px 0 rgba(255, 255, 255, 0.55) inset, 0 0 0 1px rgba(13, 148, 136, 0.22), 0 2px 10px rgba(13, 148, 136, 0.18);
+      --hud-btn-primary-sh-hover: 0 1px 0 rgba(255, 255, 255, 0.65) inset, 0 0 0 1px rgba(13, 148, 136, 0.32), 0 4px 16px rgba(13, 148, 136, 0.2);
+      --hud-btn-primary-sh-press: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 0 0 1px rgba(13, 148, 136, 0.28), 0 1px 4px rgba(13, 148, 136, 0.15);
+      --hud-dock-bg: rgba(255, 255, 255, 0.78);
+      --hud-dock-edge: 1px solid rgba(71, 85, 105, 0.38);
+      --hud-dock-sh: 0 4px 18px rgba(15, 23, 42, 0.08);
     }
 
     html {
@@ -374,7 +377,7 @@
       align-items: center;
     }
     .welcome-prompt-btn {
-      border: 2px solid var(--hud-btn-bd);
+      border: 1px solid var(--hud-btn-bd);
       border-radius: var(--hud-btn-radius);
       font-family: "VT323", monospace;
       font-size: 22px;
@@ -933,18 +936,18 @@
       display: none;
       font-family: "VT323", monospace;
       align-items: center;
-      gap: 6px;
-      padding: 6px;
-      border: 2px solid var(--hud-btn-bd);
-      border-radius: var(--hud-btn-radius);
-      background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(226, 240, 252, 0.96) 100%);
-      box-shadow: var(--hud-btn-sh);
-      backdrop-filter: blur(6px);
+      gap: 8px;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      backdrop-filter: none;
     }
     body.room-mode .room-guide {
       display: inline-flex;
       flex-direction: row-reverse;
-      align-items: center;
+      align-items: flex-start;
     }
     body.monitor-mode .room-guide,
     body.speaker-mode .room-guide,
@@ -977,34 +980,35 @@
       min-width: auto;
       min-height: auto;
       margin: 0;
-      padding: 5px 12px 6px;
-      border: 2px solid var(--hud-btn-bd);
+      padding: 6px 14px 7px 12px;
+      border: 1px solid var(--hud-btn-bd);
+      border-left: 3px solid #475569;
       border-radius: var(--hud-btn-radius);
       background: var(--hud-btn-neutral);
       color: #0f172a;
       font-family: "VT323", monospace;
-      font-size: 19px;
+      font-size: 18px;
       line-height: 1;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
       cursor: pointer;
       writing-mode: horizontal-tb;
       text-orientation: mixed;
       transform: none;
       text-align: center;
-      box-shadow: var(--hud-btn-sh), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      box-shadow: var(--hud-btn-sh);
       text-shadow: var(--hud-btn-tsh);
-      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 160ms ease;
+      transition: transform 120ms ease, box-shadow 140ms ease, filter 140ms ease, background 160ms ease, border-color 160ms ease;
     }
     .room-guide-toggle:hover {
       background: var(--hud-btn-neutral-hover);
-      filter: brightness(1.04);
+      filter: brightness(1.02);
       transform: translateY(-1px);
-      box-shadow: var(--hud-btn-sh-hover), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      box-shadow: var(--hud-btn-sh-hover);
     }
     .room-guide-toggle:active {
-      filter: brightness(0.98);
-      transform: translateY(2px);
-      box-shadow: var(--hud-btn-sh-press), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      filter: brightness(0.99);
+      transform: translateY(1px);
+      box-shadow: var(--hud-btn-sh-press);
     }
     .room-guide-toggle:focus-visible {
       outline: 2px solid #0d9488;
@@ -1013,17 +1017,21 @@
     .room-guide-panel {
       width: 0;
       min-width: 0;
-      max-height: min(72vh, 520px);
+      max-height: 0;
+      min-height: 0;
       overflow: hidden;
-      border: 2px solid var(--hud-btn-bd);
-      border-radius: var(--hud-btn-radius);
-      background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 55%, #dbe2ea 100%);
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
       color: #0f172a;
-      transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: var(--hud-btn-sh), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: none;
     }
     .room-guide.is-open .room-guide-panel {
       width: min(288px, calc(100vw - 48px));
+      max-height: min(72vh, 520px);
+      border: 1px solid rgba(71, 85, 105, 0.45);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
     }
     .room-guide-panel-inner {
       width: min(288px, calc(100vw - 48px));
@@ -1191,15 +1199,15 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 40;
-      gap: 8px;
+      gap: 10px;
       align-items: center;
       justify-content: center;
-      padding: 6px 8px;
-      border: 2px solid var(--hud-btn-bd);
-      border-radius: var(--hud-btn-radius);
-      background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(226, 240, 252, 0.96) 100%);
-      box-shadow: var(--hud-btn-sh);
-      backdrop-filter: blur(6px);
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      backdrop-filter: none;
     }
     body.room-mode .app-overlay-toolbar {
       max-width: min(92vw, 560px);
@@ -1218,13 +1226,13 @@
       left: max(12px, env(safe-area-inset-left, 0px));
       z-index: 38;
       display: none;
-      gap: 6px;
-      padding: 6px;
-      border: 2px solid var(--hud-btn-bd);
-      border-radius: var(--hud-btn-radius);
-      background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(226, 240, 252, 0.96) 100%);
-      box-shadow: var(--hud-btn-sh);
-      backdrop-filter: blur(6px);
+      gap: 5px;
+      padding: 5px;
+      border: var(--hud-dock-edge);
+      border-radius: 10px;
+      background: var(--hud-dock-bg);
+      box-shadow: var(--hud-dock-sh);
+      backdrop-filter: blur(8px);
       font-family: "VT323", monospace;
     }
     body.room-mode .weather-toggle { display: inline-flex; }
@@ -1257,8 +1265,8 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 5px 11px 6px 8px;
-      border: 2px solid var(--hud-btn-bd);
+      padding: 5px 10px 6px 7px;
+      border: 1px solid var(--hud-btn-bd);
       border-radius: var(--hud-btn-radius);
       background: var(--hud-btn-neutral);
       color: #0f172a;
@@ -1349,25 +1357,25 @@
     .weather-btn[data-weather="sunny"].active {
       background: linear-gradient(180deg, #fef9c3 0%, #fcd34d 100%);
       border-color: #b45309;
-      box-shadow: 0 3px 0 #b45309, 0 10px 22px rgba(180, 83, 9, 0.28);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset, 0 0 0 1px rgba(180, 83, 9, 0.35), 0 2px 10px rgba(180, 83, 9, 0.16);
       color: #7c2d12;
     }
     .weather-btn[data-weather="rainy"].active {
       background: linear-gradient(180deg, #dbeafe 0%, #60a5fa 100%);
       border-color: #1e40af;
-      box-shadow: 0 3px 0 #1e40af, 0 10px 22px rgba(30, 64, 175, 0.28);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset, 0 0 0 1px rgba(30, 64, 175, 0.35), 0 2px 10px rgba(30, 64, 175, 0.16);
       color: #0c1e4a;
     }
     .weather-btn[data-weather="snowy"].active {
       background: linear-gradient(180deg, #ecfeff 0%, #a5f3fc 100%);
       border-color: #0e7490;
-      box-shadow: 0 3px 0 #0e7490, 0 10px 22px rgba(14, 116, 144, 0.26);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 0 0 1px rgba(14, 116, 144, 0.35), 0 2px 10px rgba(14, 116, 144, 0.14);
       color: #134e4a;
     }
     .weather-btn[data-weather="fire"].active {
       background: linear-gradient(180deg, #fde68a 0%, #f97316 55%, #b91c1c 100%);
       border-color: #7c2d12;
-      box-shadow: 0 3px 0 #7c2d12, 0 10px 22px rgba(124, 45, 18, 0.32);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 0 0 1px rgba(124, 45, 18, 0.4), 0 2px 10px rgba(124, 45, 18, 0.18);
       color: #fff7ed;
       text-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
     }
@@ -1389,9 +1397,10 @@
         left: max(6px, env(safe-area-inset-left, 0px));
         padding: 2px;
         gap: 2px;
-        border-radius: calc(var(--hud-btn-radius) - 2px);
-        border: 1px solid var(--hud-btn-bd);
-        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 4px 12px rgba(15, 23, 42, 0.16);
+        border-radius: 8px;
+        border: var(--hud-dock-edge);
+        background: var(--hud-dock-bg);
+        box-shadow: var(--hud-dock-sh);
         align-content: stretch;
         justify-items: stretch;
       }
@@ -1407,15 +1416,15 @@
         justify-content: center;
         padding: 1px;
         font-size: 10px;
-        border-radius: calc(var(--hud-btn-radius) - 3px);
+        border-radius: 6px;
         border-width: 1px;
-        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 3px 8px rgba(15, 23, 42, 0.12);
+        box-shadow: var(--hud-btn-sh);
       }
       .weather-btn:hover {
-        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 4px 12px rgba(15, 23, 42, 0.16);
+        box-shadow: var(--hud-btn-sh-hover);
       }
       .weather-btn:active {
-        box-shadow: 0 1px 0 var(--hud-btn-bd-soft), 0 2px 6px rgba(15, 23, 42, 0.12);
+        box-shadow: var(--hud-btn-sh-press);
       }
       .weather-btn .weather-ico,
       .weather-btn .weather-ico svg {
@@ -1472,7 +1481,7 @@
     body.npc-sequence .app-overlay-toolbar { display: flex; }
 
     .retro-btn {
-      border: 2px solid var(--hud-btn-bd);
+      border: 1px solid var(--hud-btn-bd);
       border-radius: var(--hud-btn-radius);
       background: var(--hud-btn-neutral);
       color: #0f172a;
@@ -1480,7 +1489,7 @@
       font-size: 22px;
       letter-spacing: 0.04em;
       line-height: 1;
-      padding: 7px 16px 8px;
+      padding: 6px 15px 7px;
       box-shadow: var(--hud-btn-sh);
       text-shadow: var(--hud-btn-tsh);
       cursor: pointer;
@@ -1488,11 +1497,11 @@
     }
     .retro-btn:hover {
       transform: translateY(-1px);
-      filter: brightness(1.04);
+      filter: brightness(1.02);
       box-shadow: var(--hud-btn-sh-hover);
     }
     .retro-btn:active {
-      transform: translateY(2px);
+      transform: translateY(1px);
       box-shadow: var(--hud-btn-sh-press);
     }
     #enter-monitor-btn {
@@ -2996,8 +3005,8 @@
       .chelsea-tab-body {
         max-height: 46vh;
       }
-      .room-guide-panel,
-      .room-guide-panel-inner {
+      .room-guide.is-open .room-guide-panel,
+      .room-guide.is-open .room-guide-panel-inner {
         max-height: 64vh;
       }
     }
@@ -3007,26 +3016,25 @@
       .room-guide {
         top: max(8px, env(safe-area-inset-top, 0px));
         right: max(8px, env(safe-area-inset-right, 0px));
-        padding: 4px;
-        gap: 4px;
+        padding: 0;
+        gap: 6px;
       }
       .room-guide-toggle {
-        padding: 4px 9px 5px;
-        font-size: 14px;
+        padding: 5px 11px 6px;
+        font-size: 15px;
         letter-spacing: 0.02em;
         border-width: 1px;
-        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 4px 12px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+        box-shadow: var(--hud-btn-sh);
       }
       .room-guide-toggle:hover {
         transform: translateY(-1px);
-        box-shadow: 0 2px 0 var(--hud-btn-bd-soft), 0 5px 14px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        box-shadow: var(--hud-btn-sh-hover);
       }
       .room-guide-toggle:active {
         transform: translateY(1px);
-        box-shadow: 0 1px 0 var(--hud-btn-bd-soft), 0 2px 8px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        box-shadow: var(--hud-btn-sh-press);
       }
-      .room-guide-panel {
-        border-width: 1px;
+      .room-guide.is-open .room-guide-panel {
         max-height: min(54vh, 340px);
       }
       .room-guide.is-open .room-guide-panel,
