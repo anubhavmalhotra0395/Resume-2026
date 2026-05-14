@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -1264,6 +1264,16 @@
       transform-origin: 12px 12px;
       animation: weather-snow-spin 6s linear infinite;
     }
+    .weather-btn[data-weather="fire"] .weather-ico svg .flame {
+      transform-origin: 12px 16px;
+      animation: weather-fire-flicker 0.42s ease-in-out infinite alternate;
+    }
+    .weather-btn[data-weather="fire"] .weather-ico svg .ember {
+      transform-origin: center;
+      animation: weather-fire-rise 1.4s ease-in infinite;
+    }
+    .weather-btn[data-weather="fire"] .weather-ico svg .ember:nth-child(2) { animation-delay: 0.35s; }
+    .weather-btn[data-weather="fire"] .weather-ico svg .ember:nth-child(3) { animation-delay: 0.7s; }
     @keyframes weather-sun-spin {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
@@ -1276,6 +1286,16 @@
     @keyframes weather-snow-spin {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
+    }
+    @keyframes weather-fire-flicker {
+      0%   { transform: scale(0.94, 1.02) translateY(0); filter: brightness(1); }
+      50%  { transform: scale(1.04, 0.96) translateY(-0.4px); filter: brightness(1.18); }
+      100% { transform: scale(0.96, 1.06) translateY(0.2px); filter: brightness(0.95); }
+    }
+    @keyframes weather-fire-rise {
+      0%   { transform: translateY(2px) scale(0.9); opacity: 0; }
+      30%  { opacity: 1; }
+      100% { transform: translateY(-6px) scale(0.5); opacity: 0; }
     }
     .weather-btn[data-weather="sunny"].active {
       background: linear-gradient(180deg, #fef9c3 0%, #fcd34d 100%);
@@ -1294,6 +1314,13 @@
       border-color: #0e7490;
       box-shadow: 0 3px 0 #0e7490, 0 0 0 3px rgba(165,243,252,0.45), 0 6px 22px rgba(14,116,144,0.4);
       color: #134e4a;
+    }
+    .weather-btn[data-weather="fire"].active {
+      background: linear-gradient(180deg, #fde68a 0%, #f97316 55%, #b91c1c 100%);
+      border-color: #7c2d12;
+      box-shadow: 0 3px 0 #7c2d12, 0 0 0 3px rgba(249,115,22,0.42), 0 6px 22px rgba(220,38,38,0.55), 0 0 24px rgba(251,146,60,0.55);
+      color: #fff7ed;
+      text-shadow: 0 1px 0 rgba(0,0,0,0.32);
     }
     .weather-btn .weather-lbl {
       font-weight: 700;
@@ -3057,6 +3084,18 @@
       </svg>
     </span>
     <span class="weather-lbl">Snowy</span>
+  </button>
+  <button class="weather-btn" id="weather-btn-fire" data-weather="fire" type="button" aria-pressed="false" title="Fire — embers in the air">
+    <span class="weather-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path class="flame" d="M12 2.5c1 2.4 0.4 4.1-0.6 5.4-1.1 1.4-2.5 2.6-2.5 4.4 0 1.4 0.9 2.3 1.7 2.3 1.1 0 1.7-0.8 1.5-2.1 1.6 1.4 3 3 3 5.1 0 2.7-2.3 4.4-5 4.4S5 19.9 5 17.1c0-3.4 2.3-5.4 3.6-7.6C9.9 7.3 10.4 4.7 12 2.5z" fill="#f97316" stroke="#7c2d12" stroke-width="1.1" stroke-linejoin="round"/>
+        <path class="flame" d="M12.4 9.6c0.9 1.4 1.8 2.7 1.8 4.4 0 1.6-1.3 2.7-2.6 2.7s-2.4-1-2.4-2.4c0-1.4 1-2 1.6-3 0.7-1.2 1-1.8 1.6-1.7z" fill="#fde047" stroke="#b45309" stroke-width="0.7" stroke-linejoin="round" opacity="0.95"/>
+        <circle class="ember" cx="6.4" cy="15.5" r="0.85" fill="#fb923c"/>
+        <circle class="ember" cx="17.6" cy="13.0" r="0.7"  fill="#fbbf24"/>
+        <circle class="ember" cx="15.0" cy="18.8" r="0.6"  fill="#f97316"/>
+      </svg>
+    </span>
+    <span class="weather-lbl">Fire</span>
   </button>
 </div>
 <div class="mobile-controls" id="mobile-controls" aria-label="Mobile room controls">
@@ -9025,6 +9064,122 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   let sunBurstStrength = 0;
   let sunBurstTimer = 3 + Math.random() * 4;
 
+  // ── Fire weather: embers, hearth patches, heat shimmer, crackle flicker ──
+  // Embers rise upward (opposite of rain/snow) from random floor points.
+  // Hearth patches glow + pulse on the floor like little campfires. Heat
+  // shimmer beams add additive warmth above the patches.
+  const EMBER_COUNT = quality === 'high' ? 460 : 240;
+  // Soft round texture for embers — bright core, warm halo, fading edge.
+  const emberCanvas = document.createElement('canvas');
+  emberCanvas.width = emberCanvas.height = 64;
+  {
+    const ectx = emberCanvas.getContext('2d');
+    if (ectx) {
+      const g = ectx.createRadialGradient(32, 32, 0, 32, 32, 30);
+      g.addColorStop(0.0,  'rgba(255,255,210,1)');
+      g.addColorStop(0.25, 'rgba(255,196,90,0.95)');
+      g.addColorStop(0.55, 'rgba(244,114,32,0.55)');
+      g.addColorStop(1.0,  'rgba(244,114,32,0)');
+      ectx.fillStyle = g;
+      ectx.fillRect(0, 0, 64, 64);
+    }
+  }
+  const emberTex = new THREE.CanvasTexture(emberCanvas);
+  emberTex.needsUpdate = true;
+
+  const emberGeo = new THREE.BufferGeometry();
+  const emberPositions = new Float32Array(EMBER_COUNT * 3);
+  const emberRiseSpeed = new Float32Array(EMBER_COUNT);
+  const emberDriftPhase = new Float32Array(EMBER_COUNT);
+  const emberDriftAmp = new Float32Array(EMBER_COUNT);
+  const emberLifeMax = new Float32Array(EMBER_COUNT);
+  const emberLife = new Float32Array(EMBER_COUNT);
+  for (let i = 0; i < EMBER_COUNT; i++) {
+    const i3 = i * 3;
+    emberPositions[i3 + 0] = THREE.MathUtils.lerp(WEATHER_MIN_X, WEATHER_MAX_X, Math.random());
+    emberPositions[i3 + 1] = THREE.MathUtils.lerp(WEATHER_FLOOR_Y, WEATHER_TOP_Y, Math.random());
+    emberPositions[i3 + 2] = THREE.MathUtils.lerp(WEATHER_MIN_Z, WEATHER_MAX_Z, Math.random());
+    emberRiseSpeed[i] = 0.55 + Math.random() * 1.4;
+    emberDriftPhase[i] = Math.random() * Math.PI * 2;
+    emberDriftAmp[i] = 0.18 + Math.random() * 0.55;
+    emberLifeMax[i] = 2.4 + Math.random() * 3.4;
+    emberLife[i] = Math.random() * emberLifeMax[i];
+  }
+  emberGeo.setAttribute('position', new THREE.BufferAttribute(emberPositions, 3));
+  const emberMat = new THREE.PointsMaterial({
+    size: 0.18,
+    map: emberTex,
+    color: 0xffd089,
+    transparent: true,
+    opacity: 0,
+    alphaTest: 0.01,
+    depthWrite: false,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending,
+  });
+  const emberPoints = new THREE.Points(emberGeo, emberMat);
+  emberPoints.frustumCulled = false;
+  emberPoints.visible = false;
+  emberPoints.renderOrder = 7;
+  weatherGroup.add(emberPoints);
+
+  // Glowing hearth patches on the floor — each pulses on its own phase
+  // so the room feels alive with embers.
+  const FIRE_SPOTS = [
+    { x:  3.6, z:  4.8, r: 0.95, phase: 0.0 },
+    { x: -3.2, z:  5.4, r: 1.10, phase: 0.7 },
+    { x:  5.8, z:  1.2, r: 0.80, phase: 1.4 },
+    { x: -5.6, z:  2.6, r: 0.85, phase: 2.1 },
+    { x:  1.2, z:  6.8, r: 0.70, phase: 2.8 },
+    { x: -1.8, z: -1.2, r: 0.78, phase: 3.5 },
+    { x:  6.6, z:  6.0, r: 0.65, phase: 0.4 },
+    { x: -6.2, z:  6.6, r: 0.70, phase: 1.1 },
+  ];
+  const firePatches = [];
+  for (const s of FIRE_SPOTS) {
+    const geo = new THREE.CircleGeometry(s.r, 36);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xff8a2c,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const m = new THREE.Mesh(geo, mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(s.x, WEATHER_FLOOR_Y + 0.010, s.z);
+    m.renderOrder = 6;
+    m.visible = false;
+    m.userData = { phase: s.phase, baseR: s.r };
+    weatherGroup.add(m);
+    firePatches.push(m);
+  }
+
+  // Heat shimmer beams: tall, soft additive cones above each hearth patch.
+  // Together with the patch's pulse they sell the "campfire in the room" feel.
+  const heatBeams = [];
+  for (const s of FIRE_SPOTS) {
+    const beamGeo = new THREE.CylinderGeometry(0.04, s.r * 0.95, 3.6, 18, 1, true);
+    const beamMat = new THREE.MeshBasicMaterial({
+      color: 0xffb04a,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.position.set(s.x, WEATHER_FLOOR_Y + 1.8, s.z);
+    beam.renderOrder = 7;
+    beam.visible = false;
+    beam.userData = { phase: s.phase + 0.4, speed: 0.9 + Math.random() * 0.4, peak: 0.22 };
+    weatherGroup.add(beam);
+    heatBeams.push(beam);
+  }
+
+  // Fire flicker — a tinted, fast-cycling light boost (like lightning, but
+  // gentle, continuous, and warm).
+  let fireFlicker = 0;
 
   // Snapshot original lighting/background tints so we can blend back to sunny.
   const baseSceneBg = scene.background.clone();
@@ -9050,6 +9205,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       sunC: baseSunColor.clone(),
       rainOp: 0,
       snowOp: 0,
+      emberOp: 0,
     },
     rainy: {
       bg: new THREE.Color(0x6a7889),
@@ -9063,6 +9219,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       sunC: new THREE.Color(0x9fb3cc),
       rainOp: 0.65,
       snowOp: 0,
+      emberOp: 0,
     },
     snowy: {
       bg: new THREE.Color(0xdde7ef),
@@ -9076,6 +9233,21 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       sunC: new THREE.Color(0xdfeaf6),
       rainOp: 0,
       snowOp: 0.92,
+      emberOp: 0,
+    },
+    fire: {
+      bg: new THREE.Color(0x1c0a05),
+      ambientI: Math.max(0.42, baseAmbientIntensity * 0.78),
+      ambientC: new THREE.Color(0xffb380),
+      dirI: baseDirIntensity * 0.4,
+      dirC: new THREE.Color(0xff8a3d),
+      fillI: baseFillIntensity * 0.45,
+      fillC: new THREE.Color(0xff6a2a),
+      sunI: baseSunIntensity * 0.25,
+      sunC: new THREE.Color(0xffb066),
+      rainOp: 0,
+      snowOp: 0,
+      emberOp: 0.95,
     },
   };
   let currentWeather = 'sunny';
@@ -9109,8 +9281,10 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
 
     rainMat.opacity = THREE.MathUtils.lerp(rainMat.opacity, tgt.rainOp, lerpAmt);
     snowMat.opacity = THREE.MathUtils.lerp(snowMat.opacity, tgt.snowOp, lerpAmt);
+    emberMat.opacity = THREE.MathUtils.lerp(emberMat.opacity, tgt.emberOp || 0, lerpAmt);
     rainLines.visible = rainMat.opacity > 0.002;
     snowPoints.visible = snowMat.opacity > 0.002;
+    emberPoints.visible = emberMat.opacity > 0.002;
 
     if (scene.background && scene.background.isColor) {
       scene.background.lerp(tgt.bg, lerpAmt * 0.6);
@@ -9127,6 +9301,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     const isRainy = currentWeather === 'rainy';
     const isSnowy = currentWeather === 'snowy';
     const isSunny = currentWeather === 'sunny';
+    const isFire  = currentWeather === 'fire';
 
     // ── Puddles fade in during rain, with subtle per-puddle ripples ──
     {
@@ -9325,6 +9500,92 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     if (sunPool.visible) {
       sunPool.position.y = WEATHER_FLOOR_Y + 0.006;
       sunPool.scale.setScalar(0.85 + Math.sin(t * 0.7) * 0.06);
+    }
+
+    // ── Embers: rise from the floor, drift sideways, recycle when above ──
+    if (emberPoints.visible) {
+      const arr = emberGeo.attributes.position.array;
+      const ceiling = WEATHER_TOP_Y - 0.3;
+      for (let i = 0; i < EMBER_COUNT; i++) {
+        const i3 = i * 3;
+        emberLife[i] -= dt;
+        const ph = emberDriftPhase[i] + t * 1.1;
+        arr[i3 + 0] += Math.sin(ph * 1.3) * emberDriftAmp[i] * dt;
+        arr[i3 + 1] += emberRiseSpeed[i] * dt;
+        arr[i3 + 2] += Math.cos(ph * 0.7) * emberDriftAmp[i] * 0.5 * dt;
+        if (emberLife[i] <= 0 || arr[i3 + 1] > ceiling) {
+          // Bias respawn near a hearth patch so embers feel sourced.
+          if (Math.random() < 0.65 && FIRE_SPOTS.length > 0) {
+            const s = FIRE_SPOTS[(Math.random() * FIRE_SPOTS.length) | 0];
+            const jitter = s.r * (0.4 + Math.random() * 0.7);
+            const ang = Math.random() * Math.PI * 2;
+            arr[i3 + 0] = s.x + Math.cos(ang) * jitter;
+            arr[i3 + 1] = WEATHER_FLOOR_Y + 0.1 + Math.random() * 0.25;
+            arr[i3 + 2] = s.z + Math.sin(ang) * jitter;
+          } else {
+            arr[i3 + 0] = THREE.MathUtils.lerp(WEATHER_MIN_X, WEATHER_MAX_X, Math.random());
+            arr[i3 + 1] = WEATHER_FLOOR_Y + Math.random() * 0.3;
+            arr[i3 + 2] = THREE.MathUtils.lerp(WEATHER_MIN_Z, WEATHER_MAX_Z, Math.random());
+          }
+          emberLife[i] = emberLifeMax[i];
+        }
+      }
+      emberGeo.attributes.position.needsUpdate = true;
+    }
+
+    // ── Fire hearth patches + heat shimmer beams ─────────────────────────
+    {
+      const patchPeak = 0.7;
+      let patchMaxOpacity = 0;
+      for (let pi = 0; pi < firePatches.length; pi++) {
+        const p = firePatches[pi];
+        const pulse = (Math.sin(t * 2.4 + p.userData.phase) + 1) * 0.5;
+        const flicker = (Math.sin(t * 11 + pi * 0.7) + 1) * 0.5;
+        const target = isFire ? patchPeak * (0.55 + pulse * 0.45) * (0.78 + flicker * 0.22) : 0;
+        p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, target, dt * 4.0);
+        p.visible = p.material.opacity > 0.004;
+        if (p.visible) {
+          const s = 0.92 + pulse * 0.12 + flicker * 0.05;
+          p.scale.set(s, s, s);
+        }
+        if (p.material.opacity > patchMaxOpacity) patchMaxOpacity = p.material.opacity;
+      }
+      for (let bi = 0; bi < heatBeams.length; bi++) {
+        const b = heatBeams[bi];
+        const pulse = (Math.sin(t * b.userData.speed * 1.6 + b.userData.phase) + 1) * 0.5;
+        const flicker = (Math.sin(t * 9 + bi * 1.1) + 1) * 0.5;
+        const target = isFire ? b.userData.peak * (0.35 + pulse * 0.55) * (0.6 + flicker * 0.4) : 0;
+        b.material.opacity = THREE.MathUtils.lerp(b.material.opacity, target, dt * 3.0);
+        b.visible = b.material.opacity > 0.004;
+        if (b.visible) {
+          const sx = 0.92 + pulse * 0.12 + flicker * 0.06;
+          const sy = 0.85 + pulse * 0.25 + flicker * 0.10;
+          b.scale.set(sx, sy, sx);
+        }
+      }
+    }
+
+    // ── Fire flicker: rapid, gentle warm light boost (replaces lightning
+    //    while fire is active so the room breathes with the hearth).
+    if (isFire) {
+      const a = (Math.sin(t * 6.2) + Math.sin(t * 13.7 + 1.3) + Math.sin(t * 23.1 + 2.6)) / 3.0;
+      const target = 0.22 + 0.18 * (0.5 + 0.5 * a) + (Math.random() < 0.04 ? 0.18 : 0);
+      fireFlicker = THREE.MathUtils.lerp(fireFlicker, target, Math.min(1, dt * 6.0));
+    } else {
+      fireFlicker = Math.max(0, fireFlicker - dt * 2.5);
+    }
+    if (fireFlicker > 0.005) {
+      ambient.intensity += fireFlicker * 0.18;
+      // Pump warm hue into ambient + dir so even the cool side of the room
+      // feels like it's lit by a campfire.
+      ambient.color.r = Math.min(1, ambient.color.r + fireFlicker * 0.18);
+      ambient.color.g = Math.min(1, ambient.color.g + fireFlicker * 0.08);
+      dir.intensity += fireFlicker * 0.22;
+      dir.color.r = Math.min(1, dir.color.r + fireFlicker * 0.20);
+      if (scene.background && scene.background.isColor) {
+        scene.background.r = Math.min(1, scene.background.r + fireFlicker * 0.06);
+        scene.background.g = Math.min(1, scene.background.g + fireFlicker * 0.02);
+      }
     }
 
     _wxColorTmp.r = 0;

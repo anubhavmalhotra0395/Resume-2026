@@ -11,3 +11,4 @@ infra/storage/
 /models/
 _henry_portfolio_ref/
 cyber-portfolio/
+node_modules/
