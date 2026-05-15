@@ -809,6 +809,13 @@
       body.monitor-mode .shared-lock-status { font-size: 10px; }
       body.monitor-mode .shared-lock .btn { width: 100%; max-width: 100%; box-sizing: border-box; font-size: 12px; padding: 7px 12px; white-space: normal; line-height: 1.2; }
       body.monitor-mode .about-copy h3 { font-size: 13px; margin-top: 4px; }
+      body.monitor-mode .about-copy .about-skill-cat { font-size: 11px; margin: 6px 0 1px; }
+      body.monitor-mode .about-cv-bar { padding: 6px 8px; margin-bottom: 8px; gap: 6px; }
+      body.monitor-mode .about-cv-bar span { font-size: 12px; }
+      body.monitor-mode .about-cv-btn { font-size: 12px; padding: 4px 10px; }
+      body.monitor-mode .music-access-denied { margin: 12px auto; padding: 16px 12px; }
+      body.monitor-mode .music-access-denied-label { font-size: 22px; }
+      body.monitor-mode .music-access-denied-hint { font-size: 12px; }
       body.monitor-mode .about-copy p,
       body.monitor-mode .about-copy li { font-size: 11px; line-height: 1.18; }
       body.monitor-mode .about-copy .about-job-title { font-size: 12px; margin-bottom: 2px; }
@@ -887,6 +894,68 @@
     .about-copy .about-job-title { font-size: 19px; color: #0f172a; margin-bottom: 4px; }
     .about-copy .about-job-meta { font-size: 17px; color: #334155; margin-bottom: 6px; }
     .about-copy .about-sublist { margin: 6px 0 8px 0; padding-left: 18px; list-style: disc; }
+    .about-copy .about-skill-cat {
+      margin: 10px 0 2px;
+      font-size: 17px;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    .about-copy .about-skill-cat + p { margin: 0 0 6px; }
+    .about-cv-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border: 1px solid #64748b;
+      background: #e8eef5;
+    }
+    .about-cv-bar span {
+      font-family: "VT323", monospace;
+      font-size: 20px;
+      color: #0f172a;
+      flex: 1 1 auto;
+    }
+    .about-cv-btn {
+      font-family: "VT323", monospace;
+      font-size: 20px;
+      padding: 6px 14px;
+      border: 2px solid #166534;
+      background: #bbf7d0;
+      color: #14532d;
+      text-decoration: none;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .about-cv-btn:hover { filter: brightness(1.05); }
+    .music-access-denied {
+      display: none;
+      margin: 24px auto;
+      max-width: 420px;
+      padding: 28px 20px;
+      text-align: center;
+      border: 2px solid #7f1d1d;
+      background: rgba(127, 29, 29, 0.92);
+      color: #fee2e2;
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    #music-panel.active .music-access-denied { display: block; }
+    #music-panel.active .music-panel-content { display: none !important; }
+    .music-access-denied-label {
+      font-family: "VT323", monospace;
+      font-size: 36px;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .music-access-denied-hint {
+      font-family: "VT323", monospace;
+      font-size: 20px;
+      color: #fecaca;
+      margin: 0;
+      line-height: 1.25;
+    }
 
     .fx-canvas-wrap {
       position: fixed;
@@ -3358,6 +3427,10 @@
           <p><strong>Senior Frontend Engineer / Frontend Lead</strong><br/>Bengaluru, India<br/>📞 +91 73849 95155 | ✉ malhotraanubhav0395@gmail.com</p>
         </div>
       </div>
+      <div class="about-cv-bar">
+        <span>Download résumé (PDF)</span>
+        <a class="about-cv-btn" href="/assets/Anubhav-Malhotra-CV.pdf" download="Anubhav Malhotra CV.pdf">⬇ Download CV</a>
+      </div>
       <div class="about-copy">
         <h3>Profile</h3>
         <p>Frontend Lead with 5.5+ years of experience building scalable web platforms for startups and enterprise teams. I specialize in creating flexible, configurable systems that reduce development effort, speed up product delivery, and handle complex business workflows. Currently leading frontend architecture for a large enterprise real estate platform used across multiple business units.</p>
@@ -3482,11 +3555,33 @@
         <p><strong>Tech (simplified):</strong> AI models + LLMs to decide effect chain; custom audio processing pipeline (DSP); real-time processing updates via web app.</p>
 
         <h3>Skills</h3>
-        <p><strong>Frontend:</strong> React, Next.js, TypeScript, Vue<br/>
-        <strong>Architecture:</strong> Scalable UI systems, config-driven platforms<br/>
-        <strong>Performance:</strong> Optimization, Core Web Vitals, caching, lazy loading<br/>
-        <strong>Systems:</strong> Role-based access, workflows, dynamic UI platforms<br/>
-        <strong>Tools:</strong> Redux, Jest, Docker</p>
+
+        <h4 class="about-skill-cat">Frontend</h4>
+        <p>React, Next.js, TypeScript, JavaScript, Vue.js, Svelte, Three.js</p>
+
+        <h4 class="about-skill-cat">UI Libraries &amp; Styling</h4>
+        <p>Radix UI, Material UI (MUI), Bootstrap, Responsive Design, Cross-Browser Compatibility</p>
+
+        <h4 class="about-skill-cat">State Management</h4>
+        <p>Redux, Context API, Zustand</p>
+
+        <h4 class="about-skill-cat">Frontend Architecture &amp; Systems</h4>
+        <p>Scalable UI Systems, Config-Driven Platforms, Backend-Driven UI Architecture, Dynamic Form Builders, Workflow Engines, Dynamic Routing Systems, Role-Based Access Control (RBAC), Reusable Component Libraries, Modular Architecture, System Design</p>
+
+        <h4 class="about-skill-cat">Frontend Performance &amp; Optimization</h4>
+        <p>Core Web Vitals Optimization, LCP/FCP Optimization, Lazy Loading, Code Splitting, Dynamic Imports, Memoization, Rendering Optimization, Bundle Size Optimization, Image Optimization, Caching Strategies, API Performance Optimization, Virtualization, Debouncing &amp; Throttling, SSR/CSR/ISR Optimization, Hydration Optimization, Performance Profiling, Efficient State Management, Re-render Optimization, CDN Optimization, Web Performance Monitoring</p>
+
+        <h4 class="about-skill-cat">Backend &amp; APIs</h4>
+        <p>Node.js, Express.js, FastAPI, Django, REST APIs</p>
+
+        <h4 class="about-skill-cat">Databases &amp; Infrastructure</h4>
+        <p>MongoDB, SQL, Redis, Docker</p>
+
+        <h4 class="about-skill-cat">Testing &amp; Tools</h4>
+        <p>Jest, Git, API Integration, Runtime Configuration Systems</p>
+
+        <h4 class="about-skill-cat">Programming Languages</h4>
+        <p>JavaScript, TypeScript, Python</p>
 
         <h3>Education</h3>
         <p>Bachelor of Computer Applications (BCA)<br/>Sikkim Manipal Institute of Technology (2017 – 2020)</p>
@@ -3494,6 +3589,11 @@
     </section>
 
     <section class="shared-panel" id="music-panel">
+      <div class="music-access-denied" id="music-access-denied" role="alert" aria-live="polite">
+        <div class="music-access-denied-label">ACCESS DENIED</div>
+        <p class="music-access-denied-hint">This feature is locked — nice try.</p>
+      </div>
+      <div class="music-panel-content">
       <div class="music-doc-card">
         <strong>How this helps (simple):</strong><br/>
         Upload your raw vocal + a reference song. The app listens to how the reference vocal is processed, then applies a similar polished sound to your vocal. It saves studio time and helps you get a pro sound without needing a full music producer workflow.
@@ -3971,6 +4071,7 @@
       <pre id="recipe-json"></pre>
     </div>
   </div>
+      </div>
   </section>
   </div>
 
@@ -3992,6 +4093,29 @@ let recipeVisible  = false;
 let selectedLayers = [];
 let sharedUnlocked = false;
 let sharedTab = 'about';
+let accessDeniedToastTimer = null;
+
+function showAccessDeniedToast() {
+  let el = document.getElementById('access-denied-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'access-denied-toast';
+    el.textContent = 'ACCESS DENIED';
+    el.style.cssText = [
+      'position:fixed', 'left:50%', 'bottom:84px', 'transform:translateX(-50%)',
+      'padding:10px 16px', 'border:2px solid #7f1d1d', 'background:rgba(127,29,29,0.92)',
+      'color:#fee2e2', 'font-family:"VT323",monospace', 'font-size:24px',
+      'letter-spacing:0.03em', 'border-radius:6px', 'z-index:220',
+      'box-shadow:0 8px 24px rgba(0,0,0,0.35)', 'opacity:0', 'pointer-events:none',
+      'transition:opacity 180ms ease',
+    ].join(';');
+    document.body.appendChild(el);
+  }
+  el.style.opacity = '1';
+  if (accessDeniedToastTimer) clearTimeout(accessDeniedToastTimer);
+  accessDeniedToastTimer = setTimeout(() => { el.style.opacity = '0'; }, 1400);
+}
+window.showAccessDeniedToast = showAccessDeniedToast;
 
 function renderSharedUI() {
   const lock = document.getElementById('shared-lock');
@@ -4008,15 +4132,19 @@ function renderSharedUI() {
   music.classList.toggle('active', sharedUnlocked && sharedTab === 'music');
   navAbout.classList.toggle('active', sharedTab === 'about');
   navMusic.classList.toggle('active', sharedTab === 'music');
-  if (sharedUnlocked && sharedTab === 'music') revealVocalForgeSections();
 }
 
 function switchSharedTab(tab) {
   if (!sharedUnlocked) return;
   if (tab !== 'about' && tab !== 'music') return;
+  if (tab === 'music') {
+    showAccessDeniedToast();
+    sharedTab = 'music';
+    renderSharedUI();
+    return;
+  }
   sharedTab = tab;
   renderSharedUI();
-  if (tab === 'music') revealVocalForgeSections();
 }
 
 function resetSharedComputerLock() {
@@ -5577,35 +5705,9 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
   let mirrorVideoEl = null;
   let mirrorVideoTexture = null;
   function showDoorDeniedToast() {
-    let el = document.getElementById('door-denied-toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'door-denied-toast';
-      el.textContent = 'ACCESS DENIED';
-      el.style.position = 'fixed';
-      el.style.left = '50%';
-      el.style.bottom = '84px';
-      el.style.transform = 'translateX(-50%)';
-      el.style.padding = '10px 16px';
-      el.style.border = '2px solid #7f1d1d';
-      el.style.background = 'rgba(127,29,29,0.92)';
-      el.style.color = '#fee2e2';
-      el.style.fontFamily = '"VT323", monospace';
-      el.style.fontSize = '24px';
-      el.style.letterSpacing = '0.03em';
-      el.style.borderRadius = '6px';
-      el.style.zIndex = '220';
-      el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)';
-      el.style.opacity = '0';
-      el.style.pointerEvents = 'none';
-      el.style.transition = 'opacity 180ms ease';
-      document.body.appendChild(el);
+    if (typeof window.showAccessDeniedToast === 'function') {
+      window.showAccessDeniedToast();
     }
-    el.style.opacity = '1';
-    if (doorToastTimer) clearTimeout(doorToastTimer);
-    doorToastTimer = setTimeout(() => {
-      el.style.opacity = '0';
-    }, 1400);
   }
   function showCoffeeToast(message) {
     let el = document.getElementById('coffee-ready-toast');
