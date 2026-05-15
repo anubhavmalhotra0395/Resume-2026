@@ -1,22 +1,28 @@
 FROM python:3.11-slim
 
-# Install system dependencies including build tools for pyworld
-RUN apt-get update && apt-get install -y \
+WORKDIR /app
+
+# ffmpeg stays; compiler toolchain only for pip builds, then removed to shrink layers.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     g++ \
     make \
     cmake \
+    && pip install --no-cache-dir -r requirements.txt \
+    && apt-get purge -y build-essential g++ make cmake \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app
+COPY api /app/api
+COPY processor /app/processor
+COPY infra /app/infra
 RUN chmod +x /app/infra/start_api_with_worker.sh
 
 ENV APP_STORAGE_ROOT=/app/storage
 EXPOSE 8000
 CMD ["/app/infra/start_api_with_worker.sh"]
-
-

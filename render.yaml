@@ -1,11 +1,27 @@
+# Render pulls a *prebuilt* image from GHCR — no Dockerfile build on Render (saves pipeline minutes).
+#
+# 1. Push this repo to GitHub; run workflow "Publish API image" once (Actions tab).
+# 2. GitHub → Packages → open the package → set visibility to **Public** (easiest), OR add GHCR
+#    credentials in Render and use `image.creds` (see Render prebuilt image docs).
+# 3. Replace the image url below with yours: ghcr.io/<github-owner-lowercase>/<repo-lowercase>:latest
+#    (must match the package Actions publishes.)
+# 4. If you changed from an old Dockerfile-based service, create a *new* web service from this
+#    Blueprint — Render does not allow switching runtime docker → image on an existing service.
+#
+# After each GHCR push, Render does not auto-pull a new digest for :latest unless you redeploy.
+# Add GitHub secret RENDER_DEPLOY_HOOK_URL (Render → service → Settings → Deploy hook) so the
+# workflow can POST to it after each image push.
+
 services:
   - type: web
     name: doctasky-api
-    env: docker
-    dockerfilePath: ./infra/Dockerfile.api
+    runtime: image
     plan: free
+    region: oregon
     autoDeploy: true
     healthCheckPath: /healthz
+    image:
+      url: ghcr.io/your-github-user/your-repo:latest
     envVars:
       - key: APP_REDIS_URL
         sync: false

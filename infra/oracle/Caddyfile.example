@@ -1,0 +1,9 @@
+# Optional HTTPS in front of the API (get a domain, point A record to the VM public IP).
+# Install Caddy on the host (not in compose), place this as /etc/caddy/Caddyfile, then:
+#   sudo systemctl reload caddy
+#
+# Replace api.example.com with your domain.
+
+api.example.com {
+	reverse_proxy 127.0.0.1:8000
+}

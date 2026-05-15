@@ -1,0 +1,71 @@
+# VCS / editor
+.git
+.gitattributes
+**/.git
+.cursor
+.vscode
+.idea
+
+# Python
+venv/
+.venv/
+env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Secrets / local env
+.env
+.env.*
+infra/.env
+
+# Runtime data (never bake into image)
+storage/
+infra/storage/
+models/
+
+# Frontend & Node — API image does not serve the Vercel bundle
+frontend/
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+package.json
+
+# Docs, tests, tooling
+docs/
+tests/
+scripts/
+ml/
+*.md
+vercel.json
+render.yaml
+devserver.mjs
+serve.py
+test_click.mjs
+*.ps1
+
+# Local / scratch / misc
+chrome-dump.txt
+chrome-stderr.txt
+*.log
+
+# Large local reference trees (see .gitignore)
+_henry_portfolio_ref/
+cyber-portfolio/
+
+# Download helpers (models pulled at runtime or from object storage)
+download_*.py
+download_*.ps1
+create_rvc_model.py

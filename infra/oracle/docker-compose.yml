@@ -1,0 +1,42 @@
+# Run on an Oracle Cloud Ampere (ARM) VM after installing Docker Compose plugin.
+# From this directory: docker compose up -d --build
+#
+# Build context = repository root (../../).
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - internal
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      APP_REDIS_URL: redis://redis:6379/0
+      APP_ENABLE_WORKER: "1"
+      APP_STORAGE_ROOT: /app/storage
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    volumes:
+      - api-storage:/app/storage
+    networks:
+      - internal
+
+volumes:
+  redis-data:
+  api-storage:
+
+networks:
+  internal:
