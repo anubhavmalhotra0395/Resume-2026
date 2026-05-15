@@ -1963,6 +1963,11 @@
       opacity: 1;
       transform: translateY(0) scale(1);
     }
+    /* Monitor UI is clipped/scaled — IntersectionObserver often never fires; show VocalForge cards immediately */
+    body.monitor-mode .scroll-reveal {
+      opacity: 1;
+      transform: none;
+    }
     .card::before {
       content: '';
       position: absolute;
@@ -3987,13 +3992,6 @@ let recipeVisible  = false;
 let selectedLayers = [];
 let sharedUnlocked = false;
 let sharedTab = 'about';
-const SHARED_PASSWORD_SHA256 = 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3';
-
-async function sha256Hex(text) {
-  const bytes = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 function renderSharedUI() {
   const lock = document.getElementById('shared-lock');
@@ -4010,6 +4008,7 @@ function renderSharedUI() {
   music.classList.toggle('active', sharedUnlocked && sharedTab === 'music');
   navAbout.classList.toggle('active', sharedTab === 'about');
   navMusic.classList.toggle('active', sharedTab === 'music');
+  if (sharedUnlocked && sharedTab === 'music') revealVocalForgeSections();
 }
 
 function switchSharedTab(tab) {
@@ -4017,22 +4016,21 @@ function switchSharedTab(tab) {
   if (tab !== 'about' && tab !== 'music') return;
   sharedTab = tab;
   renderSharedUI();
+  if (tab === 'music') revealVocalForgeSections();
 }
 
 function resetSharedComputerLock() {
   sharedUnlocked = false;
   sharedTab = 'about';
-  const pass = document.getElementById('shared-password');
   const status = document.getElementById('shared-lock-status');
-  if (pass) pass.value = '';
   if (status) status.textContent = '';
   renderSharedUI();
 }
 
-async function submitSharedPassword() {
-  const status = document.getElementById('shared-lock-status');
+function grantSharedAccess() {
   sharedUnlocked = true;
   sharedTab = 'about';
+  const status = document.getElementById('shared-lock-status');
   if (status) status.textContent = 'Permission granted.';
   renderSharedUI();
   monitorInputFocused = false;
@@ -4040,12 +4038,11 @@ async function submitSharedPassword() {
   monitorUiNeedsFit = false;
 }
 
-function grantSharedAccess() {
-  submitSharedPassword();
+function revealVocalForgeSections() {
+  document.querySelectorAll('#music-panel .scroll-reveal').forEach((el) => el.classList.add('visible'));
 }
 
 window.switchSharedTab = switchSharedTab;
-window.submitSharedPassword = submitSharedPassword;
 window.grantSharedAccess = grantSharedAccess;
 window.resetSharedComputerLock = resetSharedComputerLock;
 window.addEventListener('DOMContentLoaded', () => {
