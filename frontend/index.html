@@ -976,6 +976,10 @@
 
     .room-guide-toggle {
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       width: auto;
       min-width: auto;
       min-height: auto;
@@ -1013,6 +1017,20 @@
     .room-guide-toggle:focus-visible {
       outline: 2px solid #0d9488;
       outline-offset: 2px;
+    }
+    .room-guide-toggle-ico {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .room-guide-toggle-ico svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+    .room-guide-toggle-label {
+      line-height: 1;
     }
     .room-guide-panel {
       width: 0;
@@ -1214,7 +1232,7 @@
       max-width: min(520px, calc(100vw - 2 * clamp(80px, 26vw, 160px)));
       width: max-content;
     }
-    /* Weather toggle — three retro pill buttons */
+    /* Weather — Sunny / Rainy only; buttons float with no dock card behind them */
     .weather-toggle {
       position: fixed;
       top: max(12px, env(safe-area-inset-top, 0px));
@@ -1222,12 +1240,12 @@
       z-index: 38;
       display: none;
       gap: 5px;
-      padding: 5px;
-      border: var(--hud-dock-edge);
-      border-radius: 10px;
-      background: var(--hud-dock-bg);
-      box-shadow: var(--hud-dock-sh);
-      backdrop-filter: blur(8px);
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
       font-family: "VT323", monospace;
     }
     body.room-mode .weather-toggle { display: inline-flex; }
@@ -1380,38 +1398,40 @@
       font-size: 16px;
     }
     @media (max-width: 640px) {
-      /* Compact 2×2 grid — extra-small on phones so it stays clear of Enter Screen / HUD. */
+      /* Two pills in a row — no outer weather card */
       body.room-mode .weather-toggle {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        width: min(17vw, 60px);
-        height: min(17vw, 60px);
+        display: inline-flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        width: auto;
+        height: auto;
         box-sizing: border-box;
         top: max(6px, env(safe-area-inset-top, 0px));
         left: max(6px, env(safe-area-inset-left, 0px));
-        padding: 2px;
-        gap: 2px;
-        border-radius: 8px;
-        border: var(--hud-dock-edge);
-        background: var(--hud-dock-bg);
-        box-shadow: var(--hud-dock-sh);
-        align-content: stretch;
-        justify-items: stretch;
+        padding: 0;
+        gap: 4px;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+        align-items: center;
+        justify-content: flex-start;
       }
       .weather-btn {
-        width: 100%;
-        height: 100%;
+        width: auto;
+        height: auto;
         min-height: 0;
         min-width: 0;
         box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
+        display: inline-flex;
+        flex-direction: row;
         align-items: center;
         justify-content: center;
-        padding: 1px;
-        font-size: 10px;
-        border-radius: 6px;
+        gap: 4px;
+        padding: 4px 8px 5px;
+        font-size: 11px;
+        border-radius: var(--hud-btn-radius);
         border-width: 1px;
         box-shadow: var(--hud-btn-sh);
       }
@@ -2980,8 +3000,13 @@
         font-size: 15px;
         letter-spacing: 0.02em;
         border-width: 1px;
+        gap: 5px;
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.06);
         text-shadow: none;
+      }
+      .room-guide-toggle-ico svg {
+        width: 17px;
+        height: 17px;
       }
       .room-guide-toggle:hover {
         transform: translateY(-1px);
@@ -3071,7 +3096,15 @@
   </div>
 </div>
 <div class="room-guide" id="room-guide" aria-label="Room guide">
-  <button type="button" class="room-guide-toggle" id="room-guide-toggle" aria-expanded="false" aria-controls="room-guide-panel">Guide</button>
+  <button type="button" class="room-guide-toggle" id="room-guide-toggle" aria-expanded="false" aria-controls="room-guide-panel">
+    <span class="room-guide-toggle-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 3h7a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2V3z" stroke="#0f766e" stroke-width="1.55" stroke-linejoin="round"/>
+        <path d="M22 3h-7a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h8V3z" stroke="#0f766e" stroke-width="1.55" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span class="room-guide-toggle-label">Guide</span>
+  </button>
   <div class="room-guide-panel" id="room-guide-panel">
     <div class="room-guide-panel-inner">
       <div class="room-guide-header">How to move</div>
@@ -3153,6 +3186,7 @@
     </span>
     <span class="weather-lbl">Rainy</span>
   </button>
+  <!-- Snow / fire themes disabled: keep only Sunny + Rainy
   <button class="weather-btn" id="weather-btn-snowy" data-weather="snowy" type="button" aria-pressed="false" title="Snowy — let it snow">
     <span class="weather-ico" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none">
@@ -3185,6 +3219,7 @@
     </span>
     <span class="weather-lbl">Fire</span>
   </button>
+  -->
 </div>
 <div class="mobile-controls" id="mobile-controls" aria-label="Mobile room controls">
   <div class="mobile-joystick-zone" id="mobile-joystick-zone" aria-label="Move joystick">
@@ -9312,6 +9347,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       snowOp: 0,
       emberOp: 0,
     },
+    /*
     snowy: {
       bg: new THREE.Color(0xdde7ef),
       ambientI: Math.min(1.05, baseAmbientIntensity * 1.18),
@@ -9340,6 +9376,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
       snowOp: 0,
       emberOp: 0.95,
     },
+    */
   };
   let currentWeather = 'sunny';
   let weatherTarget = WEATHER_PRESETS.sunny;
