@@ -9921,6 +9921,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     mobileJoystickZoneEl.addEventListener("pointerdown", (e) => {
       if (joystickPointerId !== null) return;
       e.preventDefault();
+      e.stopPropagation();
       joystickPointerId = e.pointerId;
       const rect = mobileJoystickZoneEl.getBoundingClientRect();
       joystickCenterX = THREE.MathUtils.clamp(e.clientX, rect.left + 52, rect.right - 52);
@@ -9968,6 +9969,7 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     mobileLookZoneEl.addEventListener("pointerdown", (e) => {
       if (lookPointerId !== null) return;
       e.preventDefault();
+      e.stopPropagation();
       lookPointerId = e.pointerId;
       const rect = mobileLookZoneEl.getBoundingClientRect();
       lookCenterX = THREE.MathUtils.clamp(e.clientX, rect.left + 52, rect.right - 52);
@@ -11149,7 +11151,8 @@ import { UnrealBloomPass } from "/postprocessing/UnrealBloomPass.js";
     pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
     if (dragging) {
       dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
-      if (!welcomeShown && (mode === "room" || mode === "couch-view")) {
+      // Mobile: look only via right joystick — not screen drag (avoids double-look with joystick).
+      if (!welcomeShown && (mode === "room" || mode === "couch-view") && !isLikelyMobileInput()) {
         yaw -= e.movementX * 0.0025;
         pitch -= e.movementY * 0.0017;
         pitch = Math.max(-0.5, Math.min(0.5, pitch));
