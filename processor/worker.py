@@ -32,7 +32,11 @@ try:
 except ImportError:  # pragma: no cover - slim image without RVC extras
     def get_rvc_refiner(*args, **kwargs):
         raise RuntimeError("RVC extras not installed (see requirements-rvc.txt)")
-from processor.ml_refine.spectral_refiner import get_refiner
+# Lazy: spectral_refiner imports torch (~300 MB RSS) — loading it at boot
+# starves 512 MB hosts before any request arrives. Import on first use.
+def get_refiner(*args, **kwargs):
+    from processor.ml_refine.spectral_refiner import get_refiner as _get_refiner
+    return _get_refiner(*args, **kwargs)
 from processor.dsp.analysis.chorus_analysis import detect_chorus
 from processor.dsp.analysis.flanger_analysis import detect_flanger
 from processor.dsp.analysis.harmony_analysis import detect_harmonies
