@@ -14,17 +14,18 @@
 
 services:
   - type: web
-    name: doctasky-api
+    name: vocalforge-api
     runtime: image
     plan: free
     region: oregon
     autoDeploy: true
     healthCheckPath: /healthz
     image:
-      url: ghcr.io/your-github-user/your-repo:latest
+      url: ghcr.io/anubhavmalhotra0395/resume-2026:latest
     envVars:
+      # The slim image boots its own Redis inside the container.
       - key: APP_REDIS_URL
-        sync: false
+        value: redis://localhost:6379/0
       - key: APP_STORAGE_ROOT
         value: /tmp/storage
       - key: APP_DELETE_AFTER_HOURS
@@ -35,5 +36,8 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # In-container RQ worker so jobs actually process. Free tier has
+      # 512 MB RAM — light DSP jobs work; heavy stem separation may OOM
+      # (upgrade path: HF Spaces Docker, 16 GB free, no card).
       - key: APP_ENABLE_WORKER
-        value: "0"
+        value: "1"

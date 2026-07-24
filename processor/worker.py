@@ -25,7 +25,13 @@ from processor.utils.vocal_extraction import extract_vocals
 from processor.utils.demucs_utils import run_demucs_extract
 from processor.utils.phase_align import align_by_crosscorr
 from processor.utils.metrics import timer, compute_spectral_distance, compute_lufs
-from processor.ml_refine.rvc_refiner import get_rvc_refiner
+# RVC extras (torchaudio/transformers) are optional on slim deploys —
+# jobs with ml_refine=false must work without them.
+try:
+    from processor.ml_refine.rvc_refiner import get_rvc_refiner
+except ImportError:  # pragma: no cover - slim image without RVC extras
+    def get_rvc_refiner(*args, **kwargs):
+        raise RuntimeError("RVC extras not installed (see requirements-rvc.txt)")
 from processor.ml_refine.spectral_refiner import get_refiner
 from processor.dsp.analysis.chorus_analysis import detect_chorus
 from processor.dsp.analysis.flanger_analysis import detect_flanger

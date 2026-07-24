@@ -174,14 +174,13 @@ def extract_vocals_simple(input_path: Path, output_path: Path) -> bool:
     """Last-resort bandpass filter isolation (80 Hz – 8 kHz)."""
     try:
         y, sr = librosa.load(str(input_path), sr=44100, mono=False)
-        if y.ndim > 1:
-            y = librosa.to_mono(y)
         from scipy.signal import butter, filtfilt
         nyq = sr / 2
         b, a = butter(4, [80 / nyq, 8000 / nyq], btype="band")
-        y = filtfilt(b, a, y)
+        # Keep the stereo image — layer analysis reads doubling from L/R
+        y = filtfilt(b, a, y, axis=-1)
         y = y / (np.max(np.abs(y)) + 1e-9)
-        sf.write(str(output_path), y, sr)
+        sf.write(str(output_path), y.T if y.ndim > 1 else y, sr)
         return True
     except Exception as e:
         logger.warning(f"Simple vocal extraction failed: {e}")

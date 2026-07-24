@@ -10,13 +10,17 @@ on:
       - "api/**"
       - "processor/**"
       - "infra/**"
+      - "vocalforge/**"
       - "requirements.txt"
+      - "requirements-core.txt"
       - ".dockerignore"
       - ".github/workflows/publish-api-image.yml"
   workflow_dispatch:
 
 env:
-  DOCKERFILE: ./infra/Dockerfile.api
+  # Slim build: CPU-only torch, no RVC extras, Redis+worker+API in one
+  # container (~3.3 GB vs 14 GB) — fits free hosts like Render / HF Spaces.
+  DOCKERFILE: ./infra/Dockerfile.slim
 
 jobs:
   build-and-push:

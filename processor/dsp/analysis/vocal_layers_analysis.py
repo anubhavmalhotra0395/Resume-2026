@@ -104,18 +104,18 @@ def _estimate_doublers(reference_audio: np.ndarray, sr: int) -> tuple[int, List[
     spread = side_energy / mid_energy
 
     # Estimate doubler count from spread ratio
-    # spread < 0.05  → mono / single voice → 0 doublers
-    # spread 0.05–0.20 → light doubling → 1 doubler
-    # spread 0.20–0.45 → medium stack → 2 doublers
-    # spread > 0.45  → heavy stack → 3+ doublers (cap at 6 for sanity)
-    if spread < 0.05:
+    # spread < 0.04  → mono / single voice → 0 doublers
+    # spread 0.04–0.15 → light doubling → 1 doubler
+    # spread 0.15–0.35 → medium stack → 2 doublers
+    # spread > 0.35  → heavy stack → 3+ doublers (cap at 6 for sanity)
+    if spread < 0.04:
         n_doublers = 0
-    elif spread < 0.20:
+    elif spread < 0.15:
         n_doublers = 1
-    elif spread < 0.45:
+    elif spread < 0.35:
         n_doublers = 2
     else:
-        n_doublers = min(int(spread / 0.15), 6)
+        n_doublers = min(int(spread / 0.12), 6)
 
     if n_doublers == 0:
         return 0, [], [], []
@@ -221,21 +221,25 @@ def _estimate_harmony_voices(reference_audio: np.ndarray, sr: int) -> tuple[List
     S_L = np.abs(librosa.stft(left, n_fft=n_fft, hop_length=hop))
     S_R = np.abs(librosa.stft(right, n_fft=n_fft, hop_length=hop))
 
-    def _band_e(spec_norm, target_hz, bw=50.0):
+    def _band_e(spec_norm, target_hz, bw=None):
+        # Proportional band (±3.5%): a fixed ±50 Hz window overlaps the
+        # lead's own vibrato smear at low intervals and produced phantom
+        # "harmony" detections on solo vocals.
+        if bw is None:
+            bw = max(10.0, target_hz * 0.035)
         mask = (freqs >= target_hz - bw) & (freqs <= target_hz + bw)
         return float(np.mean(spec_norm[mask])) if mask.any() else 0.0
 
-    # Candidate musical intervals — positive only (above the lead).
-    # Negative intervals are below the lead and make the mix sound darker/thinner.
-    # A 3rd above, 4th above, 5th above, or octave above all add fullness and air.
-    candidate_intervals = [3, 4, 5, 7, 12]
+    # Candidate musical intervals: 3rd/4th/5th/6th/octave above, octave below.
+    # The octave-below is a common thickening stack in modern productions.
+    candidate_intervals = [3, 4, 5, 7, 9, 12, -12]
     intervals_out  = []
     strengths_out  = []
     pans_out       = []
 
     for interval in candidate_intervals:
-        if len(intervals_out) >= 2:
-            break  # hard cap 2 harmony voices
+        if len(intervals_out) >= 3:
+            break  # hard cap 3 harmony voices
 
         target_hz = main_f0 * (2 ** (interval / 12.0))
         if target_hz <= 0 or target_hz > sr / 2:
@@ -243,8 +247,13 @@ def _estimate_harmony_voices(reference_audio: np.ndarray, sr: int) -> tuple[List
 
         energy = _band_e(S_norm, target_hz)
 
-        # Strict threshold: 0.55 — must be genuinely prominent pitched content
-        if energy < 0.55:
+        # Harmonies typically sit 6–14 dB under the (often stacked) lead;
+        # the old 0.55 threshold only fired on near-lead-level stacks
+        # (hence "always just lead"). Gate on absolute level AND spectral
+        # prominence: a real pitched voice pokes far above the spectrum's
+        # median floor, while reverb wash does not.
+        floor = float(np.median(S_norm)) + 1e-9
+        if energy < 0.18 or energy / floor < 4.0:
             continue
 
         # Also verify it's NOT just a harmonic overtone of the main f0

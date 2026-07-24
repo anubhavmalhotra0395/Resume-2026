@@ -1,0 +1,25 @@
+# Core VocalForge stack — CPU-only, no CUDA, no RVC extras.
+# Install with:
+#   pip install -r requirements-core.txt --extra-index-url https://download.pytorch.org/whl/cpu
+openai>=1.30.0
+fastapi==0.115.0
+uvicorn==0.30.3
+python-multipart==0.0.9
+redis==5.0.7
+rq==1.16.2
+numpy==1.26.4
+scipy==1.13.1
+librosa>=0.11.0
+soundfile==0.12.1
+pydantic==2.8.2
+pydantic-settings==2.3.4
+ffmpeg-python==0.2.0
+aiofiles==23.2.1
+yt-dlp==2024.7.25
+demucs>=4.0
+audio-separator>=0.17.0
+torch>=2.0.0
+onnxruntime>=1.16.0
+requests>=2.31.0
+httpx>=0.27.0
+tqdm>=4.66.0

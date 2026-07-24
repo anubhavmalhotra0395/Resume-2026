@@ -17,7 +17,7 @@ from rq.job import Job
 from processor.config import settings
 from processor.utils.download import fetch_audio_from_url
 from processor.utils.validation import validate_file
-from processor.utils.audio_io import load_wav, run_ffmpeg_normalize, save_wav
+from processor.utils.audio_io import load_wav, load_wav_stereo, run_ffmpeg_normalize, save_wav
 from processor.utils.vocal_extraction import extract_vocals
 from processor.dsp.analysis.vocal_layers_analysis import detect_vocal_layers
 from processor.dsp.effects.apply_vocal_layers import build_vocal_layer_stems
@@ -46,6 +46,11 @@ if settings.frontend_dir.exists():
     _assets_dir = settings.frontend_dir / "assets"
     if _assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=_assets_dir), name="root-assets")
+
+# VocalForge standalone site (same API origin, so no CORS setup needed)
+_vocalforge_dir = settings.frontend_dir.parent / "vocalforge"
+if _vocalforge_dir.exists():
+    app.mount("/vocalforge", StaticFiles(directory=_vocalforge_dir, html=True), name="vocalforge")
 
 # Register metrics endpoint
 register_metrics_endpoint(app)
@@ -226,7 +231,9 @@ async def analyze_layers(
 
         ref_norm = settings.inputs_dir / f"{uuid.uuid4()}_ref_layer.wav"
         dry_norm = settings.inputs_dir / f"{uuid.uuid4()}_dry_layer.wav"
-        run_ffmpeg_normalize(ref_path, ref_norm)
+        # Stereo for the reference: layer detection reads doubling from the
+        # L/R image, which a mono downmix erases (the "only lead" bug).
+        run_ffmpeg_normalize(ref_path, ref_norm, channels=2)
         run_ffmpeg_normalize(dry_path, dry_norm)
 
         ref_for_separation = ref_norm
@@ -234,8 +241,8 @@ async def analyze_layers(
         if segment_start_s is not None or segment_end_s is not None:
             import librosa
             import numpy as np
-            y_seg, sr_seg = load_wav(ref_norm)
-            total_dur = len(y_seg) / sr_seg
+            y_seg, sr_seg = load_wav_stereo(ref_norm)
+            total_dur = y_seg.shape[1] / sr_seg
             start = float(segment_start_s or 0.0)
             end = float(segment_end_s if segment_end_s is not None else total_dur)
             if start < 0:
@@ -252,8 +259,8 @@ async def analyze_layers(
 
             s0 = int(start * sr_seg)
             s1 = int(end * sr_seg)
-            seg = y_seg[s0:s1]
-            if len(seg) < int(1.0 * sr_seg):
+            seg = y_seg[:, s0:s1]
+            if seg.shape[1] < int(1.0 * sr_seg):
                 raise HTTPException(status_code=400, detail="Selected segment is too short (min 1 second)")
 
             ref_segment_path = settings.inputs_dir / f"{uuid.uuid4()}_ref_segment.wav"
@@ -264,7 +271,7 @@ async def analyze_layers(
         extracted = extract_vocals(ref_for_separation, ref_vocals_path, force_demucs=True)
         ref_for_analysis = extracted if extracted and extracted.exists() else ref_for_separation
 
-        ref_audio, sr = load_wav(ref_for_analysis)
+        ref_audio, sr = load_wav_stereo(ref_for_analysis)
         dry_audio, dry_sr = load_wav(dry_norm)
         if sr != dry_sr:
             import librosa

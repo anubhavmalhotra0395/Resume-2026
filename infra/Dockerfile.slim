@@ -1,0 +1,43 @@
+# VocalForge all-in-one slim image: API + worker + Redis in one container.
+# CPU-only torch (no CUDA), no RVC extras, models download at runtime into
+# a cache volume. Target size ~2.5-3 GB vs 14 GB for the CUDA build.
+#
+# Build:  docker build -f infra/Dockerfile.slim -t vocalforge-slim .
+# Run:    docker run -p 7860:7860 -e GROQ_API_KEY=... -v vf-data:/data vocalforge-slim
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg redis-server \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-core.txt /app/
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential g++ make cmake \
+    && pip install --no-cache-dir -r requirements-core.txt \
+       --extra-index-url https://download.pytorch.org/whl/cpu \
+    && apt-get purge -y build-essential g++ make cmake \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY api /app/api
+COPY processor /app/processor
+COPY vocalforge /app/vocalforge
+# NOTE: frontend/ (the 3D room) stays on Vercel and is .dockerignore'd;
+# the API's /ui mount simply no-ops when the folder is absent.
+COPY infra/start_all_in_one.sh /app/infra/start_all_in_one.sh
+RUN chmod +x /app/infra/start_all_in_one.sh
+
+# Writable dirs for HF Spaces (runs as non-root uid 1000)
+ENV APP_STORAGE_ROOT=/data \
+    APP_REDIS_URL=redis://localhost:6379/0 \
+    APP_ENABLE_WORKER=1 \
+    HF_HOME=/data/hf-cache \
+    XDG_CACHE_HOME=/data/cache \
+    TORCH_HOME=/data/torch-cache \
+    PORT=7860
+RUN mkdir -p /data && chmod 777 /data /app
+
+EXPOSE 7860
+CMD ["/app/infra/start_all_in_one.sh"]
