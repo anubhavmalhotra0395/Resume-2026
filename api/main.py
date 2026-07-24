@@ -206,7 +206,7 @@ async def create_job(
 
 
 @app.post("/analyze-layers")
-async def analyze_layers(
+def analyze_layers(  # sync on purpose: blocking DSP must not stall the event loop
     reference: UploadFile | None = File(None),
     reference_url: str | None = Form(None),
     dry: UploadFile = File(...),
