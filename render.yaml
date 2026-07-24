@@ -41,3 +41,7 @@ services:
       # (upgrade path: HF Spaces Docker, 16 GB free, no card).
       - key: APP_ENABLE_WORKER
         value: "1"
+      # 512 MB instance: ML stem separation OOM-kills the dyno (502s).
+      # Bandpass vocal isolation instead — remove this on hosts with RAM.
+      - key: APP_LOW_MEMORY
+        value: "1"

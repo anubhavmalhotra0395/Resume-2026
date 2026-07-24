@@ -205,8 +205,19 @@ def extract_vocals(
       3. Simple bandpass filter                   — last resort
 
     Returns the output path on success, None on total failure.
+
+    Set APP_LOW_MEMORY=1 (e.g. Render free tier, 512 MB) to skip the ML
+    separators entirely — they OOM-kill the process there — and go straight
+    to the bandpass isolation. Lower quality, but the service stays alive.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    import os
+    if os.environ.get("APP_LOW_MEMORY", "0") == "1":
+        print("  APP_LOW_MEMORY=1 — using bandpass vocal isolation (no ML separation)")
+        if extract_vocals_simple(input_path, output_path):
+            return output_path
+        return None
 
     # 1. Try MDX-Net first
     print("  Attempting MDX-Net (Kim Vocal 2) vocal extraction…")
