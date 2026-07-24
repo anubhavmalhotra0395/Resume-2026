@@ -349,6 +349,12 @@
     </div>
 
     <div class="seg-row">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="ref-is-vocal" style="accent-color:var(--accent);width:16px;height:16px">
+        🎤 My reference is already an isolated vocal <span class="hint">(skips separation — minutes faster)</span>
+      </label>
+    </div>
+    <div class="seg-row">
       <span>✂ Analyze only a segment of the reference (best: the chorus)</span>
       <input type="number" id="seg-start" min="0" step="1" placeholder="start s" />
       <span>→</span>
@@ -597,6 +603,7 @@ document.getElementById("analyze-btn").addEventListener("click", async () => {
   if (files.reference) fd.append("reference", files.reference);
   else fd.append("reference_url", document.getElementById("reference_url").value.trim());
   fd.append("dry", files.dry);
+  fd.append("reference_is_vocal", document.getElementById("ref-is-vocal").checked ? "true" : "false");
   const segS = document.getElementById("seg-start").value;
   const segE = document.getElementById("seg-end").value;
   if (segS !== "") fd.append("segment_start_s", segS);
@@ -726,6 +733,7 @@ document.getElementById("submit").addEventListener("click", async () => {
   else fd.append("reference_url", document.getElementById("reference_url").value.trim());
   fd.append("dry", files.dry);
   document.querySelectorAll("[data-opt]").forEach((cb) => fd.append(cb.dataset.opt, cb.checked ? "true" : "false"));
+  fd.append("reference_is_vocal", document.getElementById("ref-is-vocal").checked ? "true" : "false");
   if (aiConfig) fd.append("ai_dsp_config", JSON.stringify(aiConfig));
   const chosen = Array.from(document.querySelectorAll("#layers-list input:checked")).map((i) => i.value);
   if (chosen.length) fd.append("selected_layers", JSON.stringify(chosen));

@@ -134,6 +134,7 @@ async def create_job(
     enable_ms_eq: str | None = Form("true"),
     ai_dsp_config: str | None = Form(None),
     selected_layers: str | None = Form(None),
+    reference_is_vocal: str | None = Form("false"),
 ):
     if not reference and not reference_url:
         raise HTTPException(status_code=400, detail="Provide reference file or URL")
@@ -182,7 +183,9 @@ async def create_job(
         "enable_tape": _strtobool(enable_tape) if enable_tape is not None else True,
         "enable_parallel_comp": _strtobool(enable_parallel_comp) if enable_parallel_comp is not None else True,
         "enable_ms_eq": _strtobool(enable_ms_eq) if enable_ms_eq is not None else True,
-        "stems_mode": True,  # Always use stems extraction
+        # Skip the slow ML separation when the reference is already an
+        # isolated vocal/acapella (minutes -> seconds).
+        "stems_mode": not (_strtobool(reference_is_vocal) if reference_is_vocal is not None else False),
     }
 
     # Attach AI-generated DSP overrides if provided
@@ -212,6 +215,7 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
     dry: UploadFile = File(...),
     segment_start_s: float | None = Form(None),
     segment_end_s: float | None = Form(None),
+    reference_is_vocal: str | None = Form("false"),
 ):
     if not reference and not reference_url:
         raise HTTPException(status_code=400, detail="Provide reference file or URL")
@@ -269,9 +273,12 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
             save_wav(ref_segment_path, seg.astype(np.float32), sr_seg)
             ref_for_separation = ref_segment_path
 
-        ref_vocals_path = settings.inputs_dir / f"{uuid.uuid4()}_ref_vocals_layer.wav"
-        extracted = extract_vocals(ref_for_separation, ref_vocals_path, force_demucs=True)
-        ref_for_analysis = extracted if extracted and extracted.exists() else ref_for_separation
+        if _strtobool(reference_is_vocal) if reference_is_vocal is not None else False:
+            ref_for_analysis = ref_for_separation  # already a vocal - skip separation
+        else:
+            ref_vocals_path = settings.inputs_dir / f"{uuid.uuid4()}_ref_vocals_layer.wav"
+            extracted = extract_vocals(ref_for_separation, ref_vocals_path, force_demucs=True)
+            ref_for_analysis = extracted if extracted and extracted.exists() else ref_for_separation
 
         ref_audio, sr = load_wav_stereo(ref_for_analysis)
         dry_audio, dry_sr = load_wav(dry_norm)
