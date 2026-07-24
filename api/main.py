@@ -47,9 +47,11 @@ if settings.frontend_dir.exists():
     if _assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=_assets_dir), name="root-assets")
 
-# VocalForge standalone site (same API origin, so no CORS setup needed)
+# Doctavox standalone site (same API origin, so no CORS setup needed).
+# Mounted at both paths: /doctavox is the brand, /vocalforge the legacy URL.
 _vocalforge_dir = settings.frontend_dir.parent / "vocalforge"
 if _vocalforge_dir.exists():
+    app.mount("/doctavox", StaticFiles(directory=_vocalforge_dir, html=True), name="doctavox")
     app.mount("/vocalforge", StaticFiles(directory=_vocalforge_dir, html=True), name="vocalforge")
 
 # Register metrics endpoint

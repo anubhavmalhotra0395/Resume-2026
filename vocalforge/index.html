@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>VocalForge — AI Vocal Processing</title>
+<title>Doctavox — AI Vocal Processing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='24' font-size='24'%3E%F0%9F%8E%99%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238B7CFF'/%3E%3Cstop offset='1' stop-color='%23FF8E6B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230B0A12'/%3E%3Ctext x='16' y='23' font-family='Arial' font-weight='bold' font-size='18' fill='url(%23g)' text-anchor='middle'%3ED%3C/text%3E%3C/svg%3E" />
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -283,6 +283,95 @@
     transition: opacity 0.25s; z-index: 50; max-width: 90vw;
   }
   .toast.show { opacity: 1; }
+
+  /* ═══════════════════════════════════════════════════════════
+     DOCTAVOX THEME — deep-ink studio dark. Periwinkle → coral
+     signal chain, gold metering. Overrides the base layer above.
+     ═══════════════════════════════════════════════════════════ */
+  :root {
+    --bg: #0B0A12;
+    --surface: rgba(255, 255, 255, 0.035);
+    --surface2: rgba(139, 124, 255, 0.07);
+    --border: rgba(160, 150, 255, 0.14);
+    --border2: rgba(160, 150, 255, 0.28);
+    --text: #F2F0FF;
+    --text2: #C9C4E4;
+    --text3: #8B86A8;
+    --accent: #8B7CFF;
+    --accent2: #A99DFF;
+    --green: #FFC97A;
+    --orange: #FF8E6B;
+    --red: #FF6B7A;
+    --radius: 16px;
+    --mono: "JetBrains Mono", Consolas, monospace;
+    --display: "Space Grotesk", "Inter", sans-serif;
+    --grad: linear-gradient(135deg, #8B7CFF, #FF8E6B);
+  }
+  body {
+    background:
+      radial-gradient(52% 38% at 82% -6%, rgba(255, 142, 107, 0.13), transparent 62%),
+      radial-gradient(60% 44% at 8% 4%, rgba(139, 124, 255, 0.16), transparent 60%),
+      radial-gradient(50% 40% at 50% 108%, rgba(139, 124, 255, 0.08), transparent 60%),
+      var(--bg);
+  }
+  .logo h1, .card-title, .result-box h2, .step, .btn, .ab-btn { font-family: var(--display); }
+  .logo h1 {
+    font-size: 27px; letter-spacing: 0.01em;
+    background: var(--grad);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .logo-icon {
+    background: var(--grad);
+    box-shadow: 0 10px 30px rgba(139, 124, 255, 0.35);
+    font-family: var(--display); font-weight: 700; font-size: 24px; color: #0B0A12;
+  }
+  .badge { color: var(--accent2); background: var(--surface2); }
+  .badge .dot.ok { background: #7CE7B4; box-shadow: 0 0 10px rgba(124, 231, 180, 0.8); }
+  .gear { background: var(--surface); color: var(--text2); }
+  .step { background: var(--surface); }
+  .step.active { background: var(--surface2); color: var(--accent2); }
+  .step.active .step-num { background: var(--accent); color: #0B0A12; }
+  .step.done .step-num { background: #7CE7B4; color: #0B0A12; }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  }
+  .card-title .ic { background: var(--surface2); }
+  .zone { background: var(--surface2); }
+  .zone.filled { border-color: rgba(255, 201, 122, 0.7); }
+  .zone .zclear { background: #1A1730; color: var(--text2); }
+  .zone .zfile { color: #FFC97A; }
+  .url-row input, .seg-row input[type="number"], .ai-row textarea {
+    background: rgba(11, 10, 18, 0.65); color: var(--text);
+    border-color: var(--border2);
+  }
+  .url-row input:focus, .ai-row textarea:focus { outline: 2px solid rgba(139, 124, 255, 0.4); }
+  .layer-chip { background: rgba(11, 10, 18, 0.6); color: var(--text2); }
+  .layer-chip .lplay { background: var(--grad); color: #0B0A12; }
+  .layer-chip .lplay.playing { background: #FFC97A; }
+  .layer-chip .ltype { color: var(--accent2); background: var(--surface2); }
+  .tog { background: rgba(11, 10, 18, 0.55); color: var(--text2); }
+  .tog input, .layer-chip input { accent-color: #8B7CFF; }
+  .ai-out { background: rgba(139, 124, 255, 0.08); }
+  .ai-out .src { color: var(--accent2); }
+  .ai-out pre { color: var(--text2); }
+  .btn {
+    background: var(--grad); color: #0B0A12; font-weight: 700;
+    box-shadow: 0 12px 32px rgba(139, 124, 255, 0.35);
+  }
+  .btn.ghost { background: rgba(11, 10, 18, 0.5); color: var(--accent2); }
+  .term { background: #070610; color: #A99DFF; border: 1px solid var(--border); }
+  .bar { background: rgba(139, 124, 255, 0.14); }
+  .bar i { background: var(--grad); }
+  .wave { background: rgba(139, 124, 255, 0.07); }
+  .ab-btn { background: rgba(11, 10, 18, 0.5); color: var(--text2); }
+  .ab-btn.on { background: var(--grad); color: #0B0A12; }
+  #spectrum { background: rgba(139, 124, 255, 0.07); }
+  .rcard { background: rgba(11, 10, 18, 0.55); }
+  .rcard .rk { color: var(--accent2); }
+  #eq-curve { background: rgba(11, 10, 18, 0.55); }
+  .toast { background: #070610; color: #A99DFF; border: 1px solid var(--border2); }
+  audio { filter: invert(0.92) hue-rotate(190deg) saturate(0.6); border-radius: 99px; }
 </style>
 </head>
 <body>
@@ -290,9 +379,9 @@
 
   <header class="app-header">
     <div class="logo">
-      <div class="logo-icon">🎙️</div>
+      <div class="logo-icon">D</div>
       <div>
-        <h1>VocalForge</h1>
+        <h1>Doctavox</h1>
         <p>AI-Powered Reference Vocal Processing</p>
       </div>
     </div>
@@ -379,7 +468,7 @@
   <!-- STEP 3: PROCESS -->
   <div class="card">
     <div class="actions" style="margin:0">
-      <button class="btn" id="submit">🚀 Forge my vocal</button>
+      <button class="btn" id="submit">🎛️ Transform my vocal</button>
       <span class="status-line" id="status">Waiting for both files.</span>
     </div>
     <div class="progress-box" id="progress-box">
@@ -391,18 +480,18 @@
 
   <!-- STEP 4: RESULT -->
   <div class="card result-box" id="result-box">
-    <div class="big">✅</div>
-    <h2>Your vocal, forged.</h2>
+    <div class="big">✨</div>
+    <h2>Your vocal, transformed.</h2>
     <p class="hint">Dressed in the reference's tone, dynamics and space. Flip A/B to hear the difference.</p>
 
     <div class="ab">
       <button class="ab-btn" id="ab-dry">A · Dry</button>
-      <button class="ab-btn on" id="ab-out">B · Forged</button>
+      <button class="ab-btn on" id="ab-out">B · Doctavox</button>
     </div>
     <div class="wave-stack">
       <div class="wl">A · dry input</div>
       <canvas id="wave-dry" height="64"></canvas>
-      <div class="wl">B · forged output</div>
+      <div class="wl">B · processed output</div>
       <canvas id="wave-out" height="64"></canvas>
     </div>
     <audio controls id="player"></audio>
@@ -422,7 +511,7 @@
   </div>
 
   <div class="foot">
-    VocalForge · reference-based vocal style transfer — DSP-first, AI-assisted.<br/>
+    Doctavox · reference-based vocal style transfer — DSP-first, AI-assisted.<br/>
     Also living inside <a href="../frontend/index.html">Anubhav's Space</a> 🏠
   </div>
 </div>
@@ -532,7 +621,7 @@ function wireZone(kind, zoneId) {
     nameEl.style.display = f ? "block" : "none";
     clearEl.style.display = f ? "block" : "none";
     nameEl.textContent = f ? `♪ ${f.name}` : "";
-    if (f) drawFileWave(f, kind === "reference" ? "ref-wave" : "dry-wave", kind === "reference" ? "#f59e0b" : "#14b8a6");
+    if (f) drawFileWave(f, kind === "reference" ? "ref-wave" : "dry-wave", kind === "reference" ? "#FF8E6B" : "#8B7CFF");
     refreshSubmit();
   };
   input.addEventListener("change", () => setFile(input.files[0]));
@@ -813,8 +902,8 @@ function setupResult(url) {
     peaksFrom(src)
       .then((p) => drawWave(document.getElementById(id), p, color))
       .catch(() => { if (attempt < 3) setTimeout(() => tryDraw(src, id, color, attempt + 1), 2000); });
-  tryDraw(files.dry, "wave-dry", "#94a3b8");
-  tryDraw(outUrl, "wave-out", "#10b981");
+  tryDraw(files.dry, "wave-dry", "#5E5880");
+  tryDraw(outUrl, "wave-out", "#FFC97A");
 
   const bDry = document.getElementById("ab-dry");
   const bOut = document.getElementById("ab-out");
@@ -854,7 +943,7 @@ function setupResult(url) {
         const bw = w / bins.length;
         for (let i = 0; i < bins.length; i++) {
           const bh = (bins[i] / 255) * (h - 4);
-          ctx.fillStyle = `rgba(16, 185, 129, ${0.35 + 0.65 * (bins[i] / 255)})`;
+          ctx.fillStyle = `rgba(139, 124, 255, ${0.35 + 0.65 * (bins[i] / 255)})`;
           ctx.fillRect(i * bw + 1, h - bh, bw - 2, bh);
         }
       })();
@@ -901,7 +990,7 @@ async function renderRecipe(url) {
     const ctx = canvas.getContext("2d");
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
-    ctx.strokeStyle = "rgba(100,116,139,0.25)";
+    ctx.strokeStyle = "rgba(160,150,255,0.2)";
     ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
     if (bands.length) {
       const fLo = Math.log10(40), fHi = Math.log10(20000);
@@ -918,16 +1007,16 @@ async function renderRecipe(url) {
         maxAbs = Math.max(maxAbs, Math.abs(g));
         pts.push([ (w * i) / N, g ]);
       }
-      ctx.strokeStyle = "#14b8a6"; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
+      ctx.strokeStyle = "#8B7CFF"; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
       ctx.beginPath();
       pts.forEach(([x, g], i) => {
         const y = h / 2 - (g / maxAbs) * (h / 2 - 14);
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       });
       ctx.stroke();
-      ctx.fillStyle = "rgba(20,184,166,0.10)";
+      ctx.fillStyle = "rgba(139,124,255,0.12)";
       ctx.lineTo(w, h / 2); ctx.lineTo(0, h / 2); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#64748b"; ctx.font = "11px Inter, sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = "#8B86A8"; ctx.font = "11px Inter, sans-serif"; ctx.textAlign = "center";
       [100, 1000, 10000].forEach((f) => {
         const x = (w * (Math.log10(f) - fLo)) / (fHi - fLo);
         ctx.fillText(f >= 1000 ? f / 1000 + "k" : f, x, h - 6);
