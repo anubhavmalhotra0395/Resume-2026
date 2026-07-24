@@ -434,7 +434,7 @@
 const qsApi = new URLSearchParams(location.search).get("api");
 if (qsApi) localStorage.setItem("vf_api", qsApi);
 // When hosted away from the API (Vercel), default to the Render backend.
-const DEFAULT_REMOTE_API = "https://vocalforge-api.onrender.com";
+const DEFAULT_REMOTE_API = "https://vocalforge-api-07z3.onrender.com";
 let API = (localStorage.getItem("vf_api") || "").replace(/\/+$/, "");
 if (!API && /vercel\.app$/.test(location.host)) API = DEFAULT_REMOTE_API;
 function apiUrl(p) { return (API || "") + p; }
