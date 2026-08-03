@@ -1,0 +1,3 @@
+# These are executed on a Linux VM — CRLF would break the shebang.
+*.sh text eol=lf
+Caddyfile text eol=lf

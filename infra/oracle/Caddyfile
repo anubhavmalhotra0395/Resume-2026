@@ -1,0 +1,27 @@
+# TLS termination for the Doctavox API. Caddy fetches and renews a Let's
+# Encrypt certificate automatically — nothing to configure beyond the
+# hostname, which comes from API_DOMAIN in infra/oracle/.env.
+#
+# With the sslip.io default (e.g. 141-148-2-7.sslip.io) the hostname already
+# resolves to this VM's public IP, so the HTTP-01 challenge just works as
+# long as ports 80 and 443 are open in BOTH the OCI security list and the
+# VM's own iptables (bootstrap.sh does the iptables half).
+
+{$API_DOMAIN} {
+	encode gzip
+
+	# Uploads are capped at APP_MAX_FILE_MB (50) by the API itself; leave
+	# headroom here so oversized files get the API's JSON error rather than
+	# a bare 413 from the proxy.
+	request_body {
+		max_size 200MB
+	}
+
+	reverse_proxy api:8000 {
+		# Stem separation can hold a request open while ffmpeg decodes.
+		transport http {
+			read_timeout 600s
+			write_timeout 600s
+		}
+	}
+}

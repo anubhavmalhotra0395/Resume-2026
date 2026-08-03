@@ -1,139 +1,140 @@
-# Deploy the API on Oracle Cloud (Always Free)
+# Doctavox API on Oracle Cloud (Always Free)
 
-This path avoids Fly.io’s card requirement: you run **Docker Compose** on an **Oracle Ampere A1 Flex** VM (ARM64). The stack is **Redis + API** (RQ worker starts inside the API container when `APP_ENABLE_WORKER=1`).
+Runs the full stack — Redis + API + RQ worker + Caddy/HTTPS — on a single
+**Ampere A1 Flex** VM. Always Free gives you up to **4 OCPU / 24 GB RAM**
+forever, which is the only free tier with enough memory for real Demucs stem
+separation and no sleep-on-idle.
 
-**Important:** Oracle’s free Ampere VMs are **ARM (aarch64)**. The `Dockerfile.api` build uses multi-arch Python images; PyTorch publishes **linux/arm64** wheels. If a dependency fails to build on ARM, try a smaller x86 shape (see Oracle docs) or trim optional ML packages.
+The VM is ARM64. That's why the stack builds `infra/Dockerfile.slim`
+(CPU-only torch) rather than `Dockerfile.api` — the `nvidia-*` pins in
+`requirements.txt` have no aarch64 wheels and would fail to install.
 
-## 1. Oracle Cloud account and region
+---
 
-1. Sign up at [Oracle Cloud Free Tier](https://www.oracle.com/cloud/free/).
-2. Create a tenancy and sign in to the **Console**.
-3. Pick a **region** where **Ampere A1** capacity exists (e.g. Ashburn, Phoenix, Frankfurt). If instance creation fails with “out of capacity”, switch region or retry later.
+## 1. Create the instance (OCI Console)
 
-## 2. Networking (VCN)
+**Compute → Instances → Create instance**
 
-1. **Networking → Virtual cloud networks** → create VCN (Create VCN wizard with public subnet is fine).
-2. Open the subnet’s **Security list** (or NSG) and add **ingress**:
-   - **SSH:** TCP **22** from **your IP** only (recommended), not the whole internet.
-   - **API (testing):** TCP **8000** from `0.0.0.0/0` (or restrict to your IP while testing).
-3. Later, for HTTPS on **443**, either open **443** here and use **Caddy** on the host (`Caddyfile.example`), or put **8000** behind Caddy only and drop public 8000.
+| Field | Value |
+|---|---|
+| Image | Canonical **Ubuntu 22.04** |
+| Shape | **VM.Standard.A1.Flex** (Ampere) — under "Ampere" tab |
+| OCPUs / memory | **4 OCPU / 24 GB** (the whole Always Free A1 allowance) |
+| Boot volume | 50 GB default is enough (~8 GB image + model cache) |
+| SSH key | paste your `~/.ssh/id_ed25519.pub` |
+| Public IPv4 | **Assign a public IPv4 address** — required |
 
-## 3. Compute instance (Ampere A1 Flex)
+If creation fails with **"Out of host capacity"**, that region has no free
+Ampere left. Retry in a few hours or create the instance in another region
+(the free allowance is per tenancy, and home region can't be changed — but
+you can create instances in any subscribed region).
 
-1. **Compute → Instances → Create instance**.
-2. **Image:** Canonical **Ubuntu 22.04** (aarch64).
-3. **Shape:** **VM.Standard.A1.Flex** (Ampere).
-4. **OCPUs / memory:** Always Free allows up to **4 OCPUs and 24 GB** total **per tenancy** for A1 Flex (see current [Oracle Free Tier](https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm) limits). A practical start is **2 OCPUs + 12 GB** for this API stack.
-5. **SSH key:** paste your **public** key (`id_ed25519.pub` or `id_rsa.pub`).
-6. **Public IPv4:** assign a public IP so you can SSH and reach the API.
-7. Create the instance and wait until it is **Running**.
+Default login user is `ubuntu`.
 
-## 4. SSH into the VM
+## 2. Open the ports (OCI security list)
 
-```bash
-ssh -i /path/to/your.key ubuntu@<PUBLIC_IP>
-```
+**Networking → Virtual cloud networks → your VCN → Subnets → your subnet →
+Security lists → Default security list → Add ingress rules**
 
-(Username may be `ubuntu` or `opc` depending on image; Oracle shows the default user in instance details.)
+| Source CIDR | Protocol | Destination port | Why |
+|---|---|---|---|
+| `0.0.0.0/0` | TCP | 80 | Let's Encrypt HTTP-01 challenge |
+| `0.0.0.0/0` | TCP | 443 | the API itself |
 
-## 5. Install Docker (Ubuntu ARM)
+Port 22 is already open from the default rules. Port 8000 stays closed — the
+API binds to loopback only and is reached through Caddy.
 
-```bash
-sudo apt-get update
-sudo apt-get install -y ca-certificates curl git
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${VERSION_CODENAME:-jammy}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo usermod -aG docker "$USER"
-```
+> The VM *also* has its own iptables chain that rejects everything but SSH.
+> Opening the security list alone is not enough; `bootstrap.sh` fixes the
+> iptables half. This trips up almost everyone deploying on Oracle.
 
-Log out and SSH back in so the `docker` group applies.
-
-## 6. Get the application on the VM
-
-**Option A — Git clone (if the repo is on GitHub):**
+## 3. Deploy
 
 ```bash
-git clone https://github.com/YOUR_USER/YOUR_REPO.git
-cd YOUR_REPO/infra/oracle
+ssh ubuntu@<PUBLIC_IP>
+
+git clone --depth 1 https://github.com/anubhavmalhotra0395/Resume-2026.git ~/doctavox
+GROQ_API_KEY=<your-key> \
+APP_CORS_ORIGINS=https://doctavox.vercel.app \
+  bash ~/doctavox/infra/oracle/bootstrap.sh
 ```
 
-**Option B — Copy from your PC** (PowerShell example):
+`bootstrap.sh` installs Docker, opens the host firewall, writes `.env`,
+builds, starts the stack, and waits for both the API and the certificate.
+The first build pulls PyTorch and takes **10–20 minutes**; later runs are
+cached and take seconds.
 
-```powershell
-scp -i path\to\key -r "C:\Users\...\Desktop\doc" ubuntu@PUBLIC_IP:~/
+It prints the live URL on success:
+
+```text
+Deployed: https://141-148-2-7.sslip.io
 ```
 
-Then on the VM:
+### About the hostname
+
+No domain needed. [sslip.io](https://sslip.io) resolves any hostname of the
+form `141-148-2-7.sslip.io` to the IP embedded in it, which lets Caddy get a
+real Let's Encrypt certificate for it. Swap `API_DOMAIN` in `.env` for your
+own domain later — point an A record at the VM and re-run `docker compose up
+-d`, and Caddy re-issues automatically.
+
+## 4. Point the frontend at it
+
+In [`vocalforge/index.html`](../../vocalforge/index.html), set:
+
+```js
+const DEFAULT_REMOTE_API = "https://141-148-2-7.sslip.io";
+```
+
+Then redeploy the Vercel project. You can also test without redeploying by
+appending `?api=https://141-148-2-7.sslip.io` to the frontend URL — the
+standalone UI persists that override in localStorage.
+
+Keep `APP_CORS_ORIGINS` set to your Vercel origin in production rather than
+`*`.
+
+## 5. Redeploy after a push
+
+Re-running bootstrap is the update path — it resets the checkout to
+`origin/main`, rebuilds and restarts, keeping the secrets already in `.env`:
 
 ```bash
-cd ~/doc/infra/oracle
+ssh ubuntu@<PUBLIC_IP> 'bash ~/doctavox/infra/oracle/bootstrap.sh'
 ```
 
-## 7. Configure and start
+Or by hand:
 
 ```bash
-cp .env.example .env
-nano .env   # set APP_CORS_ORIGINS (comma-separated origins, e.g. https://x.vercel.app); add optional secrets
-docker compose up -d --build
+cd ~/doctavox && git pull && cd infra/oracle && docker compose up -d --build
 ```
 
-First **build can take a long time** (PyTorch, demucs, etc.). Watch logs:
+## Operating it
 
 ```bash
-docker compose logs -f api
-```
+cd ~/doctavox/infra/oracle
 
-Smoke test:
-
-```bash
+docker compose ps                  # what's running
+docker compose logs -f api         # API logs
+docker compose logs -f worker      # job processing
+docker compose logs -f caddy       # TLS / certificate issuance
+docker compose restart worker      # after a stuck job
+docker compose down                # stop (volumes survive)
 curl -sS http://127.0.0.1:8000/healthz
 ```
 
-From your laptop (security list must allow 8000):
-
-```text
-http://<PUBLIC_IP>:8000/healthz
-```
-
-## 8. Point Vercel at Oracle
-
-Set your frontend’s API base URL to:
-
-```text
-http://<PUBLIC_IP>:8000
-```
-
-For production, use **HTTPS** (Caddy + domain) and set `APP_CORS_ORIGINS` to your Vercel origin (comma-separated if you have several).
-
-## 9. Optional: HTTPS with Caddy
-
-1. Buy or use a domain; create an **A** record to the VM’s public IP.
-2. Install [Caddy](https://caddyserver.com/docs/install#debian-ubuntu-raspbian) on the VM.
-3. Adapt `Caddyfile.example` (replace hostname, keep `reverse_proxy 127.0.0.1:8000`).
-4. Tighten the security list: allow **443** from the internet, remove public **8000** if Caddy terminates TLS on 443.
-
-## 10. Updates after `git pull`
-
-```bash
-cd ~/YOUR_REPO/infra/oracle
-git pull
-docker compose up -d --build
-```
+Storage lives in the `app-data` volume (uploads and rendered output, cleaned
+up after `APP_DELETE_AFTER_HOURS`), model weights download into it on first
+job, and `caddy-data` holds the certificates — don't delete that one
+casually or you'll re-request certs against Let's Encrypt's rate limit.
 
 ## Troubleshooting
 
-| Symptom | What to check |
-|--------|----------------|
-| Cannot SSH | Security list **22** from your IP; correct username/key. |
-| Connection timeout on :8000 | Ingress rule for **8000** on subnet; instance has public IP. |
-| `docker compose` build OOM | Increase instance RAM or lower parallel jobs; A1 Flex up to free tier max. |
-| Out of capacity for A1 | Another region or wait; Oracle free Ampere is capacity-limited. |
-| ARM build failure | Paste the failing `pip` package name; may need a pin or x86 VM. |
-
-## Cost
-
-Always Free resources are **free within published limits**; a paid method may still be required at signup. Watch [Oracle Free Tier documentation](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic.htm) for current rules.
+| Symptom | Cause / fix |
+|---|---|
+| "Out of host capacity" on create | No free Ampere in that region. Retry later or pick another region. |
+| SSH works, HTTPS times out | Security list missing 80/443, or iptables — re-run `bootstrap.sh`. |
+| Caddy logs "challenge failed" | Port 80 not reachable from the internet. Both 80 and 443 must be open. |
+| Browser: "blocked mixed content" | Frontend still pointing at an `http://` API. Use the HTTPS URL. |
+| Jobs queue but never finish | `docker compose logs worker` — usually a model download failing. |
+| Build OOMs | Confirm the shape really is 24 GB, not the 1 GB `E2.1.Micro`. |
+| First job is very slow | Expected — Demucs weights download once, then cached in `app-data`. |

@@ -1,7 +1,30 @@
-# Run on an Oracle Cloud Ampere (ARM) VM after installing Docker Compose plugin.
-# From this directory: docker compose up -d --build
+# Doctavox on an Oracle Cloud Ampere A1 (ARM64) VM.
 #
-# Build context = repository root (../../).
+#   cd ~/doctavox/infra/oracle && docker compose up -d --build
+#
+# Build context is the repo root. Uses Dockerfile.slim (CPU-only torch — the
+# CUDA wheels in requirements.txt have no aarch64 build and would fail here).
+# Redis, API and worker are separate services so the worker can be restarted
+# or scaled without dropping the API; Caddy terminates TLS on 80/443.
+
+name: doctavox
+
+x-app: &app
+  build:
+    context: ../..
+    dockerfile: infra/Dockerfile.slim
+  image: doctavox-api:latest
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment:
+    APP_REDIS_URL: redis://redis:6379/0
+    APP_STORAGE_ROOT: /data
+    PYTHONUNBUFFERED: "1"
+  volumes:
+    - app-data:/data
+  networks:
+    - internal
 
 services:
   redis:
@@ -10,33 +33,57 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks:
       - internal
 
   api:
-    build:
-      context: ../..
-      dockerfile: infra/Dockerfile.api
+    <<: *app
+    # start_all_in_one.sh (the image default) boots its own Redis + worker.
+    # Here those are real services, so run uvicorn directly.
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    # Bound to loopback: reachable for `curl` on the VM, never from the
+    # internet. Public traffic arrives through Caddy on 443.
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    <<: *app
+    command: python -m processor.worker
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "80:80"
+      - "443:443"
     environment:
-      PORT: "8000"
-      APP_REDIS_URL: redis://redis:6379/0
-      APP_ENABLE_WORKER: "1"
-      APP_STORAGE_ROOT: /app/storage
-    env_file:
-      - .env
-    depends_on:
-      - redis
+      # Set in .env — bootstrap.sh defaults it to <dashed-public-ip>.sslip.io
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in infra/oracle/.env}
     volumes:
-      - api-storage:/app/storage
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data     # Let's Encrypt certs + account keys — keep this
+      - caddy-config:/config
+    depends_on:
+      - api
     networks:
       - internal
 
 volumes:
   redis-data:
-  api-storage:
+  app-data:
+  caddy-data:
+  caddy-config:
 
 networks:
   internal:
