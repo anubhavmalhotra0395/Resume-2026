@@ -21,9 +21,16 @@ Build & run locally:
     docker run -p 7860:7860 -e GROQ_API_KEY=... -v vf-data:/data vocalforge-slim
     # http://localhost:7860/vocalforge/
 
-## Option A — Hugging Face Spaces (recommended)
+## Option A — Hugging Face Spaces (NO LONGER FREE, as of 2026-08)
 
-Free tier: 2 vCPU, 16 GB RAM, 50 GB ephemeral disk — enough for CPU demucs.
+**Docker Spaces now require a PRO subscription ($9/mo).** Creating one on
+free `cpu-basic` returns HTTP 402: *"Static Spaces are free for everyone,
+but hosting Gradio and Docker Spaces on free cpu-basic requires a PRO
+subscription."* Only static sites remain free. The steps below still apply
+if you subscribe — otherwise use Option B (Oracle), which is the only
+remaining free host with enough RAM for demucs.
+
+Paid tier: 2 vCPU, 16 GB RAM, 50 GB ephemeral disk — enough for CPU demucs.
 
 1. Create a **Docker Space** at huggingface.co/new-space.
 2. Push this repo to the Space (or mirror from GitHub). Add a top-level
@@ -43,18 +50,24 @@ Notes: free Spaces sleep after ~48 h idle and the disk is ephemeral
 (models re-download after a rebuild — ~1–2 min, cached in /data between
 requests while alive).
 
-## Option B — Oracle Cloud Always Free (most powerful, forever)
+## Option B — Oracle Cloud Always Free (recommended; the only free option left)
 
-Always-free ARM VM: up to 4 OCPU / 24 GB RAM. Runs the FULL compose stack
-unchanged (there's already an `infra/oracle/` folder started).
+Always-free ARM VM: up to 4 OCPU / 24 GB RAM, persistent disk, no sleep.
 
-1. Create an Ampere A1 instance (Ubuntu), open port 80/443.
-2. Install docker + compose, clone the repo.
-3. `docker compose -f infra/docker-compose.yml up -d --build`
-   (on ARM the CPU torch wheels install fine; build takes a while once).
-4. Put Caddy or nginx in front for HTTPS.
+Fully scripted — see **`infra/oracle/`** (compose stack + Caddy/HTTPS +
+`bootstrap.sh`). Short version:
 
-This is the only free option with a persistent disk and no sleep.
+    ssh ubuntu@<PUBLIC_IP>
+    git clone --depth 1 <this repo> ~/doctavox
+    GROQ_API_KEY=... bash ~/doctavox/infra/oracle/bootstrap.sh
+
+`bootstrap.sh` installs Docker, opens the host firewall, builds, and gets a
+Let's Encrypt cert for a `<dashed-ip>.sslip.io` hostname (no domain needed).
+
+**The catch:** free Ampere capacity is scarce and region-locked to your
+tenancy's *home* region — "Out of host capacity" is routine and can persist
+for hours or days. The fix is a patient retry loop, not a config change.
+Always Free resources cannot be created outside the home region.
 
 ## Option C — Render.com free web service
 
