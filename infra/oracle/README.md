@@ -80,7 +80,8 @@ own domain later — point an A record at the VM and re-run `docker compose up
 
 ## 4. Point the frontend at it
 
-In [`vocalforge/index.html`](../../vocalforge/index.html), set:
+The Doctavox UI is not tracked in this repo (it deploys to Vercel by CLI from
+a local `vocalforge/` folder). In its `index.html`, set:
 
 ```js
 const DEFAULT_REMOTE_API = "https://141-148-2-7.sslip.io";

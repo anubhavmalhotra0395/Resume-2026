@@ -23,9 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY api /app/api
 COPY processor /app/processor
-COPY vocalforge /app/vocalforge
-# NOTE: frontend/ (the 3D room) stays on Vercel and is .dockerignore'd;
-# the API's /ui mount simply no-ops when the folder is absent.
+# NOTE: both frontends live outside this image — frontend/ (the 3D room) and
+# vocalforge/ (the Doctavox UI) deploy to Vercel and are not tracked here.
+# api/main.py mounts /ui, /doctavox and /vocalforge only when those folders
+# exist, so their absence is a no-op rather than an error.
 COPY infra/start_all_in_one.sh /app/infra/start_all_in_one.sh
 RUN chmod +x /app/infra/start_all_in_one.sh
 

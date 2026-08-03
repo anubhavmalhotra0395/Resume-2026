@@ -10,7 +10,6 @@ on:
       - "api/**"
       - "processor/**"
       - "infra/**"
-      - "vocalforge/**"
       - "requirements.txt"
       - "requirements-core.txt"
       - ".dockerignore"
