@@ -117,8 +117,25 @@ def detect_delay(y: np.ndarray, sr: int, dry: np.ndarray | None = None):
     }
 
 
+def phrase_send_envelope(n_samples: int, sr: int, segments,
+                         tail_s: float = 0.45, base: float = 0.35,
+                         ring_s: float = 0.35) -> np.ndarray:
+    """Delay-send automation for phrase throws: full send on each phrase's
+    last `tail_s` seconds (and briefly into the following gap so the throw
+    rings), `base` send during the body. This is how records use vocal
+    delay — constant full send is what makes renders feel cluttered."""
+    env = np.full(n_samples, float(base))
+    for (s0, e0) in segments:
+        t0 = max(int(s0), int(e0) - int(tail_s * sr))
+        t1 = min(n_samples, int(e0) + int(ring_s * sr))
+        env[t0:t1] = 1.0
+    k = max(1, int(0.06 * sr))  # ~60 ms ramps
+    return np.convolve(env, np.ones(k) / k, mode="same")
+
+
 def apply_delay(y: np.ndarray, sr: int, delay_ms: float, feedback: float = 0.25,
-                mix: float = 0.25, wet_lowpass_hz: float = 7000.0) -> np.ndarray:
+                mix: float = 0.25, wet_lowpass_hz: float = 7000.0,
+                send_env: np.ndarray | None = None) -> np.ndarray:
     """
     Feedback delay. `mix` sets the first repeat's level relative to the dry
     signal (so a measured echo_level maps straight onto it); `feedback` sets
@@ -140,7 +157,10 @@ def apply_delay(y: np.ndarray, sr: int, delay_ms: float, feedback: float = 0.25,
     from scipy.signal import lfilter, butter, sosfilt
     a = np.zeros(delay_samples + 1)
     a[0], a[delay_samples] = 1.0, -fb
-    wet = lfilter([1.0], a, y)
+    # Throw topology: the send envelope gates the delay line's INPUT, so the
+    # feedback tail keeps ringing after the phrase even as the send closes.
+    src = y * send_env[: len(y)] if send_env is not None else y
+    wet = lfilter([1.0], a, src)
     wet_shifted = np.zeros_like(y)
     wet_shifted[delay_samples:] = wet[: len(y) - delay_samples]
 

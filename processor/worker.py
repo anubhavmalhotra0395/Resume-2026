@@ -583,6 +583,21 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                 f"({filtered_profile.n_doublers} doublers + "
                 f"{len(filtered_profile.harmony_intervals)} harmony voices)…"
             )
+            # Stem export: save each generated layer separately so the mix
+            # can be rebalanced in a DAW. Lead stem = the chain output.
+            try:
+                if current_job:
+                    from processor.dsp.effects.apply_vocal_layers import build_vocal_layer_stems
+                    _stems = build_vocal_layer_stems(processed, sr, filtered_profile)
+                    _stem_urls = {}
+                    for _sname, _sdata in _stems.items():
+                        _sfile = f"{current_job.id}_stem_{_sname}.wav"
+                        save_wav(settings.outputs_dir / _sfile, _sdata, sr)
+                        _stem_urls[_sname] = f"/outputs/{_sfile}"
+                    options["_stem_urls"] = _stem_urls
+                    logger.info(f"[JOB {job_id}] Exported {len(_stem_urls)} layer stems")
+            except Exception as _st_err:
+                logger.warning(f"[JOB {job_id}] Stem export skipped: {_st_err}")
             processed = apply_vocal_layers(processed, sr, filtered_profile)
             logger.info(f"[JOB {job_id}] Vocal layers applied → output is now stereo")
         except ValueError:
@@ -590,18 +605,27 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         except Exception as e:
             logger.warning(f"[JOB {job_id}] Vocal layer replication failed: {e}")
 
-    # Apply delay if detected and enabled
+    # Apply delay if detected and enabled — throw-style: send rides the dry
+    # vocal's phrase boundaries instead of running constantly.
     if delay_info is not None and delay_info.get("delay_ms", 0) > 0 and options.get("enable_delay", True):
         try:
             fb = float(delay_info.get("feedback", 0.25))
             mix_val = float(delay_info.get("_mix", 0.25))
+            send = None
+            try:
+                from processor.dsp.delay import phrase_send_envelope
+                _phr = detect_phrases(dry_audio, sr=sr)
+                if len(_phr) >= 3:  # enough structure to ride
+                    send = phrase_send_envelope(len(processed), sr, _phr)
+                    logger.info(f"[JOB {job_id}] Delay throws: riding {len(_phr)} phrases")
+            except Exception:
+                send = None
             if processed.ndim == 2:
-                # Stereo (N, 2) — apply delay per channel
-                ch0 = apply_delay(processed[:, 0], sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val)
-                ch1 = apply_delay(processed[:, 1], sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val)
+                ch0 = apply_delay(processed[:, 0], sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val, send_env=send)
+                ch1 = apply_delay(processed[:, 1], sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val, send_env=send)
                 processed = np.stack([ch0, ch1], axis=1)
             else:
-                processed = apply_delay(processed, sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val)
+                processed = apply_delay(processed, sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val, send_env=send)
             logger.info(
                 f"[JOB {job_id}] Delay applied: {delay_info.get('type')} {delay_info.get('delay_ms'):.2f} ms"
             )
@@ -924,6 +948,8 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         pass
     if refinement_info:
         recipe_dict["refinement"] = refinement_info
+    if options.get("_stem_urls"):
+        recipe_dict["stems"] = options["_stem_urls"]
 
     # Save recipe with metrics
     if current_job:
