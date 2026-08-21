@@ -307,7 +307,11 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             logger.info(f"[JOB {job_id}] M-S EQ: mid_bands={len(ms_eq_settings.mid_bands)} side_bands={len(ms_eq_settings.side_bands)}")
         if _det_results.get("autotune"):
             autotune_settings = _det_results["autotune"]
-            logger.info(f"[JOB {job_id}] Autotune: strength={autotune_settings.strength:.2f}")
+            if not options.get("enable_autotune", True):
+                logger.info(f"[JOB {job_id}] Autotune detected but disabled by user")
+                autotune_settings = None
+            else:
+                logger.info(f"[JOB {job_id}] Autotune: strength={autotune_settings.strength:.2f}")
 
     _progress(current_job, 48, "Effects detected")
 
