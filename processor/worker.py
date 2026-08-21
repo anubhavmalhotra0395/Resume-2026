@@ -423,6 +423,47 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # Width: as detected
     _width_val = recipe.width if (recipe.width and options.get("enable_width", True)) else None
 
+    # ── Bounded AI fine-tune: scale DETECTED effects only (±40%) ────────────
+    # The LLM sees measured profiles + what was detected and may nudge
+    # amounts; it can never add or remove an effect. Fail-safe: {} = no-op.
+    ai_scales: dict = {}
+    try:
+        from api.ai_audio import ai_effect_scales
+        _detected_brief = {
+            "reverb": ({"rt60": reverb_final.decay_s, "mix": reverb_final.mix}
+                       if reverb_final else None),
+            "delay": ({"ms": delay_info.get("delay_ms"), "level": delay_info.get("echo_level")}
+                      if delay_info else None),
+            "tape": ({"drive": tape_settings.drive, "mix": tape_settings.mix}
+                     if tape_settings else None),
+            "parallel_comp": ({"blend": parallel_comp_settings.blend}
+                              if parallel_comp_settings else None),
+            "saturation_drive": saturation_final,
+            "vocal_layers": ({"total": vocal_layers_profile.total_layers}
+                             if vocal_layers_profile else None),
+            "compressor": ({"ratio": comp_final.ratio} if comp_final else None),
+        }
+        ai_scales = ai_effect_scales(_detected_brief, _ref_stats, _dry_stats)
+        if ai_scales:
+            logger.info(f"[JOB {job_id}] AI effect scales: {ai_scales}")
+            if reverb_final and "reverb_mix_scale" in ai_scales:
+                reverb_final.mix = float(np.clip(reverb_final.mix * ai_scales["reverb_mix_scale"], 0.0, 0.4))
+            if delay_info and "delay_mix_scale" in ai_scales:
+                delay_info["_mix"] = float(np.clip(delay_info["_mix"] * ai_scales["delay_mix_scale"], 0.05, 0.55))
+            if tape_settings and "tape_mix_scale" in ai_scales:
+                tape_settings.mix = float(np.clip(tape_settings.mix * ai_scales["tape_mix_scale"], 0.0, 0.6))
+            if parallel_comp_settings and "parallel_blend_scale" in ai_scales:
+                parallel_comp_settings.blend = float(np.clip(
+                    parallel_comp_settings.blend * ai_scales["parallel_blend_scale"], 0.0, 0.6))
+            if saturation_final and "saturation_scale" in ai_scales:
+                saturation_final = float(np.clip(saturation_final * ai_scales["saturation_scale"], 1.0, 2.0))
+            if vocal_layers_profile and "harmony_strength_scale" in ai_scales:
+                vocal_layers_profile.harmony_strengths = [
+                    float(np.clip(s * ai_scales["harmony_strength_scale"], 0.05, 0.5))
+                    for s in vocal_layers_profile.harmony_strengths]
+    except Exception as _ai_err:
+        logger.info(f"[JOB {job_id}] AI fine-tune skipped: {_ai_err}")
+
     # User-requested AI DSP overrides (from the prompt-tuning box) still apply
     ai_cfg = options.get("ai_dsp_config")
 
@@ -648,20 +689,18 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # EQ and effects, our output may be significantly quieter or louder.
     # Match RMS so the output sits at the same perceived loudness as the reference.
     try:
-        # Energy-based RMS on the full array: a mean-downmix here would let
-        # panned/decorrelated layers phase-cancel and read as "too quiet",
-        # which used to trigger a +12 dB slam followed by the dry-vocal
-        # fallback — silently discarding the whole processed result.
-        ref_rms = float(np.sqrt(np.mean(ref_audio ** 2)))
+        # Loudness is owned by the final LUFS match (after the master bus).
+        # The old RMS match here pushed +10-12 dB into the limiter, which
+        # crushed the loud sections' transients before the LUFS trim undid
+        # the level — the "squashed, not like the reference" sound. Only
+        # rescue genuinely starved signals so the glue detector has signal.
         out_rms = float(np.sqrt(np.mean(processed ** 2)))
-        if ref_rms > 1e-9 and out_rms > 1e-9:
-            gain = ref_rms / out_rms
-            # Safety: cap gain to ±12dB to avoid absurd amplification
-            gain = float(np.clip(gain, 10 ** (-12 / 20), 10 ** (12 / 20)))
+        if 1e-9 < out_rms < 0.02:  # below ~-34 dBFS — abnormally quiet
+            gain = float(min(0.05 / out_rms, 10 ** (12 / 20)))
             processed = processed * gain
-            print(f"  RMS match: applied {20 * np.log10(gain):.1f}dB gain to match reference loudness")
+            print(f"  Pre-bus rescue gain: {20 * np.log10(gain):.1f}dB (chain output was starved)")
     except Exception as e:
-        print(f"⚠ RMS match failed: {e}")
+        print(f"⚠ Pre-bus level check failed: {e}")
 
     # Master bus: glue compression + lookahead limiting — the "finished
     # record" density and level a bare effects chain lacks. Replaces the old
@@ -670,9 +709,19 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     if max_val < 1e-9:
         processed = dry_audio / (np.max(np.abs(dry_audio)) + 1e-9) * 0.95
     else:
-        from processor.dsp.master_bus import apply_master_bus
+        from processor.dsp.master_bus import apply_master_bus, _active_spread_db
         _progress(current_job, 90, "Master bus: glue + limiting…")
-        processed = apply_master_bus(processed, sr)
+        # Density target = the reference's own measured dynamic spread, so a
+        # crushed-dense reference yields a matching-dense output.
+        _ref_spread = _active_spread_db(
+            ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0), sr)
+        # density_scale > 1 = denser than measured (spread target shrinks)
+        _dens = float(ai_scales.get("density_scale", 1.0)) if ai_scales else 1.0
+        _spread_target = (_ref_spread / _dens) if _ref_spread > 0.5 else None
+        if _spread_target:
+            logger.info(f"[JOB {job_id}] Density target: ref spread {_ref_spread:.1f} dB"
+                        + (f" x{_dens:.2f} AI" if _dens != 1.0 else ""))
+        processed = apply_master_bus(processed, sr, target_spread_db=_spread_target)
         # Final level is set to LUFS parity with the reference after saving
         # (raw-RMS parity overshot: the separated reference's noise floor
         # drags its sample RMS below its perceived loudness).
@@ -779,6 +828,22 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         recipe_dict["autotune"] = _serialize(autotune_settings)
     if ai_cfg:
         recipe_dict["ai_dsp_config"] = ai_cfg
+    # ── Match report: how close did we land, dimension by dimension ────────
+    try:
+        from processor.dsp.master_bus import _active_spread_db as _spread
+        _out_mono = processed if processed.ndim == 1 else processed.mean(axis=1)
+        recipe_dict["match_report"] = {
+            "lufs_gap_db": (round(metrics["lufs_output"] - metrics["lufs_reference"], 1)
+                            if metrics.get("lufs_output") is not None and metrics.get("lufs_reference") is not None else None),
+            "spectral_distance": metrics.get("spectral_distance"),
+            "dynamic_spread_out_db": round(_spread(_out_mono.astype(np.float64), sr), 1),
+            "dynamic_spread_ref_db": round(_spread(
+                (ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)).astype(np.float64), sr), 1),
+            "ai_scales": ai_scales or None,
+        }
+    except Exception:
+        pass
+
     # Include dry vocal profile so the UI and debugging can see what was compared
     try:
         recipe_dict["dry_vocal_profile"] = _dry_stats

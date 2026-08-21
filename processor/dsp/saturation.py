@@ -2,26 +2,20 @@ import numpy as np
 
 
 def soft_clip(x: np.ndarray, drive: float = 1.0) -> np.ndarray:
-    # Clamp drive to reasonable range
-    drive = float(np.clip(drive, 0.5, 3.0))
-    
-    # Clamp input to prevent overflow
+    """tanh saturation, loudness-preserving: adds harmonics without changing
+    the signal's RMS, so saturation never doubles as a (mis)gain stage."""
+    drive = float(np.clip(drive, 0.5, 2.0))
     x_safe = np.clip(x, -2.0, 2.0)
-    
     y = np.tanh(x_safe * drive)
-    
-    # Normalize output to prevent excessive gain reduction
-    # tanh with high drive can reduce overall level significantly
-    if drive > 2.0:
-        # Compensate for level loss from high drive
-        compensation = 1.0 + (drive - 2.0) * 0.2
-        y = y * compensation
-    
-    # Ensure output is reasonable
+
+    in_rms = float(np.sqrt(np.mean(x_safe ** 2)))
+    out_rms = float(np.sqrt(np.mean(y ** 2)))
+    if in_rms > 1e-9 and out_rms > 1e-9:
+        y = y * (in_rms / out_rms)
+
     max_y = np.max(np.abs(y))
     if max_y > 1.0:
-        y = y / max_y * 0.95
-    
+        y = y / max_y * 0.98
     return y.astype(np.float32)
 
 

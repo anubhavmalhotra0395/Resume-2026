@@ -246,7 +246,7 @@ def prompt_to_dsp_config(
                 api_key=api_key,
                 base_url="https://api.groq.com/openai/v1",
             )
-            model = "llama-3.3-70b-versatile"
+            model = "openai/gpt-oss-120b"
         else:
             client = OpenAI(api_key=api_key)
             model = "gpt-4o"
@@ -286,7 +286,7 @@ def prompt_to_dsp_config(
             messages=messages,
             response_format={"type": "json_object"},
             temperature=0.3,
-            max_tokens=512,
+            max_tokens=2500,  # reasoning model
         )
 
         raw_text = response.choices[0].message.content or "{}"
@@ -378,3 +378,71 @@ def generate_preset_from_features(
 # ---------------------------------------------------------------------------
 def clear_session(session_id: str) -> None:
     _sessions.pop(session_id, None)
+
+
+# ---------------------------------------------------------------------------
+# Bounded effect-scale advisor
+# ---------------------------------------------------------------------------
+_SCALES_PROMPT = """
+You are a mix engineer matching a processed vocal to a reference vocal.
+You receive measured audio profiles and the effects DETECTED in the reference.
+Return ONLY a JSON object of scale factors (floats), each between 0.6 and 1.4,
+for any of these keys you want to adjust (omit = 1.0):
+  reverb_mix_scale, delay_mix_scale, tape_mix_scale, parallel_blend_scale,
+  harmony_strength_scale, density_scale, saturation_scale
+A scale multiplies the DETECTED amount — you cannot add or remove effects.
+Judge from the band energies, tail ratio, crest/dynamics and the detected
+values which effects should be slightly stronger or weaker to make the
+processed vocal sit like the reference. Respond with the JSON only.
+""".strip()
+
+
+def ai_effect_scales(detected: dict, ref_profile: dict, dry_profile: dict) -> dict:
+    """
+    Ask the LLM for bounded scale factors on detected effects. Purely
+    advisory: every value is clamped to [0.6, 1.4] and unknown keys are
+    dropped; any failure returns {} (no adjustment). The LLM can never
+    introduce an effect that was not detected.
+    """
+    allowed = {
+        "reverb_mix_scale", "delay_mix_scale", "tape_mix_scale",
+        "parallel_blend_scale", "harmony_strength_scale",
+        "density_scale", "saturation_scale",
+    }
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    api_key = groq_key or openai_key
+    if not api_key:
+        return {}
+    try:
+        from openai import OpenAI
+        if groq_key:
+            client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+            model = "openai/gpt-oss-120b"
+        else:
+            client = OpenAI(api_key=api_key)
+            model = "gpt-4o-mini"
+        payload = json.dumps({
+            "detected_effects": detected,
+            "reference_profile": ref_profile,
+            "dry_vocal_profile": dry_profile,
+        })[:6000]
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": _SCALES_PROMPT},
+                {"role": "user", "content": payload},
+            ],
+            temperature=0.2,
+            max_tokens=2500,  # reasoning model: thinking spends tokens before the JSON
+            response_format={"type": "json_object"},
+        )
+        raw = json.loads(resp.choices[0].message.content or "{}")
+        return {
+            k: float(max(0.6, min(1.4, float(v))))
+            for k, v in raw.items()
+            if k in allowed and isinstance(v, (int, float))
+        }
+    except Exception as e:
+        logger.info(f"ai_effect_scales skipped: {e}")
+        return {}

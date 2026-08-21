@@ -51,8 +51,33 @@ def _limiter_gain(peak_per_block: np.ndarray, block: int, sr: int,
     return g
 
 
+def _active_spread_db(mono: np.ndarray, sr: int) -> float:
+    """Dynamic spread of the active (non-silent) programme: p90/p10 of
+    100 ms RMS frames, in dB. The measurable 'density' of a vocal."""
+    frame = max(1, sr // 10)
+    n = len(mono) // frame
+    if n < 4:
+        return 0.0
+    rms = np.sqrt(np.mean(mono[: n * frame].reshape(n, frame) ** 2, axis=1))
+    # Relative activity gate (-26 dB under the loud passages): an absolute
+    # threshold let a separated stem's instrumental bleed count as "active",
+    # inflating a crushed vocal's spread to 27 dB and defeating density
+    # matching entirely.
+    loud = float(np.percentile(rms, 95))
+    gate = max(0.005, loud * 0.05)
+    active = rms[rms > gate]
+    if len(active) < 4:
+        return 0.0
+    return float(20 * np.log10(np.percentile(active, 90) / (np.percentile(active, 10) + 1e-12)))
+
+
 def apply_master_bus(y: np.ndarray, sr: int,
-                     cfg: MasterBusSettings | None = None) -> np.ndarray:
+                     cfg: MasterBusSettings | None = None,
+                     target_spread_db: float | None = None) -> np.ndarray:
+    """target_spread_db: the REFERENCE's measured dynamic spread. When given,
+    glue depth is set so the output lands near it — a crushed-dense reference
+    gets matching density, an open dynamic reference stays open. Without it,
+    gentle default glue."""
     cfg = cfg or MasterBusSettings()
     if len(y) == 0:
         return y
@@ -71,10 +96,21 @@ def apply_master_bus(y: np.ndarray, sr: int,
     else:
         threshold_db = cfg.glue_threshold_db
 
+    # Density matching: ratio chosen so our spread compresses toward the
+    # reference's. Spread above threshold shrinks ~1/ratio, so ratio ≈
+    # our_spread / ref_spread (clamped to musical bounds).
+    ratio = cfg.glue_ratio
+    if target_spread_db and target_spread_db > 0.5:
+        our_spread = _active_spread_db(mid, sr)
+        if our_spread > target_spread_db + 0.5:
+            ratio = float(np.clip(our_spread / target_spread_db, 1.2, 5.0))
+            # deeper glue needs the threshold under the quiet material too
+            threshold_db = float(np.clip(rms_db - 8.0, -38.0, -12.0)) if rms > 1e-9 else threshold_db
+
     # ── 1. Glue compression (linked stereo: one gain from the mid signal) ──
     gain = compressor_gain(mid, sr, CompressorSettings(
         threshold_db=threshold_db,
-        ratio=cfg.glue_ratio,
+        ratio=ratio,
         attack_ms=cfg.glue_attack_ms,
         release_ms=cfg.glue_release_ms,
         makeup_db=0.0,

@@ -95,8 +95,9 @@ def _estimate_compression(y: np.ndarray, sr: int, dry_y: np.ndarray | None = Non
         release = np.clip(80 + var * 6, 60, 240)
         makeup_db = np.clip((0 - threshold) * 0.25, 0, 6)
     
-    # Clamp makeup gain conservatively
-    makeup_db = float(np.clip(makeup_db, 0, 5))
+    # Level restoration is owned by the final LUFS match; keep makeup
+    # minimal so gain staging into the master bus stays clean
+    makeup_db = float(np.clip(makeup_db, 0, 2))
     
     return CompressorSettings(
         threshold_db=float(threshold),
@@ -240,12 +241,14 @@ def _estimate_saturation(y: np.ndarray, dry_y: np.ndarray | None = None) -> floa
         dry_ratio = float(np.mean(np.abs(dry_harm)) / (np.mean(np.abs(dry_res)) + 1e-6))
         # Higher harmonic ratio in reference means saturation was applied
         ratio_increase = max(0.0, ref_ratio - dry_ratio)
-        drive = float(np.clip(1.0 + ratio_increase * 1.2, 1.0, 3.0))
+        # Cap at 1.8: beyond that tanh saturation on a compressed vocal
+        # turns into audible clipping distortion, not 'warmth'
+        drive = float(np.clip(1.0 + ratio_increase * 1.0, 1.0, 2.0))
     else:
         harm = librosa.effects.harmonic(y)
         residual = y - harm
         ratio = float(np.mean(np.abs(harm)) / (np.mean(np.abs(residual)) + 1e-6))
-        drive = float(np.clip(1.0 + (ratio - 1.0) * 1.5, 1.0, 3.0))
+        drive = float(np.clip(1.0 + (ratio - 1.0) * 1.0, 1.0, 2.0))
     return drive
 
 
