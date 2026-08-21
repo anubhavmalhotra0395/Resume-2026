@@ -169,10 +169,18 @@ def apply_chain(
         except Exception as e:
             print(f"⚠ WARNING: Parallel comp failed ({e}). Skipping.")
 
-    # De-esser (before reverb to reduce sibilance in reverb tail)
+    # De-esser (before reverb to reduce sibilance in reverb tail).
+    # Depth matched to the reference's own sibilance when available.
     if enable_deesser:
         y_before = y.copy()
-        y = apply_deesser(y, sr)
+        _ref_sib = None
+        try:
+            if reference is not None and len(reference) > sr:
+                from processor.dsp.deesser import measure_sibilance_db
+                _ref_sib = measure_sibilance_db(reference[: sr * 60], sr)
+        except Exception:
+            _ref_sib = None
+        y = apply_deesser(y, sr, ref_sibilance_db=_ref_sib)
         y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
         if np.max(np.abs(y)) < 1e-9:
             print("⚠ WARNING: De-esser produced silent output. Skipping de-esser.")

@@ -19,13 +19,33 @@ def bandpass(x: np.ndarray, sr: int, low: float, high: float, order: int = 4) ->
     return lfilter(b, a, x)
 
 
-def apply_deesser(x: np.ndarray, sr: int, thresh_db: float = -26.0, ratio: float = 3.0) -> np.ndarray:
+def measure_sibilance_db(x: np.ndarray, sr: int) -> float:
+    """Energy of the sibilance band relative to the full signal, in dB.
+    Used to match the de-esser's depth to the reference's actual character."""
+    sos = butter(4, 5500.0 / (sr / 2.0), btype="high", output="sos")
+    high = sosfilt(sos, np.asarray(x, dtype=np.float64))
+    full = float(np.sqrt(np.mean(np.asarray(x, dtype=np.float64) ** 2))) + 1e-12
+    band = float(np.sqrt(np.mean(high ** 2))) + 1e-12
+    return 20.0 * np.log10(band / full)
+
+
+def apply_deesser(x: np.ndarray, sr: int, thresh_db: float = -26.0, ratio: float = 3.0,
+                  ref_sibilance_db: float | None = None) -> np.ndarray:
     """
     Reduce sibilance without touching the rest of the spectrum.
 
     Split at 5.5 kHz; the high band is compressed (fast attack, short release)
     with a gain curve computed from its own energy; low band passes untouched.
+
+    ref_sibilance_db: the reference's measured sibilance-to-full ratio. When
+    given, the ratio adapts: if the dry vocal is already no more sibilant
+    than the reference, de-essing goes gentle (1.5:1); if it is much more
+    sibilant, it deepens (up to 5:1).
     """
+    if ref_sibilance_db is not None:
+        own = measure_sibilance_db(x, sr)
+        excess = own - ref_sibilance_db  # +ve = we are more sibilant than ref
+        ratio = float(np.clip(1.5 + excess * 0.5, 1.5, 5.0))
     split_hz = 5500.0
     nyq = sr / 2.0
     sos = butter(4, split_hz / nyq, btype="high", output="sos")

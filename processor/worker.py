@@ -52,6 +52,8 @@ def _progress(job, pct: int, stage: str) -> None:
 
 def process_job(reference_path: Path, dry_path: Path, options: dict | None = None) -> Path:
     options = options or {}
+    if options.get("preset_recipe"):
+        return process_preset_job(dry_path, options["preset_recipe"], options)
     
     # Initialize metrics
     metrics = {
@@ -609,6 +611,18 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # NOTE: reverb is already applied inside apply_chain via reverb_final (converted from
     # reverb_profile_auto). A second apply_reverb here would double the reverb, so it is removed.
 
+    # ── Dynamics profile transfer ───────────────────────────────────────────
+    # Quantile-map the output's short-term loudness envelope onto the
+    # reference's: the vocal then *rides* the way the reference rides
+    # (timeline-free, so any-genre / any-song safe).
+    try:
+        from processor.dsp.dynamics_transfer import match_dynamics
+        _progress(current_job, 70, "Matching dynamics profile…")
+        _ref_mono_dyn = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
+        processed = match_dynamics(processed, sr, _ref_mono_dyn, strength=0.7)
+    except Exception as _dt_err:
+        logger.warning(f"[JOB {job_id}] Dynamics transfer skipped: {_dt_err}")
+
     # ── Spectral match pass (deterministic) ────────────────────────────────
     # Compare the processed output's band energies against the reference and
     # apply a gentle corrective EQ toward the reference. Replaces the old
@@ -722,6 +736,28 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             logger.info(f"[JOB {job_id}] Density target: ref spread {_ref_spread:.1f} dB"
                         + (f" x{_dens:.2f} AI" if _dens != 1.0 else ""))
         processed = apply_master_bus(processed, sr, target_spread_db=_spread_target)
+
+        # Closed loop: one-shot stages leave remainders — measure the result
+        # and correct until inside tolerance (hard-capped at 2 extra passes).
+        try:
+            from processor.dsp.dynamics_transfer import match_dynamics as _md, dynamics_profile_gap_db as _rg
+            _ref_mono_cl = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
+            for _cl in range(2):
+                _mono_cl = processed if processed.ndim == 1 else processed.mean(axis=1)
+                _sp = _active_spread_db(_mono_cl.astype(np.float64), sr)
+                _rd = _rg(_mono_cl, _ref_mono_cl, sr)
+                _did = []
+                if _rd > 2.0:
+                    processed = _md(processed, sr, _ref_mono_cl, strength=0.5)
+                    _did.append(f"ride {_rd:.1f}dB")
+                if _spread_target and _sp > _spread_target * 1.15:
+                    processed = apply_master_bus(processed, sr, target_spread_db=_spread_target)
+                    _did.append(f"spread {_sp:.1f}->{_spread_target:.1f}dB")
+                if not _did:
+                    break
+                logger.info(f"[JOB {job_id}] Closed-loop pass {_cl + 1}: corrected {', '.join(_did)}")
+        except Exception as _cl_err:
+            logger.warning(f"[JOB {job_id}] Closed-loop pass skipped: {_cl_err}")
         # Final level is set to LUFS parity with the reference after saving
         # (raw-RMS parity overshot: the separated reference's noise floor
         # drags its sample RMS below its perceived loudness).
@@ -751,20 +787,36 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         metrics["lufs_output"] = compute_lufs(out_path)
         logger.info(f"[JOB {job_id}] Output LUFS: {metrics['lufs_output']:.1f}")
 
-        # ── LUFS-match to the reference ────────────────────────────────────
-        # Perceived-loudness parity, applied within the limiter's headroom.
+        # ── Closed-loop LUFS match ─────────────────────────────────────────
+        # Perceived-loudness parity with the reference. Boosts beyond the
+        # peak ceiling are allowed and pushed back through the limiter —
+        # that's what a limiter is for. (The old headroom-capped version
+        # left a cross-song render 7.8 dB quieter than its reference.)
         ref_lufs = metrics.get("lufs_reference")
         if ref_lufs is not None and metrics["lufs_output"] is not None:
-            gain_db = float(ref_lufs - metrics["lufs_output"])
-            peak = float(np.max(np.abs(processed))) or 1e-9
-            max_boost_db = 20 * np.log10(0.97 / peak) if peak < 0.97 else 0.0
-            gain_db = float(np.clip(gain_db, -12.0, max(0.0, max_boost_db)))
-            if abs(gain_db) >= 0.5:
+            from processor.dsp.master_bus import MasterBusSettings, _limiter_gain
+            for _pass in range(3):  # converges in 1-2; 3 is a hard stop
+                gain_db = float(np.clip(ref_lufs - metrics["lufs_output"], -12.0, 12.0))
+                if abs(gain_db) < 0.5:
+                    break
                 processed = processed * (10 ** (gain_db / 20.0))
+                peak = float(np.max(np.abs(processed)))
+                if peak > 0.97:
+                    # re-limit transparently rather than refusing the boost
+                    block = max(1, int(sr * 0.001))
+                    nb = int(np.ceil(len(processed) / block))
+                    flat = np.abs(processed).max(axis=1) if processed.ndim == 2 else np.abs(processed)
+                    pad = np.zeros(nb * block)
+                    pad[: len(flat)] = flat
+                    peaks = pad.reshape(nb, block).max(axis=1)
+                    g = _limiter_gain(peaks, block, sr, 0.97, 80.0)
+                    gi = np.interp(np.arange(len(processed)), (np.arange(nb) + 0.5) * block, g)
+                    processed = processed * (gi[:, None] if processed.ndim == 2 else gi)
+                    processed = np.clip(processed, -0.97, 0.97)
                 save_wav(out_path, processed, sr)
                 metrics["lufs_output"] = compute_lufs(out_path)
                 logger.info(
-                    f"[JOB {job_id}] LUFS match: {gain_db:+.1f} dB → output {metrics['lufs_output']:.1f} LUFS"
+                    f"[JOB {job_id}] LUFS pass {_pass + 1}: {gain_db:+.1f} dB → {metrics['lufs_output']:.1f} LUFS"
                 )
     except Exception as e:
         logger.warning(f"[JOB {job_id}] Failed to compute output LUFS: {e}")
@@ -809,6 +861,9 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             "type": delay_info.get("type"),
             "delay_ms": delay_info.get("delay_ms"),
             "confidence": delay_info.get("confidence"),
+            "echo_level": delay_info.get("echo_level"),
+            "feedback": delay_info.get("feedback"),
+            "_mix": delay_info.get("_mix"),
         }
     if reverb_profile_auto is not None:
         recipe_dict["reverb_auto"] = reverb_profile_auto.as_dict()
@@ -829,14 +884,31 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     if ai_cfg:
         recipe_dict["ai_dsp_config"] = ai_cfg
     # ── Match report: how close did we land, dimension by dimension ────────
+    # Style targets: everything a future job needs to REPLAY this style as a
+    # preset with no reference upload (see /presets in the API).
+    try:
+        from processor.dsp.dynamics_transfer import loudness_quantiles_centered
+        _ref_mono_st = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
+        recipe_dict["style_targets"] = {
+            "ref_spread_db": round(float(_ref_spread), 1) if _ref_spread else None,
+            "ref_lufs": metrics.get("lufs_reference"),
+            "ref_loudness_quantiles": loudness_quantiles_centered(_ref_mono_st, sr),
+            "ref_band_energy": _ref_stats.get("band_energy_pct"),
+        }
+    except Exception:
+        pass
+
     try:
         from processor.dsp.master_bus import _active_spread_db as _spread
+        from processor.dsp.dynamics_transfer import dynamics_profile_gap_db as _ride_gap
         _out_mono = processed if processed.ndim == 1 else processed.mean(axis=1)
         recipe_dict["match_report"] = {
             "lufs_gap_db": (round(metrics["lufs_output"] - metrics["lufs_reference"], 1)
                             if metrics.get("lufs_output") is not None and metrics.get("lufs_reference") is not None else None),
             "spectral_distance": metrics.get("spectral_distance"),
             "dynamic_spread_out_db": round(_spread(_out_mono.astype(np.float64), sr), 1),
+            "dynamics_ride_gap_db": round(_ride_gap(
+                _out_mono, ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0), sr), 1),
             "dynamic_spread_ref_db": round(_spread(
                 (ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)).astype(np.float64), sr), 1),
             "ai_scales": ai_scales or None,
@@ -871,6 +943,197 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     print(f"✓ Job complete. Output saved to {out_name}")
     print(f"  Metrics: total={metrics['processing_time_total']:.2f}s, DSP={metrics['processing_time_dsp']:.2f}s")
 
+    sweep_old_files()
+    return out_path
+
+
+def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
+    """Replay a saved style on a new dry vocal: no reference, no separation,
+    no detection — settings are reconstructed from the stored recipe and the
+    stored style targets (ride quantiles, band energy, spread, LUFS) drive
+    the same matching passes the live path uses."""
+    current_job = get_current_job()
+    job_id = current_job.id if current_job else str(uuid.uuid4())
+    t0 = time.time()
+    name = (preset.get("_preset") or {}).get("name", "preset")
+    logger.info(f"[JOB {job_id}] Preset replay: {name}")
+    _progress(current_job, 5, f"Applying preset {name}…")
+
+    dry_norm = settings.inputs_dir / f"{uuid.uuid4()}_dry.wav"
+    run_ffmpeg_normalize(dry_path, dry_norm)
+    dry_audio, sr = load_wav(dry_norm)
+
+    from processor.dsp.eq import EqBand
+    from processor.dsp.compressor import CompressorSettings
+    from processor.dsp.reverb import ReverbSettings
+    from processor.dsp.gate import GateSettings
+    from processor.dsp.tape import TapeSettings
+    from processor.dsp.exciter import ExciterSettings
+    from processor.dsp.parallel_comp import ParallelCompSettings
+    from processor.dsp.doubler import DoublerSettings
+    from processor.dsp.ms_eq import MsEqSettings
+    from processor.dsp.analysis.autotune_analysis import AutotuneSettings
+    from processor.dsp.analysis.chorus_analysis import ChorusProfile
+    from processor.dsp.analysis.flanger_analysis import FlangerProfile
+    from processor.dsp.analysis.vocal_layers_analysis import VocalLayersProfile
+    import inspect
+
+    def build(cls, d):
+        if not isinstance(d, dict):
+            return None
+        try:
+            keys = set(inspect.signature(cls).parameters)
+            return cls(**{k: v for k, v in d.items() if k in keys})
+        except Exception:
+            return None
+
+    eq_bands = [b for b in (build(EqBand, x) for x in (preset.get("eq") or [])) if b]
+    comp = build(CompressorSettings, preset.get("compressor"))
+    targets = preset.get("style_targets") or {}
+    ref_profile = preset.get("ref_vocal_profile") or {}
+
+    reverb = None
+    ra = preset.get("reverb_auto")
+    if isinstance(ra, dict) and ra.get("wet"):
+        tail = float(np.clip(float(ref_profile.get("reverb_tail_ratio", 0.0) or 0.0), 0.0, 1.0))
+        wetness = float(np.clip((tail - 0.3) / 0.4, 0.0, 1.0))
+        rv = ReverbSettings(
+            decay_s=float(ra.get("rt60", 0.8)),
+            mix=float(np.clip(float(ra["wet"]) * (1.0 + 0.6 * wetness), 0.0, 0.20 + 0.15 * wetness)),
+            pre_delay_ms=float(ra.get("predelay_ms", 10.0)),
+        )
+        reverb = rv if rv.mix >= 0.07 else None
+    elif isinstance(preset.get("reverb"), dict):
+        reverb = build(ReverbSettings, preset["reverb"])
+
+    chorus = build(ChorusProfile, preset.get("chorus"))
+    flanger = build(FlangerProfile, preset.get("flanger"))
+    gate = build(GateSettings, preset.get("gate"))
+    tape = build(TapeSettings, preset.get("tape"))
+    exciter = build(ExciterSettings, preset.get("exciter"))
+    parallel = build(ParallelCompSettings, preset.get("parallel_comp"))
+    doubler = build(DoublerSettings, preset.get("doubler"))
+    autotune = build(AutotuneSettings, preset.get("autotune"))
+    ms_eq = None
+    if isinstance(preset.get("ms_eq"), dict):
+        try:
+            me = preset["ms_eq"]
+            ms_eq = MsEqSettings(
+                mid_bands=[b for b in (build(EqBand, x) for x in me.get("mid_bands", [])) if b],
+                side_bands=[b for b in (build(EqBand, x) for x in me.get("side_bands", [])) if b],
+            )
+        except Exception:
+            ms_eq = None
+    saturation = preset.get("saturation_drive")
+    width = preset.get("width") if isinstance(preset.get("width"), dict) else None
+    layers_profile = build(VocalLayersProfile, preset.get("vocal_layers"))
+    delay_info = dict(preset["delay"]) if isinstance(preset.get("delay"), dict) else None
+    if delay_info and not delay_info.get("_mix"):
+        delay_info["_mix"] = float(np.clip(delay_info.get("echo_level") or 0.25, 0.10, 0.5))
+
+    _progress(current_job, 40, "Applying DSP chain…")
+    processed = apply_chain(
+        dry_audio, sr,
+        eq_bands=eq_bands, comp=comp, reverb=reverb,
+        saturation_drive=saturation, width=width,
+        chorus_profile=chorus, flanger_profile=flanger, reference=None,
+        enable_deesser=options.get("enable_deesser", True),
+        gate=gate, parallel_comp=parallel, tape=tape, exciter=exciter,
+        doubler=doubler, ms_eq=ms_eq, autotune=autotune,
+    )
+
+    if layers_profile is not None and options.get("enable_harmony", True):
+        selected = options.get("selected_layers") or []
+        prof = filter_vocal_layers_profile(layers_profile, selected) if selected else layers_profile
+        if prof is not None:
+            _progress(current_job, 60, "Applying vocal layers…")
+            processed = apply_vocal_layers(processed, sr, prof)
+
+    if delay_info and delay_info.get("delay_ms", 0) > 0 and options.get("enable_delay", True):
+        fb = float(delay_info.get("feedback") or 0.25)
+        mix_val = float(delay_info.get("_mix", 0.25))
+        if processed.ndim == 2:
+            processed = np.stack([
+                apply_delay(processed[:, 0], sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val),
+                apply_delay(processed[:, 1], sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val),
+            ], axis=1)
+        else:
+            processed = apply_delay(processed, sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val)
+
+    _progress(current_job, 75, "Matching stored style targets…")
+    try:
+        from processor.dsp.dynamics_transfer import match_dynamics
+        q = targets.get("ref_loudness_quantiles")
+        if q:
+            processed = match_dynamics(processed, sr, None, strength=0.7, ref_quantiles=q)
+    except Exception as e:
+        logger.warning(f"[JOB {job_id}] Preset dynamics skipped: {e}")
+
+    try:
+        ref_bands = targets.get("ref_band_energy") or {}
+        if ref_bands:
+            from processor.dsp.eq import EqBand as _B, apply_eq as _ae
+            _mono = processed if processed.ndim == 1 else processed.mean(axis=1)
+            stft = np.abs(librosa.stft(_mono[: sr * 60]))
+            freqs = librosa.fft_frequencies(sr=sr)
+            total = float(np.sum(stft ** 2)) + 1e-12
+            gaps = []
+            prev = 0
+            for (bn, cutoff, f, qq) in [("sub_60hz", 60, 60.0, 0.7), ("low_250hz", 250, 200.0, 0.7),
+                                        ("low_mid_500hz", 500, 400.0, 0.9), ("mid_2khz", 2000, 1200.0, 1.0),
+                                        ("high_mid_6khz", 6000, 4000.0, 1.0), ("air_12khz", 12000, 10000.0, 0.7)]:
+                mask = (freqs >= prev) & (freqs < cutoff)
+                e = float(np.sum(stft[mask] ** 2)) / total
+                g = float(np.clip((float(ref_bands.get(bn, 0)) - e) * 40.0, -4.0, 4.0))
+                if abs(g) >= 0.5:
+                    gaps.append(_B(f=f, gain_db=g, q=qq))
+                prev = cutoff
+            if gaps:
+                if processed.ndim == 2:
+                    processed = np.stack([_ae(processed[:, 0], sr, gaps), _ae(processed[:, 1], sr, gaps)], axis=1)
+                else:
+                    processed = _ae(processed, sr, gaps)
+    except Exception as e:
+        logger.warning(f"[JOB {job_id}] Preset tone match skipped: {e}")
+
+    processed = np.nan_to_num(processed, nan=0.0, posinf=0.0, neginf=0.0)
+    from processor.dsp.master_bus import apply_master_bus, _limiter_gain
+    _progress(current_job, 88, "Master bus…")
+    processed = apply_master_bus(processed, sr, target_spread_db=targets.get("ref_spread_db"))
+
+    out_path = settings.outputs_dir / f"{current_job.id if current_job else uuid.uuid4()}.wav"
+    save_wav(out_path, processed, sr)
+
+    try:
+        ref_lufs = targets.get("ref_lufs")
+        if ref_lufs is not None:
+            out_lufs = compute_lufs(out_path)
+            for _ in range(3):
+                gain_db = float(np.clip(ref_lufs - out_lufs, -12.0, 12.0))
+                if abs(gain_db) < 0.5:
+                    break
+                processed = processed * (10 ** (gain_db / 20.0))
+                if float(np.max(np.abs(processed))) > 0.97:
+                    block = max(1, int(sr * 0.001))
+                    nb = int(np.ceil(len(processed) / block))
+                    flat = np.abs(processed).max(axis=1) if processed.ndim == 2 else np.abs(processed)
+                    pad = np.zeros(nb * block)
+                    pad[: len(flat)] = flat
+                    g = _limiter_gain(pad.reshape(nb, block).max(axis=1), block, sr, 0.97, 80.0)
+                    gi = np.interp(np.arange(len(processed)), (np.arange(nb) + 0.5) * block, g)
+                    processed = np.clip(processed * (gi[:, None] if processed.ndim == 2 else gi), -0.97, 0.97)
+                save_wav(out_path, processed, sr)
+                out_lufs = compute_lufs(out_path)
+    except Exception as e:
+        logger.warning(f"[JOB {job_id}] Preset LUFS match skipped: {e}")
+
+    out_recipe = dict(preset)
+    out_recipe["applied_preset"] = out_recipe.pop("_preset", {"name": name})
+    out_recipe.pop("match_report", None)
+    if current_job:
+        (settings.outputs_dir / f"{current_job.id}.json").write_text(json.dumps(out_recipe, indent=2))
+    _progress(current_job, 100, "Complete")
+    logger.info(f"[JOB {job_id}] Preset replay done in {time.time() - t0:.1f}s")
     sweep_old_files()
     return out_path
 

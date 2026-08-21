@@ -129,6 +129,49 @@ async def analyze_progress(token: str):
     return JSONResponse(_analysis_progress.get(token, {"progress": 0, "stage": "starting…"}))
 
 
+def _presets_dir() -> Path:
+    d = settings.storage_root / "presets"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+class PresetSaveRequest(BaseModel):
+    job_id: str
+    name: str
+
+
+@app.get("/presets")
+async def list_presets():
+    out = []
+    for f in sorted(_presets_dir().glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            meta = json.loads(f.read_text(encoding="utf-8")).get("_preset", {})
+            out.append({"id": f.stem, "name": meta.get("name", f.stem),
+                        "created": meta.get("created")})
+        except Exception:
+            continue
+    return {"presets": out}
+
+
+@app.post("/presets")
+async def save_preset(req: PresetSaveRequest):
+    """Save a finished job's recipe as a named, replayable style preset."""
+    src = settings.outputs_dir / f"{req.job_id}.json"
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="No recipe found for that job")
+    recipe = json.loads(src.read_text(encoding="utf-8"))
+    if not recipe.get("style_targets"):
+        raise HTTPException(status_code=400,
+                            detail="Job predates style presets — run it again to capture the style")
+    import datetime
+    pid = str(uuid.uuid4())[:8]
+    recipe["_preset"] = {"name": req.name.strip()[:60] or pid,
+                         "created": datetime.datetime.utcnow().isoformat() + "Z",
+                         "source_job": req.job_id}
+    (_presets_dir() / f"{pid}.json").write_text(json.dumps(recipe), encoding="utf-8")
+    return {"preset_id": pid, "name": recipe["_preset"]["name"]}
+
+
 def _save_upload(tmp_dir: Path, uploaded: UploadFile) -> Path:
     dst = tmp_dir / f"{uuid.uuid4()}_{uploaded.filename}"
     with dst.open("wb") as f:
@@ -159,9 +202,16 @@ async def create_job(
     selected_layers: str | None = Form(None),
     reference_is_vocal: str | None = Form("false"),
     analysis_id: str | None = Form(None),
+    preset_id: str | None = Form(None),
 ):
-    if not reference and not reference_url:
-        raise HTTPException(status_code=400, detail="Provide reference file or URL")
+    preset_recipe = None
+    if preset_id:
+        pf = _presets_dir() / f"{Path(preset_id).stem}.json"
+        if not pf.exists():
+            raise HTTPException(status_code=404, detail="Preset not found")
+        preset_recipe = json.loads(pf.read_text(encoding="utf-8"))
+    if not reference and not reference_url and not preset_recipe:
+        raise HTTPException(status_code=400, detail="Provide a reference (file or URL) or a preset")
 
     if reference and reference.content_type and "audio" not in reference.content_type:
         raise HTTPException(status_code=415, detail="Unsupported reference file type")
@@ -171,19 +221,24 @@ async def create_job(
     tmp_dir = settings.inputs_dir
     if reference:
         ref_path = _save_upload(tmp_dir, reference)
-    else:
+    elif reference_url:
         ref_path = fetch_audio_from_url(reference_url)  # type: ignore[arg-type]
+    else:
+        ref_path = None  # preset mode — no reference needed
     dry_path = _save_upload(tmp_dir, dry)
 
     try:
-        validate_file(ref_path)
+        if ref_path is not None:
+            validate_file(ref_path)
         validate_file(dry_path)
     except HTTPException:
-        ref_path.unlink(missing_ok=True)
+        if ref_path is not None:
+            ref_path.unlink(missing_ok=True)
         dry_path.unlink(missing_ok=True)
         raise
     except Exception as e:
-        ref_path.unlink(missing_ok=True)
+        if ref_path is not None:
+            ref_path.unlink(missing_ok=True)
         dry_path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
 
@@ -232,7 +287,10 @@ async def create_job(
         except Exception:
             pass
 
-    job_id = enqueue_job(ref_path, dry_path, options)
+    if preset_recipe is not None:
+        options["preset_recipe"] = preset_recipe
+
+    job_id = enqueue_job(ref_path or dry_path, dry_path, options)
     return {"job_id": job_id, "status": "queued"}
 
 
