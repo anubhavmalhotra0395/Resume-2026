@@ -2,7 +2,7 @@
 #
 #   cd ~/doctavox/infra/oracle && docker compose up -d --build
 #
-# Build context is the repo root. Uses Dockerfile.slim (CPU-only torch — the
+# Build context is the repo root. Uses Dockerfile.slim (torch-free onnxruntime stack — the
 # CUDA wheels in requirements.txt have no aarch64 build and would fail here).
 # Redis, API and worker are separate services so the worker can be restarted
 # or scaled without dropping the API; Caddy terminates TLS on 80/443.

@@ -19,27 +19,15 @@ class ParallelCompSettings:
 
 def _compress(x: np.ndarray, sr: int, threshold_db: float, ratio: float,
               attack_ms: float, release_ms: float) -> np.ndarray:
-    """Simple peak-following compressor (no lookahead)."""
-    threshold_lin = 10 ** (threshold_db / 20.0)
-    attack_coef   = np.exp(-1.0 / (sr * attack_ms  / 1000.0 + 1e-9))
-    release_coef  = np.exp(-1.0 / (sr * release_ms / 1000.0 + 1e-9))
+    """Heavy compression pass — delegates to the block-based compressor
+    (the old per-sample Python loop here ran slower than realtime)."""
+    from processor.dsp.compressor import CompressorSettings, apply_compressor
 
-    env = 0.0
-    out = np.empty_like(x)
-    for i in range(len(x)):
-        level = abs(x[i])
-        if level > env:
-            env = attack_coef * env + (1.0 - attack_coef) * level
-        else:
-            env = release_coef * env + (1.0 - release_coef) * level
-
-        if env > threshold_lin:
-            gain_reduction = threshold_lin * ((env / threshold_lin) ** (1.0 / ratio)) / env
-        else:
-            gain_reduction = 1.0
-        out[i] = x[i] * gain_reduction
-
-    return out.astype(np.float32)
+    return apply_compressor(x, sr, CompressorSettings(
+        threshold_db=threshold_db, ratio=ratio,
+        attack_ms=attack_ms, release_ms=release_ms,
+        makeup_db=0.0, knee_db=0.0,
+    ))
 
 
 def apply_parallel_comp(x: np.ndarray, sr: int, cfg: ParallelCompSettings) -> np.ndarray:

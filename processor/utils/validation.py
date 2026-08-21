@@ -22,14 +22,8 @@ def probe_duration_seconds(path: Path) -> float:
     return float(out)
 
 
-def validate_file(path: Path, is_rvc_job: bool = False) -> None:
-    """
-    Validate audio file with comprehensive checks.
-    
-    Args:
-        path: Path to audio file
-        is_rvc_job: If True, applies stricter limits for RVC processing
-    """
+def validate_file(path: Path) -> None:
+    """Validate an uploaded audio file (exists, size, duration)."""
     if not path.exists():
         raise HTTPException(status_code=400, detail="Upload missing")
 
@@ -41,13 +35,16 @@ def validate_file(path: Path, is_rvc_job: bool = False) -> None:
         )
 
     duration = probe_duration_seconds(path)
-    
-    # Stricter limits for RVC jobs (RVC is more computationally expensive)
-    max_duration = 30.0 if is_rvc_job else settings.max_duration_seconds
+
+    max_duration = settings.max_duration_seconds
     if duration > max_duration:
         raise HTTPException(
             status_code=400,
-            detail=f"File too long: {duration:.1f}s (max: {max_duration:.1f}s for {'RVC' if is_rvc_job else 'standard'} jobs)"
+            detail=(
+                f"Audio too long: {duration / 60:.1f} min "
+                f"(max {max_duration / 60:.0f} min per file). "
+                "Trim it, or use the segment fields to analyse just the chorus."
+            ),
         )
     
     # Minimum length check

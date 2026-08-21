@@ -16,3 +16,9 @@ node_modules/
 # this repo so Resume-2026 stays resume-specific. The files still live in
 # vocalforge/ on disk; nothing in the API image depends on them.
 vocalforge/
+
+# Personal marketing assets — local only
+promo-instagram-*/
+promo-instagram-*.zip
+Portfolio-Revision-Brief.pdf
+PORTFOLIO-REVISION-BRIEF.md

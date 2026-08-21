@@ -20,32 +20,15 @@ from processor.analysis.segmenter import detect_phrases
 from processor.config import settings
 from processor.cleanup import sweep_old_files
 from processor.dsp.chain import apply_chain
-from processor.utils.audio_io import load_wav, run_ffmpeg_normalize, save_wav
+from processor.utils.audio_io import load_wav, load_wav_stereo, run_ffmpeg_normalize, save_wav
 from processor.utils.vocal_extraction import extract_vocals
-from processor.utils.demucs_utils import run_demucs_extract
-from processor.utils.phase_align import align_by_crosscorr
 from processor.utils.metrics import timer, compute_spectral_distance, compute_lufs
-# RVC extras (torchaudio/transformers) are optional on slim deploys —
-# jobs with ml_refine=false must work without them.
-try:
-    from processor.ml_refine.rvc_refiner import get_rvc_refiner
-except ImportError:  # pragma: no cover - slim image without RVC extras
-    def get_rvc_refiner(*args, **kwargs):
-        raise RuntimeError("RVC extras not installed (see requirements-rvc.txt)")
-# Lazy: spectral_refiner imports torch (~300 MB RSS) — loading it at boot
-# starves 512 MB hosts before any request arrives. Import on first use.
-def get_refiner(*args, **kwargs):
-    from processor.ml_refine.spectral_refiner import get_refiner as _get_refiner
-    return _get_refiner(*args, **kwargs)
 from processor.dsp.analysis.chorus_analysis import detect_chorus
 from processor.dsp.analysis.flanger_analysis import detect_flanger
-from processor.dsp.analysis.harmony_analysis import detect_harmonies
-from processor.dsp.effects.apply_harmony import apply_harmony
-from processor.dsp.analysis.vocal_layers_analysis import detect_vocal_layers, VocalLayersProfile
+from processor.dsp.analysis.vocal_layers_analysis import detect_vocal_layers
 from processor.dsp.effects.apply_vocal_layers import apply_vocal_layers, filter_vocal_layers_profile
 from processor.dsp.delay import detect_delay, apply_delay
 from processor.dsp.analysis.reverb_analysis import estimate_reverb_params
-from processor.dsp.effects.apply_reverb import apply_reverb
 from processor.dsp.analysis.gate_analysis import detect_gate
 from processor.dsp.analysis.doubler_analysis import detect_doubler
 from processor.dsp.analysis.exciter_analysis import detect_exciter
@@ -73,8 +56,6 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # Initialize metrics
     metrics = {
         "processing_time_total": 0.0,
-        "processing_time_rvc": 0.0,
-        "processing_time_vocoder": 0.0,
         "processing_time_dsp": 0.0,
         "spectral_distance": None,
         "lufs_reference": None,
@@ -90,20 +71,36 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     
     ref_norm = settings.inputs_dir / f"{uuid.uuid4()}_ref.wav"
     dry_norm = settings.inputs_dir / f"{uuid.uuid4()}_dry.wav"
-    run_ffmpeg_normalize(reference_path, ref_norm)
+    # Stereo reference: layer detection reads doubling from the L/R image,
+    # and matching the analyze-layers bytes means the separation cache hits
+    # (the reference was usually just separated by /analyze-layers).
+    run_ffmpeg_normalize(reference_path, ref_norm, channels=2)
     run_ffmpeg_normalize(dry_path, dry_norm)
     _progress(current_job, 5, "Audio normalised")
 
     # Extract vocals from reference track (in case it's a full mix)
     use_stems = options.get("stems_mode", True)
     ref_for_analysis = ref_norm
-    
-    if use_stems:
+
+    # "Analyze layers" already separated this reference — reuse that result
+    # rather than paying for separation twice.
+    reused = options.get("ref_vocals_path")
+    if reused and Path(reused).exists():
+        ref_for_analysis = Path(reused)
+        print("✓ Reusing the vocal separated during layer analysis — skipping extraction")
+        _progress(current_job, 20, "Reusing analysed vocal")
+    elif use_stems:
         _progress(current_job, 8, "Extracting vocals from reference…")
         ref_vocals_path = settings.inputs_dir / f"{uuid.uuid4()}_ref_vocals.wav"
         print(f"Attempting to extract vocals from reference: {reference_path.name}")
-        extracted = extract_vocals(ref_norm, ref_vocals_path, force_demucs=True)
-        
+
+        def _sep_progress(done: int, total: int) -> None:
+            # Separation owns 8-20% of the job bar.
+            _progress(current_job, 8 + int(12 * done / max(total, 1)),
+                      f"Separating vocals… {int(100 * done / max(total, 1))}%")
+
+        extracted = extract_vocals(ref_norm, ref_vocals_path, progress_cb=_sep_progress)
+
         if extracted and extracted.exists():
             ref_for_analysis = extracted
             print(f"✓ Successfully extracted vocals from reference track")
@@ -111,8 +108,19 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             print(f"⚠ Vocal extraction failed — analysing full mix instead")
         _progress(current_job, 20, "Vocals extracted")
     
-    # Load reference audio
+    # Load reference audio — mono for the recipe/effect detectors, true
+    # stereo for layer detection (doubling lives in L/R decorrelation).
     ref_audio, sr = load_wav(ref_for_analysis)
+    ref_stereo, _ = load_wav_stereo(ref_for_analysis)
+
+    # The reference is analysis-only; cap it so a 4-minute song doesn't cost
+    # 4 minutes of detector time. (Separation above ran on the full file so
+    # its cache stays shared with /analyze-layers.)
+    _max_n = int(settings.analysis_max_seconds * sr)
+    if len(ref_audio) > _max_n:
+        logger.info(f"[JOB {job_id}] Capping reference analysis at {settings.analysis_max_seconds}s")
+        ref_audio = ref_audio[:_max_n]
+        ref_stereo = ref_stereo[:, :_max_n]
     ref_duration = len(ref_audio) / sr
     logger.info(f"[JOB {job_id}] Reference loaded: {ref_duration:.2f}s @ {sr}Hz")
     print(f"  Reference length: {ref_duration:.2f}s, sample rate: {sr}Hz")
@@ -136,84 +144,10 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     if current_job:
         recipe_path = settings.outputs_dir / f"{current_job.id}.json"
     
-    # Apply RVC if ML_REFINE is enabled (before DSP chain)
-    ml_refine_flag = options.get("ml_refine", False)
+    # Load the dry vocal (RVC voice conversion was removed — it only ever had
+    # a placeholder model; the DSP chain below does the style transfer).
     dry_audio, _ = load_wav(dry_norm)
-    
-    if ml_refine_flag:
-        model_path = settings.rvc_model_path if settings.rvc_model_path else None
-        
-        if not model_path or not Path(model_path).exists():
-            print(f"⚠ RVC requested but model not found at '{model_path}'.")
-            print(f"   To use RVC: Place a trained RVC model (.pth) at '{model_path}'")
-            print(f"   And vocoder at 'models/rvc/vocoder.pth' (optional)")
-            print(f"   Or set APP_RVC_MODEL_PATH environment variable to your model path.")
-            print(f"   Continuing without RVC (using original dry vocal)...")
-        else:
-            print(f"Applying RVC voice conversion with model: {model_path}")
-            try:
-                # Get RVC refiner instance
-                rvc_refiner = get_rvc_refiner(
-                    model_path=model_path,
-                    enable_gpu=settings.rvc_enable_gpu,
-                )
-                
-                # Log model availability
-                hubert_avail = rvc_refiner.hubert_model is not None
-                rvc_avail = rvc_refiner.rvc_model is not None
-                vocoder_avail = rvc_refiner.vocoder is not None
-                logger.info(f"[JOB {job_id}] Models loaded - HuBERT: {hubert_avail}, RVC: {rvc_avail}, Vocoder: {vocoder_avail} on {rvc_refiner.device}")
-                
-                # Process dry audio directly (new implementation)
-                original_length = len(dry_audio)
-                print(f"  Processing dry audio with RVC (input: {original_length} samples @ {sr}Hz)...")
-                rvc_start = time.time()
-                dry_audio_processed = rvc_refiner.process(dry_audio, sr)
-                metrics["processing_time_rvc"] = time.time() - rvc_start
-                logger.info(f"[JOB {job_id}] RVC processing completed in {metrics['processing_time_rvc']:.2f}s")
-                
-                if dry_audio_processed is not None and len(dry_audio_processed) > 0:
-                    # Check if processing actually changed the audio
-                    max_original = np.max(np.abs(dry_audio))
-                    max_processed = np.max(np.abs(dry_audio_processed))
-                    
-                    if max_processed > 1e-6:  # Valid output
-                        dry_audio = dry_audio_processed
-                        # RVC outputs at 44.1kHz, resample to match input sr if needed
-                        from processor.ml_refine.rvc_refiner import OUTPUT_SAMPLE_RATE
-                        if OUTPUT_SAMPLE_RATE != sr:
-                            # Resample to match input sample rate
-                            dry_audio = librosa.resample(
-                                dry_audio,
-                                orig_sr=OUTPUT_SAMPLE_RATE,
-                                target_sr=sr,
-                            )
-                        # Ensure length matches original (within tolerance)
-                        current_length = len(dry_audio)
-                        if abs(current_length - original_length) > sr * 0.1:  # More than 100ms difference
-                            # Trim or pad to match
-                            if current_length > original_length:
-                                dry_audio = dry_audio[:original_length]
-                            else:
-                                dry_audio = np.pad(dry_audio, (0, original_length - current_length), mode='constant')
-                        
-                        print(f"✓ RVC processing complete. Phase-aligning to reference...")
-                        # Phase align RVC output to reference to prevent phasing artifacts
-                        y_ref, _ = librosa.load(str(ref_for_analysis), sr=sr, mono=True)
-                        min_len = min(len(dry_audio), len(y_ref))
-                        dry_audio = align_by_crosscorr(y_ref[:min_len], dry_audio[:min_len], sr=sr)
-                        print(f"✓ RVC output phase-aligned and ready for DSP")
-                    else:
-                        print(f"⚠ RVC output is too quiet. Using original dry vocal.")
-                else:
-                    print(f"⚠ RVC processing returned invalid output. Using original dry vocal.")
-                    
-            except Exception as e:
-                print(f"⚠ RVC processing failed: {e}")
-                import traceback
-                traceback.print_exc()
-                print(f"   Continuing with original dry vocal...")
-    
+
     # Detect phrases for adaptive processing (optional)
     segments = None
     if options.get("adaptive_dsp", False):
@@ -232,14 +166,13 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     def _detect_flanger():
         return detect_flanger(ref_audio, sr)
 
-    def _detect_harmonies():
-        return detect_harmonies(ref_audio, sr)
-
     def _detect_reverb():
         return estimate_reverb_params(ref_audio, sr)
 
     def _detect_delay():
-        return detect_delay(ref_mono, sr)
+        # dry rides along for rhythm cancellation: shared rhythm correlates
+        # in both, only the reference has the echo effect
+        return detect_delay(ref_mono, sr, dry=dry_audio)
 
     def _detect_gate():
         return detect_gate(ref_audio, sr)
@@ -263,9 +196,9 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         return detect_autotune(ref_audio, sr)
 
     def _detect_vocal_layers():
-        return detect_vocal_layers(ref_audio, sr)
+        return detect_vocal_layers(ref_stereo, sr)
 
-    chorus_profile = flanger_profile = harmony_profile = reverb_profile_auto = delay_info = None
+    chorus_profile = flanger_profile = reverb_profile_auto = delay_info = None
     gate_settings = doubler_settings = exciter_settings = tape_settings = None
     parallel_comp_settings = ms_eq_settings = autotune_settings = None
     vocal_layers_profile = None
@@ -301,55 +234,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     with ThreadPoolExecutor(max_workers=8) as pool:
         futures = {pool.submit(fn): name for name, fn in detectors.items()}
 
-        def _process_future(future, name):
-            try:
-                result = future.result(timeout=_DETECTOR_TIMEOUT)
-                if name == "chorus" and result:
-                    chorus_profile = result
-                    logger.info(f"[JOB {job_id}] Chorus: rate={result.rate_hz:.2f}Hz mix={result.mix:.2f}")
-                elif name == "flanger" and result:
-                    flanger_profile = result
-                    logger.info(f"[JOB {job_id}] Flanger: rate={result.rate_hz:.2f}Hz feedback={result.feedback:.2f} mix={result.mix:.2f}")
-                elif name == "vocal_layers":
-                    vocal_layers_profile = result
-                    if result:
-                        logger.info(
-                            f"[JOB {job_id}] Vocal layers: {result.total_layers} total "
-                            f"({result.n_doublers} doublers + {len(result.harmony_intervals)} harmony voices)"
-                        )
-                    else:
-                        logger.info(f"[JOB {job_id}] Vocal layers: single voice, no layering detected")
-                elif name == "reverb" and result:
-                    reverb_profile_auto = result
-                    logger.info(f"[JOB {job_id}] Reverb: rt60={result.rt60:.2f}s wet={result.wet:.2f}")
-                elif name == "delay" and result:
-                    delay_info = result
-                    logger.info(f"[JOB {job_id}] Delay: {result.get('type')} {result.get('delay_ms', 0):.1f}ms")
-                elif name == "gate" and result:
-                    gate_settings = result
-                    logger.info(f"[JOB {job_id}] Gate: threshold={result.threshold_db:.1f}dB")
-                elif name == "doubler" and result:
-                    doubler_settings = result
-                    logger.info(f"[JOB {job_id}] Doubler: mix={result.mix:.2f}")
-                elif name == "exciter" and result:
-                    exciter_settings = result
-                    logger.info(f"[JOB {job_id}] Exciter: drive={result.drive:.2f} mix={result.mix:.2f}")
-                elif name == "tape" and result:
-                    tape_settings = result
-                    logger.info(f"[JOB {job_id}] Tape: drive={result.drive:.2f} rolloff={result.hf_rolloff_hz:.0f}Hz")
-                elif name == "parallel_comp" and result:
-                    parallel_comp_settings = result
-                    logger.info(f"[JOB {job_id}] Parallel comp: blend={result.blend:.2f}")
-                elif name == "ms_eq" and result:
-                    ms_eq_settings = result
-                    logger.info(f"[JOB {job_id}] M-S EQ: mid_bands={len(result.mid_bands)} side_bands={len(result.side_bands)}")
-                elif name == "autotune" and result:
-                    autotune_settings = result
-                    logger.info(f"[JOB {job_id}] Autotune: strength={result.strength:.2f}")
-            except Exception as e:
-                logger.warning(f"[JOB {job_id}] {name} detection failed or timed out: {e}")
-
-        # Use nonlocal assignments via a results dict to avoid closure issues
+        # Collect results into a dict to avoid closure issues
         _det_results: dict = {}
         def _run_future(future, name):
             try:
@@ -371,7 +256,17 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         # Assign results from dict
         if _det_results.get("chorus"):
             chorus_profile = _det_results["chorus"]
-            logger.info(f"[JOB {job_id}] Chorus: rate={chorus_profile.rate_hz:.2f}Hz mix={chorus_profile.mix:.2f}")
+            # Guard against false positives: a real chorus LFO sits around
+            # 0.5-5 Hz. Sub-0.5 Hz "detections" are just slow level drift in
+            # the reference, and applying them audibly smears the vocal.
+            if chorus_profile.rate_hz < 0.5 or chorus_profile.mix <= 0.02:
+                logger.info(
+                    f"[JOB {job_id}] Chorus ignored (rate={chorus_profile.rate_hz:.2f}Hz "
+                    f"mix={chorus_profile.mix:.2f} — likely false positive)"
+                )
+                chorus_profile = None
+            else:
+                logger.info(f"[JOB {job_id}] Chorus: rate={chorus_profile.rate_hz:.2f}Hz mix={chorus_profile.mix:.2f}")
         if _det_results.get("flanger"):
             flanger_profile = _det_results["flanger"]
             logger.info(f"[JOB {job_id}] Flanger: rate={flanger_profile.rate_hz:.2f}Hz feedback={flanger_profile.feedback:.2f} mix={flanger_profile.mix:.2f}")
@@ -482,297 +377,57 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     except Exception as _prof_err:
         logger.warning(f"[JOB {job_id}] Spectral profiling failed: {_prof_err}")
 
-    # ── AI Recipe Review ─────────────────────────────────────────────────
-    ai_review_result = None
-    try:
-        from api.ai_audio import ai_review_recipe
-        from dataclasses import asdict as _dc_asdict, is_dataclass as _is_dc
+    # ── Build the final recipe: exactly what was detected in the reference ──
+    # No AI gating, no fallback injections — if the reference doesn't have an
+    # effect, it is not applied. This keeps the output faithful to the
+    # selected reference layer's actual sound.
 
-        def _safe_asdict(obj):
-            if _is_dc(obj):
-                return _dc_asdict(obj)
-            if isinstance(obj, dict):
-                return obj
-            return str(obj)
+    # EQ / compression / saturation come from the style-match recipe
+    eq_bands_final = recipe.eq if recipe.eq else None
+    comp_final = recipe.compressor
+    saturation_final = recipe.saturation_drive
 
-        _detected_summary: dict = {}
-        # Always include eq/compression/reverb/saturation/width — AI needs to see them even if not detected
-        if recipe.eq:
-            _detected_summary["eq"] = {"n_bands": len(recipe.eq), "max_gain_db": max(abs(b.gain_db) for b in recipe.eq), "detected": True}
-        else:
-            _detected_summary["eq"] = {"detected": False, "note": "Not detected via signal analysis — apply based on band_gap_vs_reference"}
-        if recipe.compressor:
-            _detected_summary["compression"] = {**_safe_asdict(recipe.compressor), "detected": True}
-        else:
-            _detected_summary["compression"] = {"detected": False, "note": "Not detected — apply if dynamic_range_db > 14dB"}
-        if reverb_profile_auto:
-            _detected_summary["reverb"] = {"rt60": reverb_profile_auto.rt60, "wet": reverb_profile_auto.wet,
-                                            "predelay_ms": reverb_profile_auto.predelay_ms,
-                                            "confidence": reverb_profile_auto.confidence, "detected": True}
-        else:
-            _detected_summary["reverb"] = {"detected": False, "note": "Not detected — apply light reverb (mix=0.12) unless dry is already very wet"}
-        if recipe.saturation_drive:
-            _detected_summary["saturation"] = {"drive": recipe.saturation_drive, "detected": True}
-        else:
-            _detected_summary["saturation"] = {"detected": False, "note": "Not detected — apply light saturation (drive=1.2) for warmth"}
-        if recipe.width:
-            _detected_summary["width"] = {**_safe_asdict(recipe.width), "detected": True}
-        else:
-            _detected_summary["width"] = {"detected": False, "note": "Not detected — apply moderate width (mix=0.3) unless reference is mono"}
-        if chorus_profile and chorus_profile.mix > 0:
-            _detected_summary["chorus"] = {"rate_hz": chorus_profile.rate_hz,
-                                            "depth": chorus_profile.depth, "mix": chorus_profile.mix, "detected": True}
-        else:
-            _detected_summary["chorus"] = {"detected": False, "note": "Not detected — skip unless vocal_layers suggests layering"}
-        if flanger_profile and flanger_profile.mix > 0:
-            _detected_summary["flanger"] = {"rate_hz": flanger_profile.rate_hz, "mix": flanger_profile.mix, "detected": True}
-        else:
-            _detected_summary["flanger"] = {"detected": False}
-        if delay_info and delay_info.get("delay_ms", 0) > 0:
-            _detected_summary["delay"] = {"delay_ms": delay_info.get("delay_ms"),
-                                           "type": delay_info.get("type"),
-                                           "confidence": delay_info.get("confidence"), "detected": True}
-        else:
-            _detected_summary["delay"] = {"detected": False, "note": "Not detected — apply subtle delay (15-25ms) unless confidence is 0"}
-        if gate_settings:
-            _detected_summary["gate"] = {**_safe_asdict(gate_settings), "detected": True}
-        else:
-            _detected_summary["gate"] = {"detected": False, "note": "Not detected — apply gate only if spectral_flatness > 0.02"}
-        if tape_settings:
-            _detected_summary["tape"] = {**_safe_asdict(tape_settings), "detected": True}
-        else:
-            _detected_summary["tape"] = {"detected": False, "note": "Not detected — apply light tape emulation (drive=0.2, mix=0.3) for warmth"}
-        if exciter_settings:
-            _detected_summary["exciter"] = {**_safe_asdict(exciter_settings), "detected": True}
-        else:
-            _detected_summary["exciter"] = {"detected": False, "note": "Not detected — apply exciter (drive=0.2, mix=0.15) unless dry is already bright"}
-        if parallel_comp_settings:
-            _detected_summary["parallel_comp"] = {**_safe_asdict(parallel_comp_settings), "detected": True}
-        else:
-            _detected_summary["parallel_comp"] = {"detected": False, "note": "Not detected — apply parallel compression (blend=0.2) for density"}
-        if autotune_settings:
-            _detected_summary["autotune"] = {**_safe_asdict(autotune_settings), "detected": True}
-        else:
-            _detected_summary["autotune"] = {"detected": False, "note": "Not detected — skip autotune"}
-        if vocal_layers_profile:
-            _detected_summary["vocal_layers"] = {
-                "n_doublers": vocal_layers_profile.n_doublers,
-                "harmony_intervals": vocal_layers_profile.harmony_intervals,
-                "total_layers": vocal_layers_profile.total_layers,
-                "detected": True,
-            }
-        else:
-            _detected_summary["vocal_layers"] = {"detected": False, "total_layers": 1, "note": "Single voice — skip vocal layers"}
-
-        ai_review_result = ai_review_recipe(_detected_summary, _dry_stats, _ref_stats)
-        logger.info(f"[JOB {job_id}] AI review: {ai_review_result.get('summary', '')}")
-
-    except Exception as _ai_err:
-        logger.warning(f"[JOB {job_id}] AI recipe review skipped: {_ai_err}")
-
-    # Helper: check AI decision for an effect (default to True if no review available)
-    def _ai_ok(key: str) -> bool:
-        if ai_review_result is None:
-            return True
-        return bool(ai_review_result.get(f"apply_{key}", True))
-
-    def _ai_scale(key: str, default: float = 1.0) -> float:
-        if ai_review_result is None:
-            return default
-        return float(ai_review_result.get("adjustments", {}).get(key, default))
-
-    # ── Apply AI gating + fallback defaults for undetected effects ──────────
-    # Import effect classes needed for fallback defaults
-    from processor.dsp.tape import TapeSettings as _TapeSettings
-    from processor.dsp.exciter import ExciterSettings as _ExciterSettings
-    from processor.dsp.gate import GateSettings as _GateSettings
-    from processor.dsp.parallel_comp import ParallelCompSettings as _ParallelCompSettings
-    from processor.dsp.analysis.chorus_analysis import ChorusProfile as _ChorusProfile
-
-    # Chorus: gate if AI says skip; scale mix if kept; use fallback if not detected but AI says apply
-    if not _ai_ok("chorus"):
-        if chorus_profile is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping chorus")
-        chorus_profile = None
-    else:
-        if chorus_profile is not None:
-            chorus_profile.mix = float(np.clip(chorus_profile.mix * _ai_scale("chorus_mix_scale", 1.0), 0.0, 0.25))
-        # No chorus fallback — chorus is a strong modulation effect, only apply if detected
-
-    # Delay: gate if AI says skip; scale mix if kept; apply subtle delay if AI says apply but not detected
-    if not _ai_ok("delay"):
-        if delay_info is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping delay")
-        delay_info = None
-    else:
-        if delay_info is not None:
-            delay_info = dict(delay_info)
-            delay_info["_mix"] = _ai_scale("delay_mix", 0.25)
-        else:
-            # AI says apply but detector found nothing — use a subtle default delay
-            logger.info(f"[JOB {job_id}] AI: applying default delay (not detected, but AI recommends)")
-            delay_info = {"delay_ms": 18.0, "type": "dotted_eighth", "confidence": 0.3, "_mix": 0.15}
-
-    # Gate: only skip if AI says so; no fallback (gate is conservative by nature)
-    if not _ai_ok("gate"):
-        if gate_settings is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping gate")
-        gate_settings = None
-
-    # Tape: gate if AI says skip; scale mix if kept; apply conservative default if not detected but AI says apply
-    if not _ai_ok("tape"):
-        if tape_settings is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping tape")
-        tape_settings = None
-    else:
-        if tape_settings is not None:
-            tape_settings.mix = float(np.clip(tape_settings.mix * _ai_scale("tape_mix_scale", 1.0), 0.0, 0.4))
-        else:
-            logger.info(f"[JOB {job_id}] AI: applying default tape emulation (not detected, but AI recommends)")
-            tape_settings = _TapeSettings(drive=0.2, hf_rolloff_hz=14000.0, mix=0.3)
-
-    # Exciter: gate if AI says skip; apply conservative default if not detected but AI says apply
-    if not _ai_ok("exciter"):
-        if exciter_settings is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping exciter")
-        exciter_settings = None
-    else:
-        if exciter_settings is None:
-            logger.info(f"[JOB {job_id}] AI: applying default exciter (not detected, but AI recommends)")
-            exciter_settings = _ExciterSettings(drive=0.2, mix=0.15, freq_hz=6000.0)
-
-    # Parallel comp: gate if AI says skip; apply conservative default if not detected but AI says apply
-    if not _ai_ok("parallel_comp"):
-        if parallel_comp_settings is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping parallel_comp")
-        parallel_comp_settings = None
-    else:
-        if parallel_comp_settings is None:
-            logger.info(f"[JOB {job_id}] AI: applying default parallel compression (not detected, but AI recommends)")
-            parallel_comp_settings = _ParallelCompSettings(threshold_db=-30.0, ratio=10.0, attack_ms=2.0, release_ms=150.0, blend=0.2)
-
-    # Autotune: gate if AI says skip; no fallback (only apply if actually detected)
-    if not _ai_ok("autotune"):
-        if autotune_settings is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping autotune")
-        autotune_settings = None
-
-    # Vocal layers: gate if AI says skip; scale if kept; no fallback (only apply if detected)
-    if not _ai_ok("vocal_layers"):
-        if vocal_layers_profile is not None:
-            logger.info(f"[JOB {job_id}] AI: skipping vocal layers")
-        vocal_layers_profile = None
-    elif vocal_layers_profile is not None:
-        scale = _ai_scale("harmony_strength_scale", 0.7)
-        vocal_layers_profile.harmony_strengths = [s * scale for s in vocal_layers_profile.harmony_strengths]
-
-    # ── AI DSP config override ──────────────────────────────────────────────
-    ai_cfg = options.get("ai_dsp_config")
-
-    # EQ: use detected eq bands if AI ok; apply a gentle corrective EQ from band_gap if not detected
-    if _ai_ok("eq"):
-        if recipe.eq:
-            eq_bands_final = recipe.eq
-        else:
-            # Not detected but AI says apply — build corrective EQ from band_gap_vs_reference
-            from processor.dsp.eq import EqBand as _EqBand
-            _band_gap = _dry_stats.get("band_gap_vs_reference", {})
-            _fallback_eq = []
-            _gap_map = [
-                ("sub_60hz",       60.0,   0.7),
-                ("low_250hz",     200.0,   0.7),
-                ("low_mid_500hz", 400.0,   0.9),
-                ("mid_2khz",     1200.0,   1.0),
-                ("high_mid_6khz", 4000.0,  1.0),
-                ("air_12khz",    10000.0,  0.7),
-            ]
-            for band_name, freq, q in _gap_map:
-                gap = float(_band_gap.get(band_name, 0.0))
-                # Convert fractional energy gap to dB: ±0.05 gap ≈ ±2 dB
-                gain_db = float(np.clip(gap * 40.0, -4.0, 4.0))
-                if abs(gain_db) >= 0.5:
-                    _fallback_eq.append(_EqBand(f=freq, gain_db=gain_db, q=q))
-            if _fallback_eq:
-                logger.info(f"[JOB {job_id}] AI: applying {len(_fallback_eq)} corrective EQ bands from band gap analysis")
-                eq_bands_final = _fallback_eq
-            else:
-                eq_bands_final = None
-    else:
-        logger.info(f"[JOB {job_id}] AI: skipping EQ")
-        eq_bands_final = None
-
-    # Compression: use detected settings; apply default if not detected but AI says apply
-    if _ai_ok("compression"):
-        if recipe.compressor:
-            comp_final = recipe.compressor
-        else:
-            from processor.dsp.compressor import CompressorSettings as _CS
-            _dyn_range = _dry_stats.get("dynamic_range_db", 20.0)
-            _ratio = 4.0 if _dyn_range > 20 else 3.0
-            logger.info(f"[JOB {job_id}] AI: applying default compression (not detected, dynamic_range={_dyn_range:.1f}dB)")
-            comp_final = _CS(threshold_db=-24.0, ratio=_ratio, attack_ms=10.0, release_ms=100.0, makeup_db=3.0)
-    else:
-        logger.info(f"[JOB {job_id}] AI: skipping compression")
-        comp_final = None
-
-    # Saturation: use detected value; apply conservative default if not detected but AI says apply
-    if _ai_ok("saturation"):
-        if recipe.saturation_drive:
-            saturation_final = recipe.saturation_drive
-        else:
-            logger.info(f"[JOB {job_id}] AI: applying default saturation drive=1.2 (not detected)")
-            saturation_final = 1.2
-    else:
-        logger.info(f"[JOB {job_id}] AI: skipping saturation")
-        saturation_final = None
-
-    # Scale EQ gains by AI recommendation
-    if eq_bands_final is not None:
-        eq_scale = _ai_scale("eq_gain_scale", 1.0)
-        if abs(eq_scale - 1.0) > 0.05:
-            for b in eq_bands_final:
-                b.gain_db = float(np.clip(b.gain_db * eq_scale, -6.0, 6.0))
-
-    # Reverb: prefer reverb_analysis result; fallback to recipe or default
-    if not _ai_ok("reverb"):
-        logger.info(f"[JOB {job_id}] AI: skipping reverb")
-        reverb_final = None
-    elif reverb_profile_auto is not None:
+    # Reverb: prefer the dedicated reverb analysis; fall back to the recipe.
+    # The wet cap scales with how reverberant the reference actually is
+    # (tail_ratio ≈ energy at phrase tails vs starts) — a washed-out
+    # reference deserves more than a token 0.2 mix.
+    if reverb_profile_auto is not None:
         from processor.dsp.reverb import ReverbSettings as _RS
-        _rev_wet = reverb_profile_auto.wet * _ai_scale("reverb_mix_scale", 1.0)
+        # Continuous scaling with the reference's measured reverbiness —
+        # no hard branch, so any reference lands on a sensible wet level:
+        #   dry ref (tail 0.2) → cap 0.20, no boost
+        #   wet ref  (tail 0.7) → cap ~0.35, wet boosted up to 1.6x
+        _tail = float(np.clip(float(_ref_stats.get("reverb_tail_ratio", 0.0) or 0.0), 0.0, 1.0))
+        _wetness = float(np.clip((_tail - 0.3) / 0.4, 0.0, 1.0))  # 0 below 0.3, 1 above 0.7
+        _wet_cap = 0.20 + 0.15 * _wetness
         _rev = _RS(
             decay_s=reverb_profile_auto.rt60,
-            mix=float(np.clip(_rev_wet, 0.0, 0.20)),
+            mix=float(np.clip(reverb_profile_auto.wet * (1.0 + 0.6 * _wetness), 0.0, _wet_cap)),
             pre_delay_ms=reverb_profile_auto.predelay_ms,
         )
         reverb_final = _rev if _rev.mix >= 0.07 else None
-    elif recipe.reverb:
+    else:
         reverb_final = recipe.reverb
-    else:
-        # Not detected but AI says apply — use a light default reverb
-        from processor.dsp.reverb import ReverbSettings as _RS
-        _tail = _dry_stats.get("reverb_tail_ratio", 0.0)
-        if _tail < 0.25:
-            logger.info(f"[JOB {job_id}] AI: applying default reverb (not detected, tail_ratio={_tail:.3f})")
-            reverb_final = _RS(decay_s=0.8, mix=0.12, pre_delay_ms=12.0)
-        else:
-            logger.info(f"[JOB {job_id}] AI: skipping default reverb (dry vocal already has reverb tail_ratio={_tail:.3f})")
-            reverb_final = None
 
-    # Width: use detected; fallback to moderate default if AI says apply but not detected
-    _width_val = None
-    if _ai_ok("width"):
-        if recipe.width and options.get("enable_width", True):
-            _width_val = recipe.width
-        elif options.get("enable_width", True):
-            logger.info(f"[JOB {job_id}] AI: applying default width mix=0.3 (not detected)")
-            _width_val = {"mix": 0.3, "delay_ms": 12.0, "detune_cents": 4.0}
-    else:
-        logger.info(f"[JOB {job_id}] AI: skipping width")
+    # Delay: as detected. Repeat level and feedback are measured from the
+    # reference's echo itself (echo_level ≈ first-repeat amplitude relative
+    # to the voice; feedback ≈ repeat-to-repeat survival).
+    if delay_info is not None:
+        delay_info = dict(delay_info)
+        _lvl = delay_info.get("echo_level")
+        if _lvl is None:  # older recipe payloads
+            _conf = float(delay_info.get("confidence", 0.5) or 0.5)
+            _lvl = float(np.clip(0.15 + 0.35 * _conf, 0.15, 0.45))
+        delay_info.setdefault("_mix", float(np.clip(_lvl, 0.10, 0.5)))
 
-    # Log what was detected vs skipped
+    # Width: as detected
+    _width_val = recipe.width if (recipe.width and options.get("enable_width", True)) else None
+
+    # User-requested AI DSP overrides (from the prompt-tuning box) still apply
+    ai_cfg = options.get("ai_dsp_config")
+
     logger.info(
-        f"[JOB {job_id}] Final recipe (after AI review): "
+        f"[JOB {job_id}] Final recipe (as detected from reference): "
         f"EQ={'yes('+str(len(eq_bands_final))+' bands)' if eq_bands_final else 'SKIP'} "
         f"Comp={'yes' if comp_final else 'SKIP'} "
         f"Reverb={'yes(mix='+str(round(reverb_final.mix,2))+')' if reverb_final else 'SKIP'} "
@@ -891,18 +546,11 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             pass
         except Exception as e:
             logger.warning(f"[JOB {job_id}] Vocal layer replication failed: {e}")
-    elif harmony_profile is not None and harmony_profile.intervals_semitones and options.get("enable_harmony", True):
-        # Fallback to old harmony if vocal_layers not available
-        try:
-            logger.info(f"[JOB {job_id}] Applying legacy harmony layers…")
-            processed = apply_harmony(processed, sr, harmony_profile)
-        except Exception as e:
-            logger.warning(f"[JOB {job_id}] Harmony application failed: {e}")
 
     # Apply delay if detected and enabled
     if delay_info is not None and delay_info.get("delay_ms", 0) > 0 and options.get("enable_delay", True):
         try:
-            fb = 0.25
+            fb = float(delay_info.get("feedback", 0.25))
             mix_val = float(delay_info.get("_mix", 0.25))
             if processed.ndim == 2:
                 # Stereo (N, 2) — apply delay per channel
@@ -920,91 +568,70 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # NOTE: reverb is already applied inside apply_chain via reverb_final (converted from
     # reverb_profile_auto). A second apply_reverb here would double the reverb, so it is removed.
 
-    # ── Iterative AI Refinement Pass ────────────────────────────────────────
-    # Compute spectral distance between current output and reference,
-    # ask the LLM for a targeted correction EQ, apply it as a second pass.
-    _progress(current_job, 72, "AI refinement pass…")
+    # ── Spectral match pass (deterministic) ────────────────────────────────
+    # Compare the processed output's band energies against the reference and
+    # apply a gentle corrective EQ toward the reference. Replaces the old
+    # LLM-based refinement: no API calls, same goal — output that sits in the
+    # same tonal space as the reference layer.
+    _progress(current_job, 72, "Spectral match pass…")
     refinement_info: dict = {}
     try:
-        from api.ai_audio import ai_refinement_eq
-        from processor.utils.metrics import compute_spectral_distance as _csd
-
-        # Need a temp file for spectral distance computation
         import tempfile as _tf
         _tmp_path = Path(_tf.mktemp(suffix=".wav"))
         save_wav(_tmp_path, processed, sr)
+        _sd = float(compute_spectral_distance(ref_for_analysis, _tmp_path, sr=sr))
+        _tmp_path.unlink(missing_ok=True)
+        logger.info(f"[JOB {job_id}] Pre-match spectral distance: {_sd:.4f}")
 
-        _sd = float(_csd(ref_for_analysis, _tmp_path, sr=sr))
-        logger.info(f"[JOB {job_id}] Pre-refinement spectral distance: {_sd:.4f}")
-
-        if _sd > 0.08:   # only refine if there's a meaningful gap
-            # Build profiles for the AI
+        if _sd > 0.08:  # only correct if there's a meaningful gap
             _proc_mono = processed if processed.ndim == 1 else (
-                processed.mean(axis=0) if processed.shape[1] < processed.shape[0]
+                processed.mean(axis=0) if processed.shape[0] < processed.shape[-1]
                 else processed.mean(axis=1)
             )
             _proc_profile = _spectral_profile(_proc_mono, "output")
-            _ref_profile_refine = _spectral_profile(_ref_mono2, "reference")
+            _out_bands = _proc_profile["band_energy_pct"]
+            _ref_bands = _ref_stats.get("band_energy_pct", {})
 
-            refine_result = ai_refinement_eq(_proc_profile, _ref_profile_refine, _sd)
-            correction_bands = refine_result.get("correction_eq", [])
+            from processor.dsp.eq import EqBand as _MatchEqBand, apply_eq as _apply_eq
+            _gap_map = [
+                ("sub_60hz",       60.0,   0.7),
+                ("low_250hz",     200.0,   0.7),
+                ("low_mid_500hz", 400.0,   0.9),
+                ("mid_2khz",     1200.0,   1.0),
+                ("high_mid_6khz", 4000.0,  1.0),
+                ("air_12khz",    10000.0,  0.7),
+            ]
+            cb = []
+            for band_name, freq, q in _gap_map:
+                gap = float(_ref_bands.get(band_name, 0.0)) - float(_out_bands.get(band_name, 0.0))
+                # Fractional energy gap to dB: ±0.05 gap ≈ ±2 dB, capped gently
+                gain_db = float(np.clip(gap * 40.0, -4.0, 4.0))
+                if abs(gain_db) >= 0.5:
+                    cb.append(_MatchEqBand(f=freq, gain_db=gain_db, q=q))
 
-            if correction_bands:
-                from processor.dsp.eq import EqBand, apply_eq as _apply_eq
-                cb = [EqBand(f=b["f"], gain_db=b["gain_db"], q=b["q"])
-                      for b in correction_bands]
-                logger.info(f"[JOB {job_id}] Applying {len(cb)} AI correction EQ bands")
-
+            if cb:
+                logger.info(f"[JOB {job_id}] Applying {len(cb)} spectral-match EQ bands")
                 if processed.ndim == 2:
                     ch0 = _apply_eq(processed[:, 0], sr, cb)
                     ch1 = _apply_eq(processed[:, 1], sr, cb)
                     processed = np.stack([ch0, ch1], axis=1)
                 else:
                     processed = _apply_eq(processed, sr, cb)
-
                 processed = np.nan_to_num(processed, nan=0.0, posinf=0.0, neginf=0.0)
                 refinement_info = {
                     "pre_distance": _sd,
                     "correction_bands": len(cb),
-                    "summary": refine_result.get("correction_summary", ""),
+                    "summary": "Deterministic spectral match toward reference",
                 }
-                logger.info(f"[JOB {job_id}] Refinement: {refine_result.get('correction_summary', '')}")
             else:
-                logger.info(f"[JOB {job_id}] AI refinement: no correction needed")
                 refinement_info = {"pre_distance": _sd, "correction_bands": 0,
-                                   "summary": refine_result.get("correction_summary", "")}
+                                   "summary": "Band energies already match reference"}
         else:
-            logger.info(f"[JOB {job_id}] Spectral distance {_sd:.4f} < 0.08 — skipping refinement")
+            logger.info(f"[JOB {job_id}] Spectral distance {_sd:.4f} < 0.08 — no match EQ needed")
             refinement_info = {"pre_distance": _sd, "correction_bands": 0,
                                "summary": "Already close to reference — no correction needed."}
-
-        try:
-            _tmp_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-
     except Exception as _ref_err:
-        logger.warning(f"[JOB {job_id}] Iterative refinement skipped: {_ref_err}")
-
-    _progress(current_job, 75, "Applying modulation & post-effects…")
-    # Optional: ML spectral refiner (after DSP)
-    use_spectral_refiner = options.get("use_spectral_refiner", True)
-    if use_spectral_refiner:
-        refiner = get_refiner()
-        if refiner.is_available():
-            _progress(current_job, 78, "Neural spectral refinement…")
-            print(f"Applying spectral refiner...")
-            processed_before_refiner = processed.copy()
-            processed = refiner.refine(processed, ref_audio=ref_audio, sr=sr)
-            # Safety check: if refiner returned zeros or very quiet audio, use original
-            max_before = np.max(np.abs(processed_before_refiner))
-            max_after = np.max(np.abs(processed))
-            if max_after < max_before * 0.01:  # If output is 100x quieter, something went wrong
-                print(f"⚠ Spectral refiner output too quiet. Using DSP output instead.")
-                processed = processed_before_refiner
-            print(f"✓ Spectral refinement complete")
-        else:
-            print(f"⚠ Spectral refiner not available. Skipping neural refinement.")
+        logger.warning(f"[JOB {job_id}] Spectral match pass skipped: {_ref_err}")
 
     _progress(current_job, 88, "Finalising output…")
     # Safety checks before final normalization
@@ -1021,10 +648,12 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # EQ and effects, our output may be significantly quieter or louder.
     # Match RMS so the output sits at the same perceived loudness as the reference.
     try:
-        ref_mono = ref_audio if ref_audio.ndim == 1 else np.mean(ref_audio, axis=0)
-        ref_rms = float(np.sqrt(np.mean(ref_mono ** 2)))
-        out_mono = processed if processed.ndim == 1 else np.mean(processed, axis=0 if processed.shape[0] < processed.shape[1] else 1)
-        out_rms = float(np.sqrt(np.mean(out_mono ** 2)))
+        # Energy-based RMS on the full array: a mean-downmix here would let
+        # panned/decorrelated layers phase-cancel and read as "too quiet",
+        # which used to trigger a +12 dB slam followed by the dry-vocal
+        # fallback — silently discarding the whole processed result.
+        ref_rms = float(np.sqrt(np.mean(ref_audio ** 2)))
+        out_rms = float(np.sqrt(np.mean(processed ** 2)))
         if ref_rms > 1e-9 and out_rms > 1e-9:
             gain = ref_rms / out_rms
             # Safety: cap gain to ±12dB to avoid absurd amplification
@@ -1034,21 +663,28 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     except Exception as e:
         print(f"⚠ RMS match failed: {e}")
 
-    # Final peak-limit to prevent clipping after gain
+    # Master bus: glue compression + lookahead limiting — the "finished
+    # record" density and level a bare effects chain lacks. Replaces the old
+    # bare peak-scale (which undid the loudness match whenever peaks hit).
     max_val = np.max(np.abs(processed))
-    if max_val > 1e-9:
-        processed = processed / max(max_val, 1.0) * 0.95
-    else:
+    if max_val < 1e-9:
         processed = dry_audio / (np.max(np.abs(dry_audio)) + 1e-9) * 0.95
+    else:
+        from processor.dsp.master_bus import apply_master_bus
+        _progress(current_job, 90, "Master bus: glue + limiting…")
+        processed = apply_master_bus(processed, sr)
+        # Final level is set to LUFS parity with the reference after saving
+        # (raw-RMS parity overshot: the separated reference's noise floor
+        # drags its sample RMS below its perceived loudness).
 
-    # Safety: if still too quiet after all the above, fall back
+    # Absolute last resort: only if the output is essentially silent
     try:
         from processor.dsp.chain import normalize_rms, normalize_peak
-        rms_post = np.sqrt(np.mean(processed ** 2))
-        if rms_post < 0.02:
+        rms_post = float(np.sqrt(np.mean(processed ** 2)))
+        if rms_post < 0.005:
             processed = normalize_rms(dry_audio, target_db=-18.0)
             processed = normalize_peak(processed, peak=0.95)
-            print("⚠ Output still quiet; fell back to normalized dry vocal.")
+            print("⚠ Output near-silent; fell back to normalized dry vocal.")
     except Exception as e:
         print(f"⚠ Safety boost check failed: {e}")
     
@@ -1065,6 +701,22 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     try:
         metrics["lufs_output"] = compute_lufs(out_path)
         logger.info(f"[JOB {job_id}] Output LUFS: {metrics['lufs_output']:.1f}")
+
+        # ── LUFS-match to the reference ────────────────────────────────────
+        # Perceived-loudness parity, applied within the limiter's headroom.
+        ref_lufs = metrics.get("lufs_reference")
+        if ref_lufs is not None and metrics["lufs_output"] is not None:
+            gain_db = float(ref_lufs - metrics["lufs_output"])
+            peak = float(np.max(np.abs(processed))) or 1e-9
+            max_boost_db = 20 * np.log10(0.97 / peak) if peak < 0.97 else 0.0
+            gain_db = float(np.clip(gain_db, -12.0, max(0.0, max_boost_db)))
+            if abs(gain_db) >= 0.5:
+                processed = processed * (10 ** (gain_db / 20.0))
+                save_wav(out_path, processed, sr)
+                metrics["lufs_output"] = compute_lufs(out_path)
+                logger.info(
+                    f"[JOB {job_id}] LUFS match: {gain_db:+.1f} dB → output {metrics['lufs_output']:.1f} LUFS"
+                )
     except Exception as e:
         logger.warning(f"[JOB {job_id}] Failed to compute output LUFS: {e}")
     
@@ -1103,13 +755,6 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             "harmony_strengths": vocal_layers_profile.harmony_strengths,
             "harmony_pans": vocal_layers_profile.harmony_pans,
         }
-    if harmony_profile is not None:
-        recipe_dict["harmony"] = {
-            "intervals_semitones": harmony_profile.intervals_semitones,
-            "strengths": harmony_profile.strengths,
-            "pans": harmony_profile.pans,
-            "timing_offsets": harmony_profile.timing_offsets,
-        }
     if delay_info is not None:
         recipe_dict["delay"] = {
             "type": delay_info.get("type"),
@@ -1134,12 +779,6 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         recipe_dict["autotune"] = _serialize(autotune_settings)
     if ai_cfg:
         recipe_dict["ai_dsp_config"] = ai_cfg
-    if ai_review_result:
-        recipe_dict["ai_review"] = {
-            "summary": ai_review_result.get("summary", ""),
-            "reasoning": ai_review_result.get("reasoning", {}),
-            "adjustments": ai_review_result.get("adjustments", {}),
-        }
     # Include dry vocal profile so the UI and debugging can see what was compared
     try:
         recipe_dict["dry_vocal_profile"] = _dry_stats
@@ -1165,7 +804,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     _progress(current_job, 100, "Complete")
     logger.info(f"[JOB {job_id}] Total processing time: {metrics['processing_time_total']:.2f}s")
     print(f"✓ Job complete. Output saved to {out_name}")
-    print(f"  Metrics: total={metrics['processing_time_total']:.2f}s, RVC={metrics['processing_time_rvc']:.2f}s, DSP={metrics['processing_time_dsp']:.2f}s")
+    print(f"  Metrics: total={metrics['processing_time_total']:.2f}s, DSP={metrics['processing_time_dsp']:.2f}s")
 
     sweep_old_files()
     return out_path

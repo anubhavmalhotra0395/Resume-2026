@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
-from scipy.signal import fftconvolve
+from scipy.signal import fftconvolve, lfilter
 
 
 @dataclass
@@ -11,20 +11,19 @@ class ReverbSettings:
 
 
 def _comb_filter(input_signal: np.ndarray, delay_samples: int, feedback: float) -> np.ndarray:
-    output = np.zeros_like(input_signal)
-    for n in range(len(input_signal)):
-        delayed = output[n - delay_samples] if n - delay_samples >= 0 else 0.0
-        output[n] = input_signal[n] + feedback * delayed
-    return output
+    # y[n] = x[n] + g*y[n-d]  →  H(z) = 1 / (1 - g z^-d)
+    a = np.zeros(delay_samples + 1)
+    a[0], a[delay_samples] = 1.0, -feedback
+    return lfilter([1.0], a, input_signal)
 
 
 def _allpass_filter(input_signal: np.ndarray, delay_samples: int, feedback: float) -> np.ndarray:
-    output = np.zeros_like(input_signal)
-    for n in range(len(input_signal)):
-        delayed = output[n - delay_samples] if n - delay_samples >= 0 else 0.0
-        input_delayed = input_signal[n - delay_samples] if n - delay_samples >= 0 else 0.0
-        output[n] = -feedback * input_signal[n] + input_delayed + feedback * delayed
-    return output
+    # y[n] = -g*x[n] + x[n-d] + g*y[n-d]  →  H(z) = (-g + z^-d) / (1 - g z^-d)
+    b = np.zeros(delay_samples + 1)
+    b[0], b[delay_samples] = -feedback, 1.0
+    a = np.zeros(delay_samples + 1)
+    a[0], a[delay_samples] = 1.0, -feedback
+    return lfilter(b, a, input_signal)
 
 
 def build_impulse_response(sr: int, decay_s: float, pre_delay_ms: float) -> np.ndarray:

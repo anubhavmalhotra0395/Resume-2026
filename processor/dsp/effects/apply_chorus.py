@@ -14,54 +14,23 @@ class ChorusParams:
 
 def _modulated_delay(signal: np.ndarray, sr: int, params: ChorusParams, phase_offset: float = 0.0) -> np.ndarray:
     """
-    Apply a single modulated delay line with LFO.
-    Uses linear interpolation for fractional delay samples.
+    Single modulated delay line (feedforward tap, linear interpolation).
+    Vectorised: the tap position is n - delay(n), so the whole line is one
+    np.interp over the signal — same math as the old per-sample loop,
+    orders of magnitude faster.
     """
     n_samples = len(signal)
-    output = np.zeros_like(signal, dtype=np.float32)
+    if n_samples == 0:
+        return signal.astype(np.float32)
 
-    # Convert ms to samples
     base_delay = params.base_delay_ms / 1000.0 * sr
-    mod_depth = params.mod_depth_ms / 1000.0 * sr * params.depth  # scale by depth
+    mod_depth = params.mod_depth_ms / 1000.0 * sr * params.depth
 
-    # Ensure buffer is large enough
-    max_delay = int(np.ceil(base_delay + mod_depth)) + 2
-    buffer = np.zeros(max_delay, dtype=np.float32)
-
-    # LFO angular frequency
-    omega = 2 * pi * params.rate_hz
-
-    for n in range(n_samples):
-        # Current input sample
-        x_n = signal[n]
-
-        # LFO value
-        lfo = sin(omega * (n / sr) + phase_offset)
-
-        # Current delay in samples
-        cur_delay = base_delay + mod_depth * lfo
-        if cur_delay < 1.0:
-            cur_delay = 1.0
-        if cur_delay > max_delay - 2:
-            cur_delay = max_delay - 2
-
-        # Read position
-        read_pos = n % max_delay - cur_delay
-        if read_pos < 0:
-            read_pos += max_delay
-
-        # Fractional delay: linear interpolation
-        idx0 = int(np.floor(read_pos)) % max_delay
-        idx1 = (idx0 + 1) % max_delay
-        frac = read_pos - np.floor(read_pos)
-        delayed = (1 - frac) * buffer[idx0] + frac * buffer[idx1]
-
-        # Write current sample into buffer
-        buffer[n % max_delay] = x_n
-
-        output[n] = delayed
-
-    return output
+    n = np.arange(n_samples)
+    delay = base_delay + mod_depth * np.sin(2 * pi * params.rate_hz * (n / sr) + phase_offset)
+    delay = np.clip(delay, 1.0, None)
+    read_pos = n - delay
+    return np.interp(read_pos, n, signal, left=0.0, right=0.0).astype(np.float32)
 
 
 def apply_chorus(signal: np.ndarray, sr: int, rate_hz: float, depth: float, mix: float) -> np.ndarray:

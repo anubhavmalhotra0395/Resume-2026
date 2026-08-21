@@ -1,6 +1,0 @@
-# Optional extras for the ml_refine / RVC voice-conversion path only.
-# The API exposes ml_refine=false by default; skip these on slim deploys.
-torchaudio>=2.0.0
-transformers>=4.30.0
-pyworld>=0.3.0
-crepe>=0.0.14

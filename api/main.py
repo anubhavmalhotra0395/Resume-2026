@@ -104,6 +104,31 @@ def _strtobool(val: str) -> bool:
     return True  # default
 
 
+def _analysis_vocal_path(analysis_id: str) -> Path:
+    """Where /analyze-layers parks the separated reference vocal for reuse."""
+    d = settings.inputs_dir / "_analysis"
+    d.mkdir(parents=True, exist_ok=True)
+    return d / f"{analysis_id}_refvocal.wav"
+
+
+# Live progress for the synchronous /analyze-layers call, keyed by a token the
+# client generates. Same process as the endpoint, so a plain dict is enough.
+_analysis_progress: dict[str, dict] = {}
+
+
+def _set_analysis_progress(token: str | None, pct: int, stage: str) -> None:
+    if token:
+        _analysis_progress[token] = {"progress": int(pct), "stage": stage}
+        if len(_analysis_progress) > 64:  # keep the dict from growing forever
+            for k in list(_analysis_progress)[:-32]:
+                _analysis_progress.pop(k, None)
+
+
+@app.get("/analyze-progress/{token}")
+async def analyze_progress(token: str):
+    return JSONResponse(_analysis_progress.get(token, {"progress": 0, "stage": "starting…"}))
+
+
 def _save_upload(tmp_dir: Path, uploaded: UploadFile) -> Path:
     dst = tmp_dir / f"{uuid.uuid4()}_{uploaded.filename}"
     with dst.open("wb") as f:
@@ -117,8 +142,6 @@ async def create_job(
     reference_url: str | None = Form(None),
     dry: UploadFile = File(...),
     enable_width: str | None = Form("true"),
-    ml_refine: str | None = Form("false"),
-    use_spectral_refiner: str | None = Form("true"),
     enable_deesser: str | None = Form("true"),
     enable_transient_shaper: str | None = Form("false"),
     enable_multiband: str | None = Form("false"),
@@ -135,6 +158,7 @@ async def create_job(
     ai_dsp_config: str | None = Form(None),
     selected_layers: str | None = Form(None),
     reference_is_vocal: str | None = Form("false"),
+    analysis_id: str | None = Form(None),
 ):
     if not reference and not reference_url:
         raise HTTPException(status_code=400, detail="Provide reference file or URL")
@@ -151,12 +175,9 @@ async def create_job(
         ref_path = fetch_audio_from_url(reference_url)  # type: ignore[arg-type]
     dry_path = _save_upload(tmp_dir, dry)
 
-    # Check if this is an RVC job
-    is_rvc_job = _strtobool(ml_refine) if ml_refine is not None else False
-    
     try:
-        validate_file(ref_path, is_rvc_job=is_rvc_job)
-        validate_file(dry_path, is_rvc_job=is_rvc_job)
+        validate_file(ref_path)
+        validate_file(dry_path)
     except HTTPException:
         ref_path.unlink(missing_ok=True)
         dry_path.unlink(missing_ok=True)
@@ -168,8 +189,6 @@ async def create_job(
 
     options = {
         "enable_width": _strtobool(enable_width) if enable_width is not None else True,
-        "ml_refine": _strtobool(ml_refine) if ml_refine is not None else False,
-        "use_spectral_refiner": _strtobool(use_spectral_refiner) if use_spectral_refiner is not None else True,
         "enable_deesser": _strtobool(enable_deesser) if enable_deesser is not None else True,
         "enable_transient_shaper": _strtobool(enable_transient_shaper) if enable_transient_shaper is not None else False,
         "enable_multiband": _strtobool(enable_multiband) if enable_multiband is not None else False,
@@ -187,6 +206,15 @@ async def create_job(
         # isolated vocal/acapella (minutes -> seconds).
         "stems_mode": not (_strtobool(reference_is_vocal) if reference_is_vocal is not None else False),
     }
+
+    # If the user already ran "Analyze layers", the reference vocal is separated
+    # and on disk — reuse it and skip the most expensive stage of the job.
+    if analysis_id:
+        cached = _analysis_vocal_path(analysis_id)
+        if cached.exists():
+            options["ref_vocals_path"] = str(cached)
+        else:
+            print(f"⚠ analysis_id {analysis_id} has no cached vocal — will separate")
 
     # Attach AI-generated DSP overrides if provided
     if ai_dsp_config:
@@ -216,6 +244,7 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
     segment_start_s: float | None = Form(None),
     segment_end_s: float | None = Form(None),
     reference_is_vocal: str | None = Form("false"),
+    progress_token: str | None = Form(None),
 ):
     if not reference and not reference_url:
         raise HTTPException(status_code=400, detail="Provide reference file or URL")
@@ -236,19 +265,27 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
         validate_file(dry_path)
 
         ref_norm = settings.inputs_dir / f"{uuid.uuid4()}_ref_layer.wav"
-        dry_norm = settings.inputs_dir / f"{uuid.uuid4()}_dry_layer.wav"
         # Stereo for the reference: layer detection reads doubling from the
         # L/R image, which a mono downmix erases (the "only lead" bug).
+        _set_analysis_progress(progress_token, 3, "Normalising audio…")
         run_ffmpeg_normalize(ref_path, ref_norm, channels=2)
-        run_ffmpeg_normalize(dry_path, dry_norm)
+        # NOTE: the dry vocal is validated (duration/size) but not decoded here
+        # — layer detection and the audition stems are built entirely from the
+        # reference. Decoding it was pure waste on every analyze call.
 
-        ref_for_separation = ref_norm
-        # Optional: analyze only a selected segment to speed up extraction.
+        import librosa
+        import numpy as np
+
+        # Analyse a window rather than the whole track. Separation and the
+        # per-layer pitch shifting both scale linearly with duration, so a
+        # 4-minute reference costs minutes for no extra accuracy — layering
+        # is a local property. The user's segment wins; otherwise pick the
+        # most energetic window automatically (usually the chorus).
+        y_seg, sr_seg = load_wav_stereo(ref_norm)
+        total_dur = y_seg.shape[1] / sr_seg
+        window_s = float(settings.layer_analysis_window_s)
+
         if segment_start_s is not None or segment_end_s is not None:
-            import librosa
-            import numpy as np
-            y_seg, sr_seg = load_wav_stereo(ref_norm)
-            total_dur = y_seg.shape[1] / sr_seg
             start = float(segment_start_s or 0.0)
             end = float(segment_end_s if segment_end_s is not None else total_dur)
             if start < 0:
@@ -258,37 +295,74 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
             if start >= total_dur:
                 raise HTTPException(status_code=400, detail="segment_start_s exceeds reference duration")
             end = min(end, total_dur)
+            if (end - start) > window_s:
+                end = start + window_s
+            auto_window = False
+        elif total_dur > window_s:
+            mono = y_seg.mean(axis=0)
+            hop = sr_seg  # 1-second resolution is plenty
+            energy = np.array([
+                float(np.sqrt(np.mean(mono[i:i + hop] ** 2)))
+                for i in range(0, len(mono) - hop + 1, hop)
+            ])
+            win = max(1, int(window_s))
+            if len(energy) > win:
+                sums = np.convolve(energy, np.ones(win), mode="valid")
+                start = float(int(np.argmax(sums)))
+            else:
+                start = 0.0
+            end = min(start + window_s, total_dur)
+            auto_window = True
+        else:
+            start, end, auto_window = 0.0, total_dur, False
 
-            max_segment_s = 60.0
-            if (end - start) > max_segment_s:
-                end = start + max_segment_s
-
-            s0 = int(start * sr_seg)
-            s1 = int(end * sr_seg)
+        ref_for_separation = ref_norm
+        if (end - start) < total_dur - 0.01:
+            s0, s1 = int(start * sr_seg), int(end * sr_seg)
             seg = y_seg[:, s0:s1]
             if seg.shape[1] < int(1.0 * sr_seg):
                 raise HTTPException(status_code=400, detail="Selected segment is too short (min 1 second)")
-
             ref_segment_path = settings.inputs_dir / f"{uuid.uuid4()}_ref_segment.wav"
             save_wav(ref_segment_path, seg.astype(np.float32), sr_seg)
             ref_for_separation = ref_segment_path
+        del y_seg
+
+        analyzed_window = {
+            "start_s": round(start, 1),
+            "end_s": round(end, 1),
+            "auto": auto_window,
+        }
 
         if _strtobool(reference_is_vocal) if reference_is_vocal is not None else False:
             ref_for_analysis = ref_for_separation  # already a vocal - skip separation
         else:
             ref_vocals_path = settings.inputs_dir / f"{uuid.uuid4()}_ref_vocals_layer.wav"
-            extracted = extract_vocals(ref_for_separation, ref_vocals_path, force_demucs=True)
+
+            def _sep_progress(done: int, total: int) -> None:
+                # Separation is the bulk of the wait — give it 10-80%.
+                _set_analysis_progress(
+                    progress_token, 10 + int(70 * done / max(total, 1)),
+                    f"Separating vocals from the mix… {int(100 * done / max(total, 1))}%",
+                )
+
+            _set_analysis_progress(progress_token, 8, "Loading separation model…")
+            extracted = extract_vocals(ref_for_separation, ref_vocals_path, progress_cb=_sep_progress)
             ref_for_analysis = extracted if extracted and extracted.exists() else ref_for_separation
 
-        ref_audio, sr = load_wav_stereo(ref_for_analysis)
-        dry_audio, dry_sr = load_wav(dry_norm)
-        if sr != dry_sr:
-            import librosa
-            dry_audio = librosa.resample(dry_audio, orig_sr=dry_sr, target_sr=sr)
+        # Keep the separated vocal under a stable id so /jobs can reuse it and
+        # skip separation entirely — by far the most expensive stage.
+        analysis_id = str(uuid.uuid4())
+        kept = _analysis_vocal_path(analysis_id)
+        try:
+            shutil.copy2(ref_for_analysis, kept)
+        except Exception as e:
+            print(f"⚠ Could not cache analysis vocal: {e}")
 
+        ref_audio, sr = load_wav_stereo(ref_for_analysis)
+
+        _set_analysis_progress(progress_token, 82, "Detecting vocal layers…")
         profile = detect_vocal_layers(ref_audio, sr)
         if not profile:
-            analysis_id = str(uuid.uuid4())
             lead_name = f"{analysis_id}_lead.wav"
             lead_path = settings.outputs_dir / lead_name
             save_wav(lead_path, ref_audio, sr)
@@ -302,13 +376,15 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
                     "preview_url": f"/outputs/{lead_name}",
                     "selected": True,
                 }],
+                "analysis_id": analysis_id,
+                "analyzed_window": analyzed_window,
                 "message": "No extra vocal layers detected; previewing extracted lead vocal.",
             }
 
         # Build audition stems from the analyzed reference vocal so users
         # hear reference-derived layering characteristics directly.
+        _set_analysis_progress(progress_token, 90, "Rendering layer previews…")
         stems = build_vocal_layer_stems(ref_audio, sr, profile)
-        analysis_id = str(uuid.uuid4())
         layers = []
         for idx, key in enumerate(stems.keys()):
             preview_name = f"{analysis_id}_{key}.wav"
@@ -339,6 +415,7 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
             "total_layers": profile.total_layers,
             "n_doublers": profile.n_doublers,
             "n_harmonies": len(profile.harmony_intervals),
+            "analyzed_window": analyzed_window,
             "layers": layers,
         }
     except HTTPException:
@@ -450,73 +527,16 @@ async def health():
 
 @app.get("/health/models")
 async def health_models():
-    """
-    Health check endpoint for model loading status.
-    
-    Returns:
-        JSON with model availability status
-    """
-    try:
-        from processor.ml_refine.rvc_refiner import get_rvc_refiner
-        from pathlib import Path
-        
-        refiner = get_rvc_refiner(enable_gpu=False)
-        
-        # Check file existence
-        hubert_file_exists = refiner.hubert_path.exists()
-        rvc_file_exists = refiner.model_path.exists()
-        vocoder_file_exists = refiner.vocoder_path.exists()
-        
-        # Try to load models (lazy loading)
-        models_loaded = refiner.load_models()
-        
-        # Check individual components
-        hubert_available = refiner.hubert_model is not None
-        rvc_available = refiner.rvc_model is not None
-        vocoder_available = refiner.vocoder is not None
-        
-        device = str(refiner.device)
-        
-        # Determine status message
-        if models_loaded and rvc_available:
-            msg = "All models available and loaded"
-        elif rvc_file_exists:
-            msg = "RVC model file exists but may need architecture adaptation"
-        elif hubert_available:
-            msg = "HuBERT available, RVC model file missing"
-        else:
-            msg = "Some models not available (check logs)"
-        
-        return JSONResponse({
-            "hubert": hubert_available,
-            "hubert_file": hubert_file_exists,
-            "rvc_model": rvc_available,
-            "rvc_file": rvc_file_exists,
-            "vocoder": vocoder_available,
-            "vocoder_file": vocoder_file_exists,
-            "device": device,
-            "models_loaded": models_loaded,
-            "msg": msg,
-            "paths": {
-                "hubert": str(refiner.hubert_path),
-                "rvc": str(refiner.model_path),
-                "vocoder": str(refiner.vocoder_path),
-            },
-        })
-    except Exception as e:
-        import traceback
-        return JSONResponse({
-            "hubert": False,
-            "hubert_file": False,
-            "rvc_model": False,
-            "rvc_file": False,
-            "vocoder": False,
-            "vocoder_file": False,
-            "device": "unknown",
-            "models_loaded": False,
-            "msg": f"Error checking models: {str(e)}",
-            "error": str(e),
-        }, status_code=500)
+    """Model availability: the MDX separation model (downloaded on first use)."""
+    from processor.utils.mdx_onnx import MODEL_FILENAME, _models_dir
+
+    model_path = _models_dir() / MODEL_FILENAME
+    return JSONResponse({
+        "separation_model": MODEL_FILENAME,
+        "downloaded": model_path.exists(),
+        "path": str(model_path),
+        "note": "Model auto-downloads (~67 MB) on the first separation.",
+    })
 
 
 # ---------------------------------------------------------------------------

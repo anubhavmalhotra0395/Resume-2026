@@ -1,9 +1,10 @@
-# VocalForge all-in-one slim image: API + worker + Redis in one container.
-# CPU-only torch (no CUDA), no RVC extras, models download at runtime into
-# a cache volume. Target size ~2.5-3 GB vs 14 GB for the CUDA build.
+# Doctavox all-in-one image: API + worker + Redis in one container.
+# Torch-free: vocal separation runs Kim_Vocal_2.onnx via onnxruntime.
+# The ~67 MB model downloads at first use into the /data volume.
+# Target size ~1 GB (was ~2.5-3 GB with CPU torch, 14 GB with CUDA).
 #
-# Build:  docker build -f infra/Dockerfile.slim -t vocalforge-slim .
-# Run:    docker run -p 7860:7860 -e GROQ_API_KEY=... -v vf-data:/data vocalforge-slim
+# Build:  docker build -f infra/Dockerfile.slim -t doctavox .
+# Run:    docker run -p 7860:7860 -e GROQ_API_KEY=... -v dv-data:/data doctavox
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -13,13 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-core.txt /app/
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential g++ make cmake \
-    && pip install --no-cache-dir -r requirements-core.txt \
-       --extra-index-url https://download.pytorch.org/whl/cpu \
-    && apt-get purge -y build-essential g++ make cmake \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir -r requirements-core.txt
 
 COPY api /app/api
 COPY processor /app/processor
@@ -30,13 +25,11 @@ COPY processor /app/processor
 COPY infra/start_all_in_one.sh /app/infra/start_all_in_one.sh
 RUN chmod +x /app/infra/start_all_in_one.sh
 
-# Writable dirs for HF Spaces (runs as non-root uid 1000)
+# Writable dirs for hosts that run as non-root (uid 1000)
 ENV APP_STORAGE_ROOT=/data \
     APP_REDIS_URL=redis://localhost:6379/0 \
     APP_ENABLE_WORKER=1 \
-    HF_HOME=/data/hf-cache \
     XDG_CACHE_HOME=/data/cache \
-    TORCH_HOME=/data/torch-cache \
     PORT=7860
 RUN mkdir -p /data && chmod 777 /data /app
 

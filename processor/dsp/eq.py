@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-from scipy.signal import iirpeak, lfilter
+from scipy.signal import sosfilt
 
 
 @dataclass
@@ -12,23 +12,41 @@ class EqBand:
     q: float
 
 
+def _peaking_sos(f: float, gain_db: float, q: float, sr: int) -> np.ndarray:
+    """RBJ audio-EQ-cookbook peaking biquad as a single SOS section."""
+    A = 10.0 ** (gain_db / 40.0)
+    w0 = 2.0 * np.pi * f / sr
+    alpha = np.sin(w0) / (2.0 * max(q, 1e-3))
+    cos_w0 = np.cos(w0)
+
+    b0 = 1.0 + alpha * A
+    b1 = -2.0 * cos_w0
+    b2 = 1.0 - alpha * A
+    a0 = 1.0 + alpha / A
+    a1 = -2.0 * cos_w0
+    a2 = 1.0 - alpha / A
+    return np.array([b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0])
+
+
 def apply_eq(x: np.ndarray, sr: int, bands: List[EqBand]) -> np.ndarray:
-    """Apply a stack of peaking EQ filters (RBJ biquads)."""
-    y = np.copy(x)
+    """Apply a cascade of peaking EQ filters (RBJ biquads).
+
+    Note: the previous implementation used scipy's `iirpeak` (a band-PASS
+    resonator) with a scaled numerator — each "band" replaced the signal
+    with just that narrow band, so cascading bands destroyed the audio.
+    A peaking EQ leaves the signal at unity everywhere except around f,
+    which is what this now does.
+    """
+    sections = []
+    nyq = sr / 2.0
     for band in bands:
-        # iirpeak expects normalized frequency (0..1, where 1 = Nyquist)
-        w0 = band.f / (sr / 2.0)
-        w0 = float(np.clip(w0, 1e-4, 0.9999))
-        try:
-            b, a = iirpeak(w0, band.q)
-            # Apply gain by scaling numerator
-            gain_linear = 10 ** (band.gain_db / 20.0)
-            b = b * gain_linear
-            y = lfilter(b, a, y)
-        except ValueError:
-            # Skip unstable/out-of-range bands
+        if not (10.0 < band.f < nyq * 0.999) or abs(band.gain_db) < 1e-3:
             continue
-    return y
+        sections.append(_peaking_sos(band.f, band.gain_db, band.q, sr))
+    if not sections:
+        return np.copy(x)
+    sos = np.stack(sections)
+    return sosfilt(sos, x).astype(np.float32, copy=False)
 
 
 def match_spectral_tilt(ref_mag: np.ndarray, freqs: np.ndarray) -> List[EqBand]:

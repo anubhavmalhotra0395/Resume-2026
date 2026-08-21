@@ -14,15 +14,20 @@ class Settings(BaseSettings):
     loudness_target_lufs: float = -16.0
     sample_rate: int = 44100
     delete_after_hours: int = 24
-    max_duration_seconds: int = 600
+    # Hard cap on both uploads (reference and dry vocal). Separation cost and
+    # peak RAM both scale with duration, so this is a real resource guard.
+    max_duration_seconds: int = 240
     max_file_mb: int = 50
+    # Reference audio beyond this is not analysed (the reference only feeds
+    # analysis — none of it ends up in the output, so 2 minutes is plenty).
+    analysis_max_seconds: int = 120
+    # Window used by /analyze-layers. Layering is a local property, so a
+    # single well-chosen window (the chorus) is as informative as the whole
+    # song and far cheaper to separate + analyse. The UI's waveform selector
+    # mirrors this cap — keep them in sync (MAX_REF_SELECT_S in index.html).
+    layer_analysis_window_s: int = 30
     cors_origins: List[str] = Field(default_factory=lambda: ["*"])
     frontend_dir: Path = Path("frontend")
-    ml_refine: bool = False
-    rvc_model_path: str = "models/rvc/pretrained.pth"
-    rvc_vocoder_path: str = "models/rvc/vocoder.pth"
-    rvc_hubert_path: str = "models/hubert/hubert-base-ls960.pt"
-    rvc_enable_gpu: bool = True
     # Optional: https://www.football-data.org/ — Chelsea snapshot at GET /api/chelsea/football
     football_data_api_token: str | None = None
 

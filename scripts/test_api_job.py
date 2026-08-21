@@ -3,7 +3,7 @@
 API integration test - tests full job submission and processing pipeline.
 
 This script:
-- Sends multipart POST request to /jobs with dry file, reference file, ml_refine=true
+- Sends multipart POST request to /jobs with dry file and reference file
 - Polls /jobs/{id} until status=finished/failed
 - Downloads output WAV
 - Prints status + timings
@@ -83,7 +83,6 @@ def test_api_job():
             'reference': ('ref.wav', ref_file, 'audio/wav'),
         }
         data = {
-            'ml_refine': 'true',
             'use_spectral_refiner': 'false',  # Disable for faster test
             'enable_deesser': 'false',
             'enable_transient_shaper': 'false',

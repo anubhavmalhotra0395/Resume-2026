@@ -1,25 +1,20 @@
-# Deploying VocalForge online for free (slim build)
+# Deploying Doctavox online for free
 
-The original image is ~14 GB because it installs CUDA torch + the optional
-RVC stack. The slim build (`infra/Dockerfile.slim`) uses CPU-only torch and
-skips RVC extras → **~2.5–3 GB**, small enough for free hosts. Separation
-models (Kim_Vocal_2, demucs weights) download on first use into `/data`,
-so they never bloat the image.
-
-## What the slim build contains
-
-- `requirements-core.txt` — everything except RVC (CPU torch via the
-  `download.pytorch.org/whl/cpu` index; no `nvidia-*` packages)
-- `requirements-rvc.txt` — optional extras (torchaudio, transformers,
-  pyworld, crepe) only if you want `ml_refine=true`
-- `infra/start_all_in_one.sh` — Redis + RQ worker + API in one container
-- Serves the frontends too: `/vocalforge/` (standalone) and `/ui/` (room)
+The stack is now **torch-free**: separation runs Kim_Vocal_2.onnx directly
+via onnxruntime (`processor/utils/mdx_onnx.py`), and the RVC / neural-refiner
+extras were removed. The image (`infra/Dockerfile.slim`) is ~1 GB (was
+~2.5-3 GB with CPU torch, 14 GB with CUDA), and RAM needs dropped to
+~1-2 GB per job. The ~67 MB separation model downloads on first use into
+`/data` so it never bloats the image.
 
 Build & run locally:
 
-    docker build -f infra/Dockerfile.slim -t vocalforge-slim .
-    docker run -p 7860:7860 -e GROQ_API_KEY=... -v vf-data:/data vocalforge-slim
+    docker build -f infra/Dockerfile.slim -t doctavox .
+    docker run -p 7860:7860 -e GROQ_API_KEY=... -v dv-data:/data doctavox
     # http://localhost:7860/vocalforge/
+
+Low-memory hosts: set `APP_LOW_MEMORY=1` to replace ML separation with a
+bandpass fallback (lower quality, but survives 512 MB).
 
 ## Option A — Hugging Face Spaces (NO LONGER FREE, as of 2026-08)
 

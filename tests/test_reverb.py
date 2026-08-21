@@ -1,6 +1,7 @@
 import numpy as np
 from processor.dsp.analysis.reverb_analysis import estimate_reverb_params, ReverbProfile
 from processor.dsp.effects.apply_reverb import apply_reverb
+from processor.dsp.reverb import ReverbSettings as _Settings
 
 
 def test_reverb_profile_estimation_and_apply():
@@ -13,7 +14,12 @@ def test_reverb_profile_estimation_and_apply():
     assert isinstance(profile, ReverbProfile)
     assert 0.0 < profile.rt60 < 10.0
 
-    out = apply_reverb(y, sr, profile)
+    # Convert the analysis profile to apply settings, as the worker does —
+    # the old test passed the profile object straight in, which apply_reverb
+    # has never accepted.
+    settings = _Settings(decay_s=profile.rt60, mix=max(profile.wet, 0.1),
+                         pre_delay_ms=profile.predelay_ms)
+    out = apply_reverb(y, sr, settings)
     assert len(out) == len(y)
     assert not np.any(np.isnan(out))
 

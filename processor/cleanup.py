@@ -8,7 +8,7 @@ from processor.config import settings
 def sweep_old_files(now: float | None = None) -> None:
     """Remove files older than retention window from inputs/outputs.
 
-    Never raises: stem-separator tools (demucs, audio-separator) drop
+    Never raises: the stem separator can drop
     directories into inputs/, and a cleanup hiccup must not fail a job
     that already produced its output.
     """

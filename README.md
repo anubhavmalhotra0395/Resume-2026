@@ -13,6 +13,9 @@ What’s here
 - `infra/` — Dockerfiles + docker-compose for API, worker, Redis.
 - `tests/` — A couple of sanity tests for the DSP blocks.
 
+The stack is torch-free: vocal separation runs UVR's Kim_Vocal_2 MDX-Net
+model directly through onnxruntime (~67 MB, auto-downloaded on first use).
+
 Quickstart (local)
 ------------------
 1) Install deps (Python 3.10+): `pip install -r requirements.txt`

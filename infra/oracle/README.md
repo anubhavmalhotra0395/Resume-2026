@@ -5,9 +5,8 @@ Runs the full stack — Redis + API + RQ worker + Caddy/HTTPS — on a single
 forever, which is the only free tier with enough memory for real Demucs stem
 separation and no sleep-on-idle.
 
-The VM is ARM64. That's why the stack builds `infra/Dockerfile.slim`
-(CPU-only torch) rather than `Dockerfile.api` — the `nvidia-*` pins in
-`requirements.txt` have no aarch64 wheels and would fail to install.
+The VM is ARM64; the stack builds `infra/Dockerfile.slim` — the torch-free
+onnxruntime build (~1 GB image), which installs cleanly on aarch64.
 
 ---
 
@@ -61,7 +60,7 @@ APP_CORS_ORIGINS=https://doctavox.vercel.app \
 
 `bootstrap.sh` installs Docker, opens the host firewall, writes `.env`,
 builds, starts the stack, and waits for both the API and the certificate.
-The first build pulls PyTorch and takes **10–20 minutes**; later runs are
+The first build takes **a few minutes**; later runs are
 cached and take seconds.
 
 It prints the live URL on success:

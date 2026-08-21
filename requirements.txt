@@ -1,3 +1,6 @@
+# Doctavox core stack — torch-free.
+# Separation runs Kim_Vocal_2.onnx directly via onnxruntime
+# (processor/utils/mdx_onnx.py); no demucs, no audio-separator, no RVC.
 openai>=1.30.0
 fastapi==0.115.0
 uvicorn==0.30.3
@@ -13,15 +16,7 @@ pydantic-settings==2.3.4
 ffmpeg-python==0.2.0
 aiofiles==23.2.1
 yt-dlp==2024.7.25
-demucs>=4.0
-audio-separator>=0.17.0
-torch>=2.0.0
-torchaudio>=2.0.0
 onnxruntime>=1.16.0
 requests>=2.31.0
 httpx>=0.27.0
-pyworld>=0.3.0
-crepe>=0.0.14
 tqdm>=4.66.0
-transformers>=4.30.0
-

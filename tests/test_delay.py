@@ -3,18 +3,24 @@ from processor.dsp.delay import detect_delay, apply_delay
 
 
 def test_delay_detection():
-    sr = 48000
-    t = np.linspace(0, 1, sr, endpoint=False)
-    x = np.sin(2 * np.pi * 440 * t)
+    """Echo detection needs transients — a continuous sine has no onsets, so
+    the old version of this test could never pass. Use a bursty signal with a
+    planted 420 ms echo and verify the *measured* lag is close."""
+    sr = 44100
+    t = np.arange(sr * 12) / sr
+    bursts = (np.sin(2 * np.pi * 1.1 * t) > 0.55).astype(float)
+    dry = (np.sin(2 * np.pi * 300 * t) * bursts * 0.5).astype(np.float32)
+    d = int(0.420 * sr)
+    ref = dry.copy()
+    ref[d:] += dry[:-d] * 0.45
 
-    # make an artificial delay
-    delay_samples = int(0.25 * sr)  # 250 ms at 1s duration
-    y = np.copy(x)
-    y[delay_samples:] += 0.3 * x[:-delay_samples]
+    res = detect_delay(ref, sr, dry=dry)
+    assert res["delay_ms"] > 0, f"echo not detected: {res}"
+    assert abs(res["delay_ms"] - 420) < 40, f"lag off: {res['delay_ms']:.0f} ms"
 
-    res = detect_delay(y, sr)
-    assert res["delay_ms"] > 0
-    assert res["confidence"] >= 0
+    # And the rhythm-only control must NOT trigger
+    res2 = detect_delay(dry, sr, dry=dry)
+    assert res2["delay_ms"] == 0.0, f"false positive on echo-free signal: {res2}"
 
 
 def test_delay_apply_shape():

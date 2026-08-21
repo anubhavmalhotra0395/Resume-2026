@@ -348,41 +348,28 @@ def apply_chain(
         except Exception as e:
             print(f"⚠ WARNING: Autotune failed ({e}). Skipping.")
 
-    # Match loudness to reference if provided, otherwise normalize to -18 dBFS
+    # Match loudness to reference if provided, otherwise normalize to -18 dBFS.
+    # IMPORTANT: the gain is *computed* on the overlapping segment but *applied*
+    # to the full-length signal. The old code assigned the truncated segment
+    # back to y — when the reference was shorter than the vocal (e.g. a 45 s
+    # analysis window vs a 3-minute take), everything past the reference's
+    # length was replaced with padded silence.
     if reference is not None and len(reference) > 0:
-        # Normalize lengths for comparison
         min_len = min(len(y), len(reference))
         ref_seg = reference[:min_len]
         y_seg = y[:min_len]
-        
-        # Safety check: ensure reference has audio
+
         ref_rms = np.sqrt(np.mean(np.clip(np.square(ref_seg), 0, 1.0)))
         y_rms = np.sqrt(np.mean(np.clip(np.square(y_seg), 0, 1.0)))
-        
-        # Minimum RMS threshold to prevent making audio too quiet
         min_rms = 0.01  # -40 dBFS minimum
-        
-        if ref_rms > min_rms and y_rms > min_rms:
-            y_matched = match_loudness(y_seg, ref_seg)
-            # Safety: ensure matched audio isn't too quiet
-            matched_rms = np.sqrt(np.mean(np.clip(np.square(y_matched), 0, 1.0)))
-            
-            # If reference is very quiet, don't match to it - use reasonable target instead
-            if ref_rms < 0.05:  # Reference is very quiet (< -26 dBFS)
-                # Use -18 dBFS target instead of matching quiet reference
-                y = normalize_rms(y_seg, target_db=-18.0)
-            elif matched_rms > min_rms:
-                y = y_matched
-            else:
-                # Matched audio is too quiet, use RMS normalization
-                y = normalize_rms(y_seg, target_db=-18.0)
+
+        if ref_rms > min_rms and y_rms > min_rms and ref_rms >= 0.05:
+            # Full-length gain toward the reference's level, capped at ±12 dB
+            gain = float(np.clip(ref_rms / y_rms, 10 ** (-12 / 20), 10 ** (12 / 20)))
+            y = y * gain
         else:
-            # Reference or output is too quiet, use RMS normalization
-            y = normalize_rms(y_seg, target_db=-18.0)
-        
-        if len(y) < len(x):
-            # Pad if needed (shouldn't happen, but safety)
-            y = np.pad(y, (0, len(x) - len(y)), mode='constant')
+            # Reference unusable (too quiet) — normalize the whole signal
+            y = normalize_rms(y, target_db=-18.0)
     else:
         y = normalize_rms(y, target_db=-18.0)
     

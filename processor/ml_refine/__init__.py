@@ -1,2 +1,0 @@
-# RVC refiner module
-

@@ -59,21 +59,21 @@ def _decay_envelope(length: int, sr: int, rt60: float) -> np.ndarray:
 
 
 def _comb(sig: np.ndarray, delay: int, g: float) -> np.ndarray:
-    out = np.zeros_like(sig)
-    for n in range(len(sig)):
-        d = n - delay
-        out[n] = sig[n] + g * (out[d] if d >= 0 else 0.0)
-    return out
+    # y[n] = x[n] + g*y[n-d]  →  H(z) = 1 / (1 - g z^-d)
+    from scipy.signal import lfilter
+    a = np.zeros(delay + 1)
+    a[0], a[delay] = 1.0, -g
+    return lfilter([1.0], a, sig).astype(np.float32)
 
 
 def _allpass(sig: np.ndarray, delay: int, g: float) -> np.ndarray:
-    out = np.zeros_like(sig)
-    for n in range(len(sig)):
-        d = n - delay
-        xd = sig[d] if d >= 0 else 0.0
-        od = out[d] if d >= 0 else 0.0
-        out[n] = -g * sig[n] + xd + g * od
-    return out
+    # y[n] = -g*x[n] + x[n-d] + g*y[n-d]  →  H(z) = (-g + z^-d) / (1 - g z^-d)
+    from scipy.signal import lfilter
+    b = np.zeros(delay + 1)
+    b[0], b[delay] = -g, 1.0
+    a = np.zeros(delay + 1)
+    a[0], a[delay] = 1.0, -g
+    return lfilter(b, a, sig).astype(np.float32)
 
 
 def _build_ir(

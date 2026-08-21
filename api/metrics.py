@@ -17,8 +17,6 @@ from pathlib import Path
 _metrics_store: Dict[str, float] = {
     "jobs_finished_total": 0.0,
     "jobs_failed_total": 0.0,
-    "rvc_time_sum": 0.0,
-    "rvc_time_count": 0.0,
     "dsp_time_sum": 0.0,
     "dsp_time_count": 0.0,
     "total_time_sum": 0.0,
@@ -37,9 +35,6 @@ def update_metrics(metrics: dict):
         _metrics_store["total_time_sum"] += metrics["processing_time_total"]
         _metrics_store["total_time_count"] += 1.0
     
-    if "processing_time_rvc" in metrics and metrics["processing_time_rvc"] > 0:
-        _metrics_store["rvc_time_sum"] += metrics["processing_time_rvc"]
-        _metrics_store["rvc_time_count"] += 1.0
     
     if "processing_time_dsp" in metrics:
         _metrics_store["dsp_time_sum"] += metrics["processing_time_dsp"]
@@ -64,10 +59,6 @@ def get_metrics() -> Dict[str, float]:
     metrics = _metrics_store.copy()
     
     # Compute averages
-    if metrics["rvc_time_count"] > 0:
-        metrics["rvc_time_avg"] = metrics["rvc_time_sum"] / metrics["rvc_time_count"]
-    else:
-        metrics["rvc_time_avg"] = 0.0
     
     if metrics["dsp_time_count"] > 0:
         metrics["dsp_time_avg"] = metrics["dsp_time_sum"] / metrics["dsp_time_count"]
