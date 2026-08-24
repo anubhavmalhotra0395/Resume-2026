@@ -17,6 +17,16 @@
 		max_size 200MB
 	}
 
+	# Audio files served by Caddy itself from the shared volume: file_server
+	# supports HTTP Range (206), which browsers require for seeking inside
+	# <audio> — proxied FileResponse answered 200-full and made the processed
+	# track unseekable / restart-from-zero.
+	handle_path /outputs/* {
+		root * /appdata/storage/outputs
+		header Access-Control-Allow-Origin "*"
+		file_server
+	}
+
 	reverse_proxy api:8000 {
 		# Stem separation can hold a request open while ffmpeg decodes.
 		transport http {

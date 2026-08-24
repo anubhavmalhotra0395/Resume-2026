@@ -81,6 +81,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data     # Let's Encrypt certs + account keys — keep this
       - caddy-config:/config
+      # app storage read-only at /appdata (NOT /data — that's caddy's certs)
+      - app-data:/appdata:ro
     depends_on:
       - api
     networks:
