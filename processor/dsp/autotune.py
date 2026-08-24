@@ -115,46 +115,83 @@ def apply_autotune(
     # Convert f0 to MIDI
     midi = np.where(voiced_mask, librosa.hz_to_midi(np.where(voiced_mask, f0, 440.0)), np.nan)
 
-    # Snap each voiced frame to nearest in-key note
+    # Snap each voiced frame to the nearest in-key note
     target_midi = np.copy(midi)
     for i in range(len(midi)):
         if voiced_mask[i] and np.isfinite(midi[i]):
             target_midi[i] = _nearest_scale_note(midi[i], scale_notes)
 
-    target_hz = np.where(voiced_mask, librosa.midi_to_hz(np.nan_to_num(target_midi)), f0)
-
-    # Smooth the target over retune_ms to avoid zipper noise
-    hop_samples = 256
-    retune_samples = max(1, int(sr * retune_ms / 1000.0 / hop_samples))
-    if retune_samples > 1:
-        kernel = np.ones(retune_samples) / retune_samples
-        target_hz = np.convolve(target_hz, kernel, mode="same")
-
-    # Shift in semitones (positive = up, negative = down)
-    safe_f0 = np.where(voiced_mask & (f0 > 0), f0, 1.0)
-    shift_semitones = 12.0 * np.log2(np.maximum(target_hz, 1.0) / safe_f0)
-    shift_semitones[~voiced_mask] = 0.0
-
-    # Apply strength
-    applied_shift = shift_semitones * float(np.clip(strength, 0.0, 1.0))
-
-    # Use the median voiced shift for global pitch correction (simple but effective)
-    voiced_shifts = applied_shift[voiced_mask & np.isfinite(applied_shift)]
-    if len(voiced_shifts) == 0:
-        return y
-    median_shift = float(np.nanmedian(voiced_shifts))
-    if abs(median_shift) < 0.02:
+    # Per-frame correction in semitones. (The previous implementation
+    # computed this too, then collapsed it to ONE median shift for the whole
+    # track — a static transpose, i.e. no per-note tuning ever happened.)
+    shift = np.where(
+        voiced_mask & np.isfinite(midi) & np.isfinite(target_midi),
+        (target_midi - midi) * float(np.clip(strength, 0.0, 1.0)),
+        0.0,
+    )
+    shift = np.nan_to_num(shift, nan=0.0)
+    # Ignore octave-level detection glitches; tuning corrects small errors
+    shift = np.where(np.abs(shift) > 1.5, 0.0, shift)
+    if not np.any(np.abs(shift) > 0.02):
         return y
 
-    y_tuned = librosa.effects.pitch_shift(y, sr=sr, n_steps=median_shift, bins_per_octave=12)
+    HOP = 256  # estimate_f0 hop
 
-    # Crossfade edges to avoid clicks
-    fade_samps = min(int(sr * retune_ms / 1000.0), len(y) // 4)
-    if fade_samps > 0:
-        window = np.linspace(0.0, 1.0, fade_samps)
-        out = y_tuned.copy()
-        out[:fade_samps]  = window * y_tuned[:fade_samps]  + (1.0 - window) * y[:fade_samps]
-        out[-fade_samps:] = (1.0 - window) * y_tuned[-fade_samps:] + window * y[-fade_samps:]
-        return out.astype(np.float32)
+    # ── Segment into notes: contiguous runs needing the same correction ──
+    # Hard tune (small retune_ms) keeps segments exact; softer settings
+    # smooth the shift curve first so corrections glide instead of snapping.
+    retune_frames = max(1, int(retune_ms / 1000.0 * sr / HOP))
+    if retune_frames > 1 and strength < 0.9:
+        k = np.ones(retune_frames) / retune_frames
+        shift = np.convolve(shift, k, mode="same")
 
-    return y_tuned.astype(np.float32)
+    segments = []  # (start_frame, end_frame, shift_semitones)
+    MIN_FRAMES = max(3, int(0.06 * sr / HOP))  # >= 60 ms per tuned piece
+    i = 0
+    n = len(shift)
+    while i < n:
+        if abs(shift[i]) < 0.03:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and abs(shift[j] - shift[i]) < 0.35 and abs(shift[j]) >= 0.03:
+            j += 1
+        if j - i >= MIN_FRAMES:
+            segments.append((i, j, float(np.median(shift[i:j]))))
+        i = j
+    if not segments:
+        return y
+
+    # Merge segments so each pitch_shift call gets enough context and the
+    # total call count stays sane on long vocals
+    merged = [list(segments[0])]
+    for s0, s1, sh in segments[1:]:
+        if s0 - merged[-1][1] <= MIN_FRAMES and abs(sh - merged[-1][2]) < 0.2:
+            merged[-1][1] = s1
+        else:
+            merged.append([s0, s1, sh])
+
+    # ── Apply: pitch-shift each note region, equal-power crossfade back ──
+    out = np.array(y, dtype=np.float64, copy=True)
+    fade = max(32, int(0.012 * sr))  # 12 ms joins
+    for s0, s1, sh in merged:
+        a = max(0, s0 * HOP - fade)
+        b = min(len(y), s1 * HOP + fade)
+        if b - a < fade * 3:
+            continue
+        piece = np.asarray(y[a:b], dtype=np.float32)
+        try:
+            tuned = librosa.effects.pitch_shift(piece, sr=sr, n_steps=float(sh),
+                                                bins_per_octave=12)
+        except Exception:
+            continue
+        if len(tuned) != len(piece):
+            tuned = tuned[: len(piece)] if len(tuned) > len(piece) else np.pad(
+                tuned, (0, len(piece) - len(tuned)))
+        w = np.ones(len(piece))
+        ramp = np.linspace(0.0, 1.0, fade)
+        w[:fade] = ramp
+        w[-fade:] = ramp[::-1]
+        out[a:b] = out[a:b] * (1.0 - w) + tuned.astype(np.float64) * w
+
+    return out.astype(np.float32)

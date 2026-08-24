@@ -124,6 +124,15 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         ref_audio = ref_audio[:_max_n]
         ref_stereo = ref_stereo[:, :_max_n]
     ref_duration = len(ref_audio) / sr
+    # Stereo field of the reference vocal — matched onto the output later.
+    try:
+        from processor.dsp.stereo import measure_stereo_profile
+        _ref_stereo_profile = measure_stereo_profile(ref_stereo, sr) or None
+        if _ref_stereo_profile:
+            logger.info(f"[JOB {job_id}] Ref stereo: "
+                        + ", ".join(f"{k}={v:.1f}" for k, v in _ref_stereo_profile.items()))
+    except Exception:
+        _ref_stereo_profile = None
     logger.info(f"[JOB {job_id}] Reference loaded: {ref_duration:.2f}s @ {sr}Hz")
     print(f"  Reference length: {ref_duration:.2f}s, sample rate: {sr}Hz")
     
@@ -639,6 +648,16 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # NOTE: reverb is already applied inside apply_chain via reverb_final (converted from
     # reverb_profile_auto). A second apply_reverb here would double the reverb, so it is removed.
 
+    # ── Stereo image: match the reference's width (per band) ────────────────
+    # Mono renders become true stereo; layered renders keep their panning and
+    # gain decorrelated width on top. Mono fold-down stays exactly the mid.
+    try:
+        from processor.dsp.stereo import apply_stereo_image
+        _progress(current_job, 68, "Matching stereo image…")
+        processed = apply_stereo_image(processed, sr, target=_ref_stereo_profile)
+    except Exception as _st_err:
+        logger.warning(f"[JOB {job_id}] Stereo image skipped: {_st_err}")
+
     # ── Dynamics profile transfer ───────────────────────────────────────────
     # Quantile-map the output's short-term loudness envelope onto the
     # reference's: the vocal then *rides* the way the reference rides
@@ -922,6 +941,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             "ref_lufs": metrics.get("lufs_reference"),
             "ref_loudness_quantiles": loudness_quantiles_centered(_ref_mono_st, sr),
             "ref_band_energy": _ref_stats.get("band_energy_pct"),
+            "ref_stereo_profile": _ref_stereo_profile,
         }
     except Exception:
         pass
@@ -941,6 +961,14 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                 (ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)).astype(np.float64), sr), 1),
             "ai_scales": ai_scales or None,
         }
+        try:
+            from processor.dsp.stereo import measure_stereo_profile as _msp
+            _wout = _msp(processed, sr)
+            if _wout and _ref_stereo_profile:
+                recipe_dict["match_report"]["stereo_width_out"] = {k: round(v, 1) for k, v in _wout.items()}
+                recipe_dict["match_report"]["stereo_width_ref"] = {k: round(v, 1) for k, v in _ref_stereo_profile.items()}
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -1091,6 +1119,12 @@ def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
             processed = apply_delay(processed, sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val)
 
     _progress(current_job, 75, "Matching stored style targets…")
+    try:
+        from processor.dsp.stereo import apply_stereo_image
+        _sp = targets.get("ref_stereo_profile")
+        processed = apply_stereo_image(processed, sr, target=_sp)
+    except Exception as e:
+        logger.warning(f"[JOB {job_id}] Preset stereo skipped: {e}")
     try:
         from processor.dsp.dynamics_transfer import match_dynamics
         q = targets.get("ref_loudness_quantiles")
