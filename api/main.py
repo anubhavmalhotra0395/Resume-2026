@@ -32,7 +32,7 @@ from api.ai_audio import (
     validate_dsp_config,
 )
 
-app = FastAPI(title="Vocal Style Transfer (DSP-first)")
+app = FastAPI(title="Doctavox API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -48,11 +48,14 @@ if settings.frontend_dir.exists():
         app.mount("/assets", StaticFiles(directory=_assets_dir), name="root-assets")
 
 # Doctavox standalone site (same API origin, so no CORS setup needed).
-# Mounted at both paths: /doctavox is the brand, /vocalforge the legacy URL.
-_vocalforge_dir = settings.frontend_dir.parent / "vocalforge"
-if _vocalforge_dir.exists():
-    app.mount("/doctavox", StaticFiles(directory=_vocalforge_dir, html=True), name="doctavox")
-    app.mount("/vocalforge", StaticFiles(directory=_vocalforge_dir, html=True), name="vocalforge")
+_doctavox_dir = settings.frontend_dir.parent / "doctavox"
+if _doctavox_dir.exists():
+    app.mount("/doctavox", StaticFiles(directory=_doctavox_dir, html=True), name="doctavox")
+
+    @app.get("/vocalforge/{rest:path}", include_in_schema=False)
+    async def _legacy_redirect(rest: str):  # old links keep working
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(f"/doctavox/{rest}", status_code=301)
 
 # Register metrics endpoint
 register_metrics_endpoint(app)

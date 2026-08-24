@@ -19,8 +19,8 @@ RUN pip install --no-cache-dir -r requirements-core.txt
 COPY api /app/api
 COPY processor /app/processor
 # NOTE: both frontends live outside this image — frontend/ (the 3D room) and
-# vocalforge/ (the Doctavox UI) deploy to Vercel and are not tracked here.
-# api/main.py mounts /ui, /doctavox and /vocalforge only when those folders
+# doctavox/ (the Doctavox UI) deploy to Vercel and are not tracked here.
+# api/main.py mounts /ui and /doctavox only when those folders
 # exist, so their absence is a no-op rather than an error.
 COPY infra/start_all_in_one.sh /app/infra/start_all_in_one.sh
 RUN chmod +x /app/infra/start_all_in_one.sh

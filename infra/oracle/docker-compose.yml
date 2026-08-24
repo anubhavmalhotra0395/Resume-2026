@@ -52,11 +52,11 @@ services:
       - "127.0.0.1:8000:8000"
     # YAML merge replaces lists, so the anchor's volume must be repeated.
     # The UI is not in the git repo (deployed separately) — when a copy is
-    # placed at <repo>/vocalforge on the host, the API serves it at
-    # /vocalforge/ and /doctavox/, making the VM a complete one-URL app.
+    # placed at <repo>/doctavox on the host, the API serves it at
+    # /doctavox/, making the VM a complete one-URL app.
     volumes:
       - app-data:/data
-      - ../../vocalforge:/app/vocalforge:ro
+      - ../../doctavox:/app/doctavox:ro
     depends_on:
       redis:
         condition: service_healthy
