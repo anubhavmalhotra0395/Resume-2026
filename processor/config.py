@@ -26,7 +26,10 @@ class Settings(BaseSettings):
     # song and far cheaper to separate + analyse. The UI's waveform selector
     # mirrors this cap — keep them in sync (MAX_REF_SELECT_S in index.html).
     layer_analysis_window_s: int = 30
-    cors_origins: List[str] = Field(default_factory=lambda: ["*"])
+    # Plain str, not List: pydantic-settings JSON-decodes env vars for complex
+    # fields BEFORE validators run, so APP_CORS_ORIGINS=* crashed at startup
+    # on the first real deploy. Split via the property below.
+    cors_origins: str = "*"
     frontend_dir: Path = Path("frontend")
     # Optional: https://www.football-data.org/ — Chelsea snapshot at GET /api/chelsea/football
     football_data_api_token: str | None = None
@@ -40,12 +43,9 @@ class Settings(BaseSettings):
         root = Path((info.data or {}).get("storage_root", "storage"))
         return root / path
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def _split_origins(cls, v):  # noqa: N805
-        if isinstance(v, str):
-            return [s.strip() for s in v.split(",") if s.strip()]
-        return v
+    @property
+    def cors_origin_list(self) -> List[str]:
+        return [s.strip() for s in self.cors_origins.split(",") if s.strip()] or ["*"]
 
 
 settings = Settings()

@@ -35,7 +35,7 @@ from api.ai_audio import (
 app = FastAPI(title="Vocal Style Transfer (DSP-first)")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
