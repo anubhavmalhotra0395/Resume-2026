@@ -203,9 +203,6 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     def _detect_ms_eq():
         return detect_ms_eq(ref_audio, sr)
 
-    def _detect_autotune():
-        return detect_autotune(ref_audio, sr)
-
     def _detect_vocal_layers():
         return detect_vocal_layers(ref_stereo, sr)
 
@@ -237,8 +234,6 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         detectors["parallel_comp"] = _detect_parallel_comp
     if options.get("enable_ms_eq", True):
         detectors["ms_eq"]   = _detect_ms_eq
-    # Autotune: always detect — auto-applied if reference shows pitch correction
-    detectors["autotune"] = _detect_autotune
 
     _DETECTOR_TIMEOUT = 90  # seconds per detector
 
@@ -314,13 +309,6 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         if _det_results.get("ms_eq"):
             ms_eq_settings = _det_results["ms_eq"]
             logger.info(f"[JOB {job_id}] M-S EQ: mid_bands={len(ms_eq_settings.mid_bands)} side_bands={len(ms_eq_settings.side_bands)}")
-        if _det_results.get("autotune"):
-            autotune_settings = _det_results["autotune"]
-            if not options.get("enable_autotune", True):
-                logger.info(f"[JOB {job_id}] Autotune detected but disabled by user")
-                autotune_settings = None
-            else:
-                logger.info(f"[JOB {job_id}] Autotune: strength={autotune_settings.strength:.2f}")
 
     _progress(current_job, 48, "Effects detected")
 
@@ -1071,7 +1059,7 @@ def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
     exciter = build(ExciterSettings, preset.get("exciter"))
     parallel = build(ParallelCompSettings, preset.get("parallel_comp"))
     doubler = build(DoublerSettings, preset.get("doubler"))
-    autotune = build(AutotuneSettings, preset.get("autotune"))
+    autotune = None  # autotune removed from the product (sounded bad; module kept for future opt-in)
     ms_eq = None
     if isinstance(preset.get("ms_eq"), dict):
         try:

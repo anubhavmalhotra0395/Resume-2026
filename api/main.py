@@ -233,7 +233,6 @@ async def create_job(
     enable_tape: str | None = Form("true"),
     enable_parallel_comp: str | None = Form("true"),
     enable_ms_eq: str | None = Form("true"),
-    enable_autotune: str | None = Form("true"),
     ai_dsp_config: str | None = Form(None),
     selected_layers: str | None = Form(None),
     reference_is_vocal: str | None = Form("false"),
@@ -293,10 +292,6 @@ async def create_job(
         "enable_tape": _strtobool(enable_tape) if enable_tape is not None else True,
         "enable_parallel_comp": _strtobool(enable_parallel_comp) if enable_parallel_comp is not None else True,
         "enable_ms_eq": _strtobool(enable_ms_eq) if enable_ms_eq is not None else True,
-        # Autotune strength comes from the reference; the KEY always comes
-        # from the user's own vocal (chain detects it from the dry input),
-        # so a reference in a different scale can never pull notes off-key.
-        "enable_autotune": _strtobool(enable_autotune) if enable_autotune is not None else True,
         # Skip the slow ML separation when the reference is already an
         # isolated vocal/acapella (minutes -> seconds).
         "stems_mode": not (_strtobool(reference_is_vocal) if reference_is_vocal is not None else False),
