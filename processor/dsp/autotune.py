@@ -50,6 +50,10 @@ def _scale_notes_in_range(root: int, mode: str, lo_midi: int = 36, hi_midi: int 
     """
     Return all MIDI note numbers belonging to root/mode scale between lo and hi.
     """
+    if mode == "chromatic":
+        # Every semitone: correction is never more than 50 cents and can
+        # never pick a wrong pitch class — immune to key-detection errors.
+        return [float(m) for m in range(lo_midi, hi_midi + 1)]
     intervals = _MAJOR_INTERVALS if mode == "major" else _MINOR_INTERVALS
     notes = []
     for midi in range(lo_midi, hi_midi + 1):

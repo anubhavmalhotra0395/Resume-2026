@@ -330,12 +330,12 @@ def apply_chain(
     # then apply correction to the processed signal y.
     if autotune is not None:
         try:
-            from processor.dsp.autotune import _detect_key
             y_before = y.copy()
-            mono_dry = x if x.ndim == 1 else np.mean(x, axis=0)
-            scale_root, scale_mode = _detect_key(mono_dry, sr)
-            print(f"  Autotune: key={['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][scale_root]} {scale_mode} "
-                  f"strength={autotune.strength:.2f} retune={autotune.retune_ms:.0f}ms")
+            # Chromatic snapping (Auto-Tune's own safe default): key detection
+            # on a solo vocal misfires easily, and a wrong scale audibly pulls
+            # correct notes to wrong pitches. Nearest-semitone can't.
+            scale_root, scale_mode = 0, "chromatic"
+            print(f"  Autotune: chromatic strength={autotune.strength:.2f} retune={autotune.retune_ms:.0f}ms")
 
             mono_y = y if y.ndim == 1 else np.mean(y, axis=0)
             tuned = apply_autotune(
