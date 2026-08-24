@@ -61,7 +61,11 @@ docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 # except SSH. Opening the port in the OCI security list is NOT enough — this
 # is the single most common reason a fresh Oracle VM "ignores" port 443.
 log "opening ports 80/443 on the host firewall"
-sudo apt-get install -y -qq iptables-persistent >/dev/null 2>&1 || true
+# Preseed debconf: iptables-persistent asks "save current rules?" interactively,
+# which hangs forever under cloud-init (found the hard way on the first AWS run)
+echo "iptables-persistent iptables-persistent/autosave_v4 boolean true" | sudo debconf-set-selections
+echo "iptables-persistent iptables-persistent/autosave_v6 boolean true" | sudo debconf-set-selections
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq iptables-persistent >/dev/null 2>&1 || true
 for port in 80 443; do
   if ! sudo iptables -C INPUT -p tcp --dport "$port" -j ACCEPT 2>/dev/null; then
     sudo iptables -I INPUT 1 -p tcp --dport "$port" -j ACCEPT
