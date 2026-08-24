@@ -61,6 +61,38 @@ if _doctavox_dir.exists():
 register_metrics_endpoint(app)
 
 
+# ── Beta access gate ─────────────────────────────────────────────────────────
+# Single shared credential; compute endpoints require the bearer token.
+# Read-only fetches (status, outputs, recipes) stay open — they're UUID-keyed
+# and <audio>/<a> tags can't send Authorization headers anyway.
+import hashlib
+from fastapi import Header, Depends
+
+_BETA_USER = os.environ.get("APP_BETA_USER", "betaadmin")
+_BETA_PASSWORD = os.environ.get("APP_BETA_PASSWORD", "Password@123#")
+
+
+def _beta_token() -> str:
+    return hashlib.sha256(f"{_BETA_USER}:{_BETA_PASSWORD}:doctavox-beta-v1".encode()).hexdigest()
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/auth/login")
+async def auth_login(req: LoginRequest):
+    if req.username == _BETA_USER and req.password == _BETA_PASSWORD:
+        return {"token": _beta_token()}
+    raise HTTPException(status_code=401, detail="Invalid username or password")
+
+
+def require_auth(authorization: str | None = Header(None)):
+    if authorization != f"Bearer {_beta_token()}":
+        raise HTTPException(status_code=401, detail="Login required")
+
+
 def enqueue_job(reference: Path, dry: Path, options: dict | None = None) -> str:
     """
     Lazy import worker enqueue function to avoid loading heavy ML modules
@@ -156,7 +188,7 @@ async def list_presets():
     return {"presets": out}
 
 
-@app.post("/presets")
+@app.post("/presets", dependencies=[Depends(require_auth)])
 async def save_preset(req: PresetSaveRequest):
     """Save a finished job's recipe as a named, replayable style preset."""
     src = settings.outputs_dir / f"{req.job_id}.json"
@@ -182,7 +214,7 @@ def _save_upload(tmp_dir: Path, uploaded: UploadFile) -> Path:
     return dst
 
 
-@app.post("/jobs")
+@app.post("/jobs", dependencies=[Depends(require_auth)])
 async def create_job(
     reference: UploadFile | None = File(None),
     reference_url: str | None = Form(None),
@@ -302,8 +334,9 @@ async def create_job(
     return {"job_id": job_id, "status": "queued"}
 
 
-@app.post("/analyze-layers")
+@app.post("/analyze-layers", dependencies=[Depends(require_auth)])
 def analyze_layers(  # sync on purpose: blocking DSP must not stall the event loop
+    # (auth enforced via decorator dependencies below)
     reference: UploadFile | None = File(None),
     reference_url: str | None = Form(None),
     dry: UploadFile = File(...),
@@ -625,7 +658,7 @@ class AiAudioResponse(BaseModel):
     source: str  # "gpt" | "fallback"
 
 
-@app.post("/api/ai-audio", response_model=AiAudioResponse)
+@app.post("/api/ai-audio", response_model=AiAudioResponse, dependencies=[Depends(require_auth)])
 async def ai_audio(req: AiAudioRequest):
     """
     Convert a natural language prompt (or audio features) into a DSP config.
