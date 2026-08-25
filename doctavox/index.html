@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Doctavox — Vocal Style Transfer Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0c0f'/%3E%3Crect x='13' y='12' width='5' height='40' rx='2.5' fill='%23394352'/%3E%3Crect x='29.5' y='12' width='5' height='40' rx='2.5' fill='%23394352'/%3E%3Crect x='46' y='12' width='5' height='40' rx='2.5' fill='%23394352'/%3E%3Crect x='9' y='34' width='13' height='9' rx='3' fill='%232ee6a8'/%3E%3Crect x='25.5' y='17' width='13' height='9' rx='3' fill='%232ee6a8'/%3E%3Crect x='42' y='27' width='13' height='9' rx='3' fill='%23ffb454'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --panel: #12151a;
+    --panel-2: #171b21;
+    --panel-3: #1d222a;
+    --rail: #0e1114;
+    --line: #262c35;
+    --line-soft: #1e242d;
+    --text: #e8ecf1;
+    --dim: #8b95a3;
+    --faint: #5a6472;
+    --mint: #2ee6a8;
+    --mint-deep: #14b8a6;
+    --amber: #ffb454;
+    --red: #ff5d5d;
+    --led-off: #2a313b;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --glow-mint: 0 0 10px rgba(46, 230, 168, 0.55);
+    --glow-amber: 0 0 10px rgba(255, 180, 84, 0.55);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, rgba(46, 230, 168, 0.05), transparent 60%),
+      radial-gradient(900px 600px at 110% 110%, rgba(255, 180, 84, 0.04), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 26px 16px 60px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  /* ── Console header ─────────────────────────────────────────── */
+  .console-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: linear-gradient(180deg, #1a1f26, #12151a);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px rgba(0,0,0,0.45);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 44px; height: 44px; border-radius: 10px; flex: none;
+    background: linear-gradient(145deg, #10352b, #0b1f1a);
+    border: 1px solid rgba(46, 230, 168, 0.35);
+    display: grid; place-items: center;
+    font-size: 22px;
+    box-shadow: inset 0 0 14px rgba(46, 230, 168, 0.25);
+  }
+  .brand h1 {
+    font-size: 21px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .brand h1 b { color: var(--mint); }
+  .brand .tag { font-size: 11px; color: var(--dim); letter-spacing: 0.08em; margin-top: 2px; }
+  .console-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .led-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--dim);
+    background: var(--rail); border: 1px solid var(--line-soft);
+    border-radius: 8px; padding: 7px 11px; letter-spacing: 0.05em;
+  }
+  .led { width: 9px; height: 9px; border-radius: 50%; background: var(--led-off); flex: none; }
+  .led.ok  { background: var(--mint);  box-shadow: var(--glow-mint); }
+  .led.bad { background: var(--red);   box-shadow: 0 0 10px rgba(255,93,93,0.6); }
+  .gear {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+    background: var(--rail); color: var(--dim);
+    border: 1px solid var(--line-soft); border-radius: 8px;
+    padding: 7px 11px; cursor: pointer; transition: 0.15s;
+  }
+  .gear:hover { color: var(--text); border-color: var(--line); }
+
+  /* ── Signal flow strip ──────────────────────────────────────── */
+  .flow {
+    display: flex; align-items: center; gap: 0;
+    margin: 0 4px 18px; overflow-x: auto; scrollbar-width: none;
+  }
+  .flow::-webkit-scrollbar { display: none; }
+  .flow-node {
+    display: flex; align-items: center; gap: 8px; flex: none;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    color: var(--faint); text-transform: uppercase;
+    padding: 6px 12px; border-radius: 7px;
+    border: 1px solid transparent;
+    transition: 0.25s;
+  }
+  .flow-node .fdot { width: 7px; height: 7px; border-radius: 50%; background: var(--led-off); }
+  .flow-node.active { color: var(--mint); border-color: rgba(46,230,168,0.3); background: rgba(46,230,168,0.05); }
+  .flow-node.active .fdot { background: var(--mint); box-shadow: var(--glow-mint); }
+  .flow-node.done { color: var(--dim); }
+  .flow-node.done .fdot { background: var(--mint-deep); }
+  .flow-wire { flex: 1; min-width: 18px; height: 1px; background: linear-gradient(90deg, var(--line), var(--line-soft)); }
+
+  /* ── Rack units ─────────────────────────────────────────────── */
+  .rack {
+    position: relative;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .rack::before, .rack::after {
+    content: ""; position: absolute; top: 14px; bottom: 14px; width: 6px;
+    background: repeating-linear-gradient(180deg, transparent 0 10px, rgba(255,255,255,0.04) 10px 12px);
+    border-radius: 3px;
+  }
+  .rack::before { left: 8px; border-left: 1px solid rgba(255,255,255,0.05); }
+  .rack::after  { right: 8px; border-right: 1px solid rgba(255,255,255,0.05); }
+  .rack-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 16px;
+  }
+  .rack-title .ic { font-size: 15px; }
+  .rack-title .sub { font-weight: 500; letter-spacing: 0.03em; text-transform: none; color: var(--faint); font-size: 11px; }
+  .rack-title::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent);
+  }
+
+  .hint { color: var(--faint); font-size: 12px; }
+
+  /* ── Input decks ────────────────────────────────────────────── */
+  .deck-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .deck-grid { grid-template-columns: 1fr; } }
+  .deck {
+    position: relative;
+    background: var(--rail);
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 18px 16px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    overflow: hidden;
+  }
+  .deck:hover { border-color: var(--dim); }
+  .deck.drag { border-color: var(--mint); background: rgba(46,230,168,0.05); }
+  .deck.filled { border-style: solid; }
+  .deck.deck-ref.filled { border-color: rgba(255,180,84,0.5); }
+  .deck.deck-dry.filled { border-color: rgba(46,230,168,0.5); }
+  .deck input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .deck .dlabel {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--dim); display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .deck .dchan {
+    display: inline-grid; place-items: center;
+    width: 20px; height: 20px; border-radius: 5px;
+    font-size: 10px; font-weight: 700;
+  }
+  .deck-ref .dchan { background: rgba(255,180,84,0.15); color: var(--amber); border: 1px solid rgba(255,180,84,0.4); }
+  .deck-dry .dchan { background: rgba(46,230,168,0.12); color: var(--mint); border: 1px solid rgba(46,230,168,0.4); }
+  .deck .dsub { font-size: 11.5px; color: var(--faint); margin-top: 6px; line-height: 1.5; }
+  .deck .dfile {
+    display: none; font-family: var(--mono); font-size: 11px; color: var(--text);
+    margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .deck canvas.wave { width: 100%; height: 46px; margin-top: 8px; display: block; }
+  .deck .dclear {
+    display: none; position: absolute; top: 8px; right: 8px; z-index: 3;
+    width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--dim); font-size: 11px; cursor: pointer;
+  }
+  .deck .dclear:hover { color: var(--red); border-color: var(--red); }
+
+  .io-row {
+    display: flex; align-items: center; gap: 10px; margin-top: 12px;
+    font-size: 12.5px; color: var(--dim); flex-wrap: wrap;
+  }
+  .io-row input[type=url] {
+    flex: 1; min-width: 220px;
+    background: var(--rail); border: 1px solid var(--line-soft); border-radius: 8px;
+    color: var(--text); padding: 9px 12px; font-size: 12.5px; font-family: var(--mono);
+  }
+  .io-row input[type=url]:focus { outline: none; border-color: var(--mint-deep); }
+  .io-row input[type=number] {
+    width: 84px; background: var(--rail); border: 1px solid var(--line-soft); border-radius: 8px;
+    color: var(--text); padding: 8px 10px; font-size: 12.5px; font-family: var(--mono);
+  }
+  .io-row input[type=number]:focus { outline: none; border-color: var(--mint-deep); }
+  .io-row label.chk { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+  .io-row input[type=checkbox] { accent-color: var(--mint-deep); width: 15px; height: 15px; }
+
+  /* ── Layer mixer ────────────────────────────────────────────── */
+  .mixer { display: none; margin-top: 16px; }
+  .mixer-strips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .strip {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    background: linear-gradient(180deg, var(--panel-3), var(--rail));
+    border: 1px solid var(--line-soft); border-radius: 9px;
+    padding: 12px 10px 10px; min-width: 108px;
+    transition: 0.2s; cursor: pointer; user-select: none;
+  }
+  .strip.on { border-color: rgba(46,230,168,0.45); box-shadow: inset 0 0 16px rgba(46,230,168,0.06); }
+  .strip input { display: none; }
+  .strip .sled { width: 8px; height: 8px; border-radius: 50%; background: var(--led-off); }
+  .strip.on .sled { background: var(--mint); box-shadow: var(--glow-mint); }
+  .strip .sname {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
+    color: var(--text); text-align: center; max-width: 120px;
+  }
+  .strip .stype {
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--faint); background: var(--rail);
+    border: 1px solid var(--line-soft); border-radius: 4px; padding: 2px 7px;
+  }
+  .strip.on .stype { color: var(--mint-deep); border-color: rgba(46,230,168,0.3); }
+  .strip .splay {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--panel); border: 1px solid var(--line);
+    color: var(--dim); font-size: 11px; cursor: pointer; transition: 0.15s;
+  }
+  .strip .splay:hover { color: var(--mint); border-color: var(--mint-deep); }
+  .strip .splay.playing { color: var(--mint); border-color: var(--mint); box-shadow: var(--glow-mint); }
+
+  /* ── Buttons ────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    background: linear-gradient(180deg, #17d99a, #0fa87a);
+    color: #04211a; font-weight: 700; font-size: 14px;
+    border: none; border-radius: 9px; padding: 12px 22px; cursor: pointer;
+    letter-spacing: 0.02em; transition: 0.18s;
+    box-shadow: 0 4px 16px rgba(20, 184, 130, 0.25), inset 0 1px 0 rgba(255,255,255,0.25);
+    text-decoration: none;
+  }
+  .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn:disabled { filter: grayscale(0.8) brightness(0.55); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn.ghost {
+    background: var(--rail); color: var(--dim);
+    border: 1px solid var(--line); box-shadow: none; font-weight: 600;
+  }
+  .btn.ghost:hover { color: var(--text); border-color: var(--dim); }
+  .actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
+  .status-line { font-family: var(--mono); font-size: 11.5px; color: var(--faint); letter-spacing: 0.03em; }
+
+  /* ── FX rack toggles ────────────────────────────────────────── */
+  .fx-rack { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 9px; }
+  .fx {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: linear-gradient(180deg, var(--panel-3), var(--rail));
+    border: 1px solid var(--line-soft); border-radius: 8px;
+    padding: 9px 11px; cursor: pointer; user-select: none; transition: 0.15s;
+  }
+  .fx:hover { border-color: var(--line); }
+  .fx input { display: none; }
+  .fx .fxname { font-size: 12px; color: var(--dim); font-weight: 500; }
+  .fx.on .fxname { color: var(--text); }
+  .fx .sw {
+    position: relative; width: 30px; height: 16px; border-radius: 9px; flex: none;
+    background: var(--led-off); border: 1px solid var(--line); transition: 0.18s;
+  }
+  .fx .sw::after {
+    content: ""; position: absolute; top: 1.5px; left: 2px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #454f5c; transition: 0.18s;
+  }
+  .fx.on .sw { background: rgba(46,230,168,0.25); border-color: rgba(46,230,168,0.5); }
+  .fx.on .sw::after { left: 15px; background: var(--mint); box-shadow: var(--glow-mint); }
+
+  /* ── AI console ─────────────────────────────────────────────── */
+  .ai-row { display: flex; gap: 10px; align-items: stretch; }
+  @media (max-width: 640px) { .ai-row { flex-direction: column; } }
+  .ai-row textarea {
+    flex: 1; min-height: 64px; resize: vertical;
+    background: #0c1310; border: 1px solid rgba(46,230,168,0.25); border-radius: 9px;
+    color: #b8f5dd; padding: 12px 14px;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+    box-shadow: inset 0 0 22px rgba(46,230,168,0.05);
+  }
+  .ai-row textarea:focus { outline: none; border-color: var(--mint-deep); }
+  .ai-row textarea::placeholder { color: #4a6b5d; }
+  .ai-out { display: none; margin-top: 12px; }
+  .ai-out .src { font-family: var(--mono); font-size: 10.5px; color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; }
+  .ai-out pre {
+    background: #0c1310; border: 1px solid var(--line-soft); border-radius: 9px;
+    color: #9adcbf; font-family: var(--mono); font-size: 11px; line-height: 1.55;
+    padding: 12px 14px; margin-top: 6px; overflow-x: auto; max-height: 220px;
+  }
+
+  /* ── Master / transport ─────────────────────────────────────── */
+  .master { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .btn-master {
+    display: inline-flex; align-items: center; gap: 11px;
+    background: linear-gradient(180deg, #21e0a4, #0d9d72);
+    color: #04211a; font-weight: 800; font-size: 15px; letter-spacing: 0.05em;
+    border: none; border-radius: 12px; padding: 16px 30px; cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 6px 24px rgba(20, 184, 130, 0.35), inset 0 1.5px 0 rgba(255,255,255,0.35);
+    transition: 0.18s;
+  }
+  .btn-master:hover { filter: brightness(1.07); transform: translateY(-1px); }
+  .btn-master:disabled { filter: grayscale(0.85) brightness(0.5); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-master .rec { width: 11px; height: 11px; border-radius: 50%; background: #04211a; opacity: 0.75; }
+
+  .progress-box { display: none; margin-top: 20px; }
+  .meter {
+    position: relative; height: 26px; border-radius: 7px; overflow: hidden;
+    background: var(--rail); border: 1px solid var(--line-soft);
+  }
+  .meter .fill {
+    position: absolute; inset: 0 auto 0 0; width: 0%;
+    background: repeating-linear-gradient(90deg,
+      rgba(46,230,168,0.9) 0 6px, rgba(46,230,168,0.55) 6px 8px);
+    box-shadow: 0 0 18px rgba(46,230,168,0.35);
+    transition: width 0.6s ease;
+  }
+  .meter .pct {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--text);
+    letter-spacing: 0.1em; mix-blend-mode: difference;
+  }
+  .stage-line {
+    display: flex; justify-content: space-between; gap: 10px; margin-top: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: 0.04em;
+  }
+  .term {
+    background: #07090b; border: 1px solid var(--line-soft); border-radius: 9px;
+    font-family: var(--mono); font-size: 11px; line-height: 1.65; color: #6ee7b7;
+    padding: 12px 14px; margin-top: 12px; max-height: 190px; overflow-y: auto;
+    white-space: pre-wrap;
+  }
+
+  /* ── Result / monitor section ───────────────────────────────── */
+  .result { display: none; text-align: center; }
+  .result h2 { font-size: 20px; margin: 6px 0 4px; letter-spacing: 0.02em; }
+  .ab { display: inline-flex; margin: 16px 0 4px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .ab-btn {
+    background: var(--rail); color: var(--dim); border: none;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em;
+    padding: 10px 22px; cursor: pointer; transition: 0.15s;
+  }
+  .ab-btn + .ab-btn { border-left: 1px solid var(--line); }
+  .ab-btn.on { background: rgba(46,230,168,0.12); color: var(--mint); }
+  .wave-stack { text-align: left; margin: 14px 0 6px; }
+  .wave-stack .wl {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--faint); margin: 10px 0 4px;
+  }
+  .wave-stack canvas { width: 100%; display: block; background: var(--rail); border-radius: 7px; border: 1px solid var(--line-soft); }
+  audio { width: 100%; margin-top: 14px; filter: invert(0.92) hue-rotate(160deg); border-radius: 8px; }
+  #spectrum { width: 100%; margin-top: 10px; display: block; }
+
+  .recipe { display: none; text-align: left; margin-top: 20px; }
+  .recipe h3 {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 12px;
+  }
+  .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px; }
+  .rcard {
+    background: linear-gradient(180deg, var(--panel-3), var(--rail));
+    border: 1px solid var(--line-soft); border-radius: 9px; padding: 12px 13px;
+  }
+  .rcard .rk { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+  .rcard .rv { font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--mint); margin: 4px 0 2px; }
+  .rcard .rs { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+  #eq-curve { width: 100%; margin-top: 12px; display: block; }
+
+  .foot { text-align: center; color: var(--faint); font-size: 11.5px; line-height: 1.8; margin-top: 30px; }
+  .foot a { color: var(--dim); }
+
+  /* ── Busy overlay ───────────────────────────────────────────── */
+  .busy {
+    position: fixed; inset: 0; z-index: 90; display: none;
+    background: rgba(6, 8, 10, 0.82); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .busy.show { display: flex; }
+  .busy-panel {
+    width: min(460px, 92vw); text-align: center;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: 14px; padding: 28px 26px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .busy-title {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 6px;
+  }
+  .busy-stage { font-family: var(--mono); font-size: 12.5px; color: var(--text); min-height: 18px; }
+  .busy-ring { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 16px 0 14px; }
+  .busy-ring i {
+    width: 4px; border-radius: 2px; background: var(--mint-deep);
+    animation: bounce 1.1s ease-in-out infinite;
+  }
+  .busy-ring i:nth-child(1) { height: 12px; animation-delay: 0s; }
+  .busy-ring i:nth-child(2) { height: 20px; animation-delay: 0.1s; }
+  .busy-ring i:nth-child(3) { height: 28px; animation-delay: 0.2s; }
+  .busy-ring i:nth-child(4) { height: 20px; animation-delay: 0.3s; }
+  .busy-ring i:nth-child(5) { height: 12px; animation-delay: 0.4s; }
+  @keyframes bounce { 0%,100% { transform: scaleY(0.45); opacity: 0.5; } 50% { transform: scaleY(1); opacity: 1; } }
+  .busy-meter {
+    position: relative; height: 22px; border-radius: 6px; overflow: hidden;
+    background: var(--rail); border: 1px solid var(--line-soft); margin-top: 4px;
+  }
+  .busy-meter .fill {
+    position: absolute; inset: 0 auto 0 0; width: 0%;
+    background: repeating-linear-gradient(90deg, rgba(46,230,168,0.9) 0 6px, rgba(46,230,168,0.5) 6px 8px);
+    transition: width 0.5s ease;
+  }
+  .busy-meter .pct {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    color: var(--text); mix-blend-mode: difference; letter-spacing: 0.08em;
+  }
+  .busy-note { font-size: 11.5px; color: var(--faint); margin-top: 12px; line-height: 1.6; }
+  .busy-elapsed { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 8px; }
+
+  /* ── Reference section selector ─────────────────────────────── */
+  .refsel { display: none; }
+  .refsel.show { display: block; }
+  #refsel-wave {
+    width: 100%; height: 76px; display: block;
+    background: var(--rail); border: 1px solid var(--line-soft); border-radius: 8px;
+    cursor: crosshair; touch-action: none;
+  }
+  .refsel-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--amber);
+  }
+
+  /* ── Layer audition transport ───────────────────────────────── */
+  .transport {
+    display: none; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--rail); border: 1px solid var(--line-soft);
+    border-radius: 9px; padding: 11px 14px; margin-top: 12px;
+  }
+  .transport.show { display: flex; }
+  .transport .tname {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    color: var(--mint); min-width: 92px;
+  }
+  .transport .tbtn {
+    width: 30px; height: 30px; border-radius: 50%; flex: none;
+    background: var(--panel); border: 1px solid var(--line);
+    color: var(--mint); font-size: 11px; cursor: pointer;
+  }
+  .transport input[type=range] {
+    flex: 1; min-width: 140px; accent-color: var(--mint-deep); cursor: pointer;
+  }
+  .transport .ttime { font-family: var(--mono); font-size: 11px; color: var(--dim); min-width: 78px; text-align: right; }
+
+  /* ── login gate ─────────────────────────────── */
+  #login {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    background: radial-gradient(900px 500px at 50% 20%, rgba(46,230,168,.06), transparent 60%), #06080b;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #login.show { display: flex; }
+  .login-card {
+    width: min(420px, 94vw);
+    background: linear-gradient(180deg, #171b21, #12151a);
+    border: 1px solid var(--line); border-radius: 16px; padding: 38px 34px;
+    box-shadow: 0 30px 90px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
+    text-align: center;
+  }
+  .login-card h1 { font-size: 26px; font-weight: 800; letter-spacing: .16em; margin: 6px 0 2px; }
+  .login-card h1 b { color: var(--mint); }
+  .login-card .lsub { font-family: var(--mono); font-size: 10.5px; letter-spacing: .3em; color: var(--faint); text-transform: uppercase; }
+  .login-card input {
+    width: 100%; margin-top: 14px; background: var(--rail);
+    border: 1px solid var(--line-soft); border-radius: 9px; color: var(--text);
+    padding: 13px 15px; font-size: 14px; font-family: var(--mono);
+  }
+  .login-card input:focus { outline: none; border-color: var(--mint-deep); }
+  .login-card .btn { width: 100%; margin-top: 18px; }
+  #login-err { font-size: 12.5px; color: var(--red); margin-top: 12px; min-height: 16px; }
+  .login-note {
+    margin-top: 22px; padding: 13px 16px; border-radius: 10px; font-size: 12.5px;
+    color: #c8d0da; line-height: 1.6; text-align: left;
+    background: rgba(46,230,168,.06); border: 1px solid rgba(46,230,168,.22);
+  }
+  .login-note a { color: var(--mint); font-weight: 600; }
+  #logout-btn { display: none; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(80px);
+    background: var(--panel-3); color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 13px; padding: 11px 18px; opacity: 0;
+    transition: 0.3s; z-index: 50; max-width: 90vw;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="console-top">
+    <div class="brand">
+      <div class="brand-mark">🎚️</div>
+      <div>
+        <h1>DOCTA<b>VOX</b></h1>
+        <div class="tag">REFERENCE-BASED VOCAL STYLE TRANSFER</div>
+      </div>
+    </div>
+    <div class="console-right">
+      <span class="led-badge"><span class="led" id="health-dot"></span><span id="health-text">API</span></span>
+      <button class="gear" onclick="configureApi()">⚙ API</button>
+      <button class="gear" id="logout-btn">⏻ Logout</button>
+    </div>
+  </header>
+
+  <div class="flow">
+    <div class="flow-node active" id="s1"><span class="fdot"></span>Source</div>
+    <div class="flow-wire"></div>
+    <div class="flow-node" id="s2"><span class="fdot"></span>Analyze</div>
+    <div class="flow-wire"></div>
+    <div class="flow-node" id="s3"><span class="fdot"></span>Process</div>
+    <div class="flow-wire"></div>
+    <div class="flow-node" id="s4"><span class="fdot"></span>Output</div>
+  </div>
+
+  <!-- INPUT DECKS -->
+  <section class="rack">
+    <div class="rack-title"><span class="ic">📼</span> Input · A/B decks</div>
+    <div class="deck-grid">
+      <div class="deck deck-ref" id="ref-zone">
+        <input type="file" id="reference" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.aif,.aiff" />
+        <button class="dclear" id="ref-clear" title="Remove">✕</button>
+        <div class="dlabel"><span class="dchan">A</span> Reference track</div>
+        <div class="dsub">The vocal sound you want to match<br/>MP3 · WAV · FLAC · M4A — max 4 min</div>
+        <div class="dfile" id="ref-file"></div>
+        <canvas class="wave" id="ref-wave"></canvas>
+      </div>
+      <div class="deck deck-dry" id="dry-zone">
+        <input type="file" id="dry" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.aif,.aiff" />
+        <button class="dclear" id="dry-clear" title="Remove">✕</button>
+        <div class="dlabel"><span class="dchan">B</span> Your dry vocal</div>
+        <div class="dsub">Raw take, no effects<br/>MP3 · WAV · FLAC · M4A — max 4 min</div>
+        <div class="dfile" id="dry-file"></div>
+        <canvas class="wave" id="dry-wave"></canvas>
+      </div>
+    </div>
+    <!-- Reference URL (disabled)
+    <div class="io-row">
+      <span>🔗 or reference URL:</span>
+      <input type="url" id="reference_url" placeholder="https://…  (used when no reference file is loaded)" />
+    </div>
+    -->
+    <input type="hidden" id="reference_url" value="" />
+    <!-- Style preset picker (disabled)
+    <div class="io-row" id="preset-row" style="display:none">
+      <span>🎛️ or a saved style preset:</span>
+      <select id="preset-select" style="background:var(--rail);border:1px solid var(--line-soft);border-radius:8px;color:var(--text);padding:9px 12px;font-size:12.5px;font-family:var(--mono);min-width:220px">
+        <option value="">— none (use reference above) —</option>
+      </select>
+      <span class="hint">replays a saved sound instantly — no reference, no separation</span>
+    </div>
+    -->
+    <select id="preset-select" hidden aria-hidden="true"><option value=""></option></select>
+    <!-- Reference is isolated vocal (disabled)
+    <div class="io-row">
+      <label class="chk">
+        <input type="checkbox" id="ref-is-vocal" />
+        🎤 Reference is already an isolated vocal <span class="hint">(skips separation — much faster)</span>
+      </label>
+    </div>
+    -->
+    <input type="checkbox" id="ref-is-vocal" hidden disabled />
+    <div class="refsel" id="refsel">
+      <div class="rack-title" style="margin:16px 0 8px"><span class="ic">✂</span> Reference section
+        <span class="sub">drag up to 30 s on the waveform — pick the chorus. Only this part is analysed.</span></div>
+      <canvas id="refsel-wave"></canvas>
+      <div class="io-row" style="margin-top:8px">
+        <span class="refsel-label" id="refsel-label">AUTO — the loudest 30 s will be used</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost" id="refsel-play" style="padding:8px 16px;font-size:12px">▶ Play selection</button>
+        <input type="number" id="seg-start" min="0" step="0.5" placeholder="start s" />
+        <span>→</span>
+        <input type="number" id="seg-end" min="0" step="0.5" placeholder="end s" />
+        <button class="btn ghost" id="refsel-auto" style="padding:8px 14px;font-size:12px">↺ Auto</button>
+      </div>
+    </div>
+
+    <!-- LAYER MIXER -->
+    <div class="mixer" id="layers-box">
+      <div class="rack-title" style="margin-bottom:4px"><span class="ic">🎛️</span> Layer mixer
+        <span class="sub">step 2 of 3 — choose your layers</span></div>
+      <div style="display:flex;align-items:center;gap:10px;margin:6px 0 12px;padding:12px 16px;border-radius:9px;background:rgba(46,230,168,.07);border:1px solid rgba(46,230,168,.25)">
+        <span style="font-size:18px">👉</span>
+        <span style="font-size:13.5px;color:#c8d0da;line-height:1.5"><b style="color:#2ee6a8">Pick which layers to apply:</b>
+        tap a card to switch it on or off — <b>lit cards will be recreated on your vocal</b>. Tap ▶ to hear any layer alone. Then hit Transform.</span>
+      </div>
+      <div class="mixer-strips" id="layers-list"></div>
+      <div class="transport" id="layer-transport">
+        <span class="tname" id="lt-name">—</span>
+        <button class="tbtn" id="lt-play">⏸</button>
+        <input type="range" id="lt-seek" min="0" max="1000" value="0" />
+        <span class="ttime" id="lt-time">0:00 / 0:00</span>
+      </div>
+      <p class="hint" style="margin-top:8px">Scrub anywhere — switching layers keeps your position, so you can A/B the same moment.</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost" id="analyze-btn">🔬 Analyze layers</button>
+      <span class="status-line" id="analyze-status"></span>
+    </div>
+  </section>
+
+  <!-- AI console (disabled)
+  <section class="rack">
+    <div class="rack-title"><span class="ic">🤖</span> AI console <span class="sub">optional — describe the sound in plain English</span></div>
+    <div class="ai-row">
+      <textarea id="ai-prompt" placeholder='> e.g. "airy pop vocal, tight low end, a touch of tape warmth, wide chorus"'></textarea>
+      <button class="btn ghost" id="ai-btn" style="align-self:stretch">✨ Generate</button>
+    </div>
+    <div class="ai-out" id="ai-out">
+      <span class="src" id="ai-src"></span>
+      <pre id="ai-json"></pre>
+    </div>
+
+    <p class="hint" style="margin-top:20px">Every effect — EQ, compression, space, echo, layers, width — is measured from the reference and replicated automatically. Nothing to configure.</p>
+  </section>
+  -->
+
+  <!-- MASTER -->
+  <section class="rack">
+    <div class="master">
+      <button class="btn-master" id="submit"><span class="rec"></span> Transform vocal</button>
+      <span class="status-line" id="status">Waiting for both files.</span>
+    </div>
+    <div class="progress-box" id="progress-box">
+      <div class="meter"><div class="fill" id="bar-fill"></div><div class="pct" id="bar-pct">0%</div></div>
+      <div class="stage-line"><span id="progress-status">queued…</span><span id="progress-job"></span></div>
+      <div class="term" id="term"></div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="rack result" id="result-box">
+    <div style="font-size:34px">✨</div>
+    <h2>Your vocal, transformed.</h2>
+    <p class="hint">Dressed in the reference's tone, dynamics and space. Flip A/B to hear the difference.</p>
+
+    <div class="ab">
+      <button class="ab-btn" id="ab-dry">A · DRY</button>
+      <button class="ab-btn on" id="ab-out">B · DOCTAVOX</button>
+      <button class="ab-btn" id="ab-ref" style="display:none">C · REFERENCE</button>
+    </div>
+    <div class="wave-stack">
+      <div class="wl">A · dry input</div>
+      <canvas id="wave-dry" height="64"></canvas>
+      <div class="wl">B · processed output</div>
+      <canvas id="wave-out" height="64"></canvas>
+    </div>
+    <!-- crossorigin: without it, Web Audio (the spectrum analyser) treats the
+         cross-origin output file as tainted and plays SILENCE -->
+    <audio controls id="player" crossorigin="anonymous"></audio>
+    <canvas id="spectrum" height="54"></canvas>
+
+    <div class="recipe" id="scorecard" style="display:none;margin-top:16px">
+      <h3>🎯 Match scorecard — output vs reference</h3>
+      <div class="recipe-grid" id="scorecard-grid"></div>
+    </div>
+    <div class="recipe" id="recipe">
+      <h3>📜 Engine report — what was replicated</h3>
+      <div class="recipe-grid" id="recipe-grid"></div>
+      <canvas id="eq-curve" height="120"></canvas>
+    </div>
+
+    <div class="actions" style="justify-content:center">
+      <a class="btn" id="dl-out" download>⬇ Download WAV</a>
+      <button class="btn ghost" id="save-preset">★ Save style as preset</button>
+      <a class="btn ghost" id="dl-recipe" download style="display:none">📜 Recipe JSON</a>
+      <button class="btn ghost" onclick="resetAll()">↺ Process another</button>
+    </div>
+  </section>
+
+  <div class="foot">~ Anubhav Malhotra</div>
+</div>
+
+<div class="busy" id="busy">
+  <div class="busy-panel">
+    <div class="busy-title" id="busy-title">Working</div>
+    <div class="busy-stage" id="busy-stage">starting…</div>
+    <div class="busy-ring"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="busy-meter"><div class="fill" id="busy-fill"></div><div class="pct" id="busy-pct">0%</div></div>
+    <div class="busy-elapsed" id="busy-elapsed">0:00 elapsed</div>
+    <div class="busy-note" id="busy-note">Vocal separation runs on CPU — please keep this tab open.</div>
+  </div>
+</div>
+
+<div id="login">
+  <div class="login-card">
+    <div style="font-size:34px">🎚️</div>
+    <h1>DOCTA<b>VOX</b></h1>
+    <div class="lsub">Private Beta · Login Required</div>
+    <input type="text" id="login-user" placeholder="username" autocomplete="username">
+    <input type="password" id="login-pass" placeholder="password" autocomplete="current-password">
+    <button class="btn" id="login-btn">Sign in</button>
+    <div id="login-err"></div>
+    <div class="login-note">🔒 Doctavox is in <b>private beta</b>. Want access?
+      Mail <a href="mailto:malhotraanubhav0395@gmail.com?subject=Doctavox%20beta%20access">malhotraanubhav0395@gmail.com</a>
+      and you&#39;ll get credentials.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════ API base ════ */
+const qsApi = new URLSearchParams(location.search).get("api");
+if (qsApi) sset("dv_api", qsApi);
+// When hosted away from the API (Vercel), point this at your backend once
+// it's live (⚙ API button or ?api=https://… also work and persist).
+const DEFAULT_REMOTE_API = "https://13-200-207-237.sslip.io";
+let API = (sget("dv_api") || sget("vf_api") || "").replace(/\/+$/, "");
+if (!API && /vercel\.app$/.test(location.host)) API = DEFAULT_REMOTE_API;
+function apiUrl(p) { return (API || "") + p; }
+function configureApi() {
+  const v = prompt("API base URL (empty = same origin):", API);
+  if (v === null) return;
+  API = v.trim().replace(/\/+$/, "");
+  sset("dv_api", API);
+  checkHealth();
+}
+
+/* storage wrappers: private-browsing iOS throws on direct access */
+function sget(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function sset(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function sdel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+/* ════ Beta auth ════ */
+let authToken = sget("dv_token") || "";
+function authHeaders(extra) {
+  return Object.assign({}, extra || {}, authToken ? { "Authorization": "Bearer " + authToken } : {});
+}
+function showLogin() {
+  document.getElementById("login").classList.add("show");
+  document.getElementById("logout-btn").style.display = "none";
+}
+function hideLogin() {
+  document.getElementById("login").classList.remove("show");
+  document.getElementById("logout-btn").style.display = "";
+}
+function handleAuthFail() {
+  authToken = ""; sdel("dv_token"); showLogin();
+  toast("Session expired - sign in again");
+}
+document.addEventListener("DOMContentLoaded", () => {
+  (authToken ? hideLogin : showLogin)();
+  const doLogin = async () => {
+    const u = document.getElementById("login-user").value.trim();
+    const pw = document.getElementById("login-pass").value;
+    const err = document.getElementById("login-err");
+    err.textContent = "";
+    try {
+      const r = await fetch(apiUrl("/auth/login"), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u, password: pw }),
+      });
+      if (!r.ok) { err.textContent = (await r.json()).detail || "Login failed"; return; }
+      authToken = (await r.json()).token;
+      sset("dv_token", authToken);
+      hideLogin(); toast("Welcome to Doctavox");
+    } catch (e) { err.textContent = "Cannot reach the server"; }
+  };
+  document.getElementById("login-btn").addEventListener("click", doLogin);
+  document.getElementById("login-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+  document.getElementById("logout-btn").addEventListener("click", () => {
+    authToken = ""; sdel("dv_token"); showLogin(); toast("Logged out");
+  });
+});
+
+/* ════ Toast ════ */
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+/* ════ Health ════ */
+async function checkHealth() {
+  const dot = document.getElementById("health-dot");
+  const txt = document.getElementById("health-text");
+  try {
+    const r = await fetch(apiUrl("/healthz"), { signal: AbortSignal.timeout(5000) });
+    dot.className = "led " + (r.ok ? "ok" : "bad");
+    txt.textContent = r.ok ? "API LIVE" : "API ERROR";
+  } catch {
+    dot.className = "led bad";
+    txt.textContent = "API OFFLINE";
+  }
+}
+checkHealth();
+setInterval(checkHealth, 30000);
+
+/* ════ Busy overlay — locks the UI while a long task runs ════ */
+const busy = {
+  el: document.getElementById("busy"),
+  t0: 0,
+  timer: null,
+  open(title, note) {
+    document.getElementById("busy-title").textContent = title;
+    document.getElementById("busy-note").textContent = note || "";
+    this.set(0, "starting…");
+    this.t0 = Date.now();
+    this.el.classList.add("show");
+    // Block interaction with everything behind the overlay, including keyboard.
+    document.querySelectorAll("button, input, textarea, select, a.btn").forEach((el) => {
+      if (this.el.contains(el)) return;
+      if (el.disabled) el.dataset.wasDisabled = "1";
+      el.disabled = true;
+    });
+    clearInterval(this.timer);
+    this.timer = setInterval(() => {
+      const s = Math.round((Date.now() - this.t0) / 1000);
+      document.getElementById("busy-elapsed").textContent =
+        `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} elapsed`;
+    }, 1000);
+  },
+  set(pct, stage) {
+    const p = Math.max(0, Math.min(100, Math.round(pct)));
+    document.getElementById("busy-fill").style.width = p + "%";
+    document.getElementById("busy-pct").textContent = p + "%";
+    if (stage) document.getElementById("busy-stage").textContent = stage;
+  },
+  close() {
+    clearInterval(this.timer);
+    this.el.classList.remove("show");
+    document.querySelectorAll("button, input, textarea, select, a.btn").forEach((el) => {
+      if (this.el.contains(el)) return;
+      if (el.dataset.wasDisabled) { delete el.dataset.wasDisabled; return; }
+      el.disabled = false;
+    });
+    refreshSubmit(); // restore the submit button's real enabled/disabled state
+  },
+};
+
+/* ════ Signal flow ════ */
+function activateStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById("s" + i);
+    el.classList.remove("active", "done");
+    if (i < n) el.classList.add("done");
+    if (i === n) el.classList.add("active");
+  }
+}
+
+/* ════ Waveform helpers ════ */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+async function peaksFrom(src) {
+  const buf = src instanceof Blob ? await src.arrayBuffer() : await (await fetch(src)).arrayBuffer();
+  const audio = await audioCtx.decodeAudioData(buf);
+  const data = audio.getChannelData(0);
+  const N = 240, block = Math.floor(data.length / N), peaks = [];
+  for (let i = 0; i < N; i++) {
+    let max = 0;
+    for (let j = i * block; j < (i + 1) * block; j += 24) {
+      const v = Math.abs(data[j]);
+      if (v > max) max = v;
+    }
+    peaks.push(max);
+  }
+  return peaks;
+}
+function drawWave(canvas, peaks, color) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.parentElement.clientWidth || 600;
+  const h = canvas.clientHeight || 60;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  const bw = w / peaks.length;
+  ctx.fillStyle = color;
+  peaks.forEach((p, i) => {
+    const bh = Math.max(2, p * (h - 6));
+    ctx.fillRect(i * bw + bw * 0.15, (h - bh) / 2, bw * 0.7, bh);
+  });
+}
+async function drawFileWave(file, canvasId, color) {
+  try { drawWave(document.getElementById(canvasId), await peaksFrom(file), color); } catch {}
+}
+
+/* ════ Reference section selector (max 30 s) ════
+   Mirrors APP_LAYER_ANALYSIS_WINDOW_S on the API — keep in sync. */
+const MAX_REF_SELECT_S = 30;
+const refSel = {
+  peaks: null, duration: 0, sel: null,   // sel = {start, end} seconds, null = auto
+  canvas: document.getElementById("refsel-wave"),
+  el: document.getElementById("refsel"),
+  label: document.getElementById("refsel-label"),
+  segS: document.getElementById("seg-start"),
+  segE: document.getElementById("seg-end"),
+
+  async load(file) {
+    try {
+      const buf = await file.arrayBuffer();
+      const audio = await audioCtx.decodeAudioData(buf);
+      this.duration = audio.duration;
+      const data = audio.getChannelData(0);
+      const N = 480, block = Math.floor(data.length / N);
+      this.peaks = [];
+      for (let i = 0; i < N; i++) {
+        let max = 0;
+        for (let j = i * block; j < (i + 1) * block; j += 32) {
+          const v = Math.abs(data[j]);
+          if (v > max) max = v;
+        }
+        this.peaks.push(max);
+      }
+      this.sel = null;
+      this.segS.value = ""; this.segE.value = "";
+      this.canvas.style.display = "block";
+      this.el.classList.add("show");
+      this.draw();
+    } catch { this.hide(); }
+  },
+  hide() {
+    this.el.classList.remove("show");
+    this.peaks = null; this.sel = null;
+    this.segS.value = ""; this.segE.value = "";
+  },
+  timeAt(clientX) {
+    const r = this.canvas.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * this.duration;
+  },
+  clamp(sel) {
+    let { start, end } = sel;
+    if (end < start) [start, end] = [end, start];
+    if (end - start > MAX_REF_SELECT_S) end = start + MAX_REF_SELECT_S;
+    if (end - start < 1) end = Math.min(start + 1, this.duration);
+    start = Math.max(0, Math.min(start, this.duration - 1));
+    end = Math.max(start + 0.5, Math.min(end, this.duration));
+    return { start, end };
+  },
+  commit() {
+    if (this.sel) {
+      this.segS.value = this.sel.start.toFixed(1);
+      this.segE.value = this.sel.end.toFixed(1);
+      this.label.textContent =
+        `SELECTED ${fmtClock(this.sel.start)} – ${fmtClock(this.sel.end)} (${(this.sel.end - this.sel.start).toFixed(1)} s)`;
+    } else {
+      this.segS.value = ""; this.segE.value = "";
+      this.label.textContent = "AUTO — the loudest 30 s will be used";
+    }
+    this.draw();
+    clearLayerAnalysis();
+    refreshSubmit();
+  },
+  draw() {
+    if (!this.peaks) return;
+    const c = this.canvas, dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth || 700, h = c.clientHeight || 76;
+    c.width = w * dpr; c.height = h * dpr;
+    const ctx = c.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+    const bw = w / this.peaks.length;
+    const selX0 = this.sel ? (this.sel.start / this.duration) * w : -1;
+    const selX1 = this.sel ? (this.sel.end / this.duration) * w : -1;
+    this.peaks.forEach((p, i) => {
+      const x = i * bw;
+      const inSel = this.sel && x + bw >= selX0 && x <= selX1;
+      ctx.fillStyle = this.sel
+        ? (inSel ? "#ffb454" : "rgba(255,180,84,0.18)")
+        : "rgba(255,180,84,0.6)";
+      const bh = Math.max(2, p * (h - 10));
+      ctx.fillRect(x + bw * 0.15, (h - bh) / 2, bw * 0.7, bh);
+    });
+    if (this.sel) {
+      ctx.fillStyle = "rgba(46,230,168,0.07)";
+      ctx.fillRect(selX0, 0, selX1 - selX0, h);
+      ctx.strokeStyle = "#2ee6a8"; ctx.lineWidth = 2;
+      ctx.strokeRect(selX0, 1, selX1 - selX0, h - 2);
+    }
+    // playhead while auditioning
+    if (this.playT != null && this.duration > 0) {
+      const px = (this.playT / this.duration) * w;
+      ctx.fillStyle = "#2ee6a8";
+      ctx.shadowColor = "rgba(46,230,168,.9)"; ctx.shadowBlur = 10;
+      ctx.fillRect(px - 1.5, 0, 3, h);
+      ctx.shadowBlur = 0;
+    }
+    // time ruler
+    ctx.fillStyle = "#5a6472"; ctx.font = "10px 'JetBrains Mono', monospace";
+    const step = this.duration > 150 ? 60 : this.duration > 60 ? 30 : 10;
+    for (let t = step; t < this.duration; t += step) {
+      ctx.fillText(fmtClock(t), (t / this.duration) * w + 2, h - 4);
+    }
+  },
+};
+const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+// Drag interactions: drag on empty waveform = new selection (max 30 s);
+// drag inside the existing selection = move it.
+(function wireRefSel() {
+  const c = refSel.canvas;
+  let mode = null, anchor = 0, grabOffset = 0;
+  c.addEventListener("pointerdown", (e) => {
+    if (!refSel.peaks) return;
+    c.setPointerCapture(e.pointerId);
+    const t = refSel.timeAt(e.clientX);
+    if (refSel.sel && t >= refSel.sel.start && t <= refSel.sel.end) {
+      mode = "move"; grabOffset = t - refSel.sel.start;
+    } else {
+      mode = "create"; anchor = t;
+      refSel.sel = refSel.clamp({ start: t, end: t + 1 });
+    }
+    refSel.draw();
+  });
+  c.addEventListener("pointermove", (e) => {
+    if (!mode || !refSel.peaks) return;
+    const t = refSel.timeAt(e.clientX);
+    if (mode === "create") {
+      refSel.sel = refSel.clamp({ start: anchor, end: t });
+    } else {
+      const len = refSel.sel.end - refSel.sel.start;
+      let start = Math.max(0, Math.min(t - grabOffset, refSel.duration - len));
+      refSel.sel = { start, end: start + len };
+    }
+    refSel.draw();
+  });
+  const up = () => { if (mode) { mode = null; refSel.commit(); } };
+  c.addEventListener("pointerup", up);
+  c.addEventListener("pointercancel", up);
+
+  // Numeric fields stay usable for fine-tuning (and for URL references,
+  // where there is no decoded waveform to drag on).
+  const fromFields = () => {
+    const s = parseFloat(refSel.segS.value), en = parseFloat(refSel.segE.value);
+    if (isFinite(s) && isFinite(en) && en > s) {
+      refSel.sel = refSel.duration ? refSel.clamp({ start: s, end: en }) : { start: s, end: Math.min(en, s + MAX_REF_SELECT_S) };
+      refSel.commit();
+    }
+  };
+  refSel.segS.addEventListener("change", fromFields);
+  refSel.segE.addEventListener("change", fromFields);
+  document.getElementById("refsel-auto").addEventListener("click", () => {
+    refSel.sel = null;
+    refSel.commit();
+  });
+  window.addEventListener("resize", () => refSel.draw());
+
+  // ── Audition the selection ──
+  const selAudio = new Audio();
+  const playBtn = document.getElementById("refsel-play");
+  let selRAF = null;
+  function stopSel() {
+    selAudio.pause();
+    playBtn.textContent = "▶ Play selection";
+    if (selRAF) cancelAnimationFrame(selRAF);
+    refSel.playT = null; refSel.draw();
+  }
+  playBtn.addEventListener("click", () => {
+    if (!selAudio.paused) { stopSel(); return; }
+    if (!files.reference) { toast("Load a reference file first"); return; }
+    if (!selAudio.src || selAudio.dataset.name !== files.reference.name) {
+      selAudio.src = URL.createObjectURL(files.reference);
+      selAudio.dataset.name = files.reference.name;
+    }
+    const start = refSel.sel ? refSel.sel.start : 0;
+    const end = refSel.sel ? refSel.sel.end : Math.min(refSel.duration || 30, start + 30);
+    const begin = () => {
+      selAudio.currentTime = start;
+      selAudio.play();
+      playBtn.textContent = "⏸ Stop";
+      (function tick() {
+        refSel.playT = selAudio.currentTime;
+        refSel.draw();
+        if (selAudio.currentTime >= end || selAudio.paused) { stopSel(); return; }
+        selRAF = requestAnimationFrame(tick);
+      })();
+    };
+    if (selAudio.readyState >= 1) begin();
+    else selAudio.addEventListener("loadedmetadata", begin, { once: true });
+  });
+  // stop audition if the selection changes under it
+  refSel.canvas.addEventListener("pointerdown", () => { if (!selAudio.paused) stopSel(); });
+
+  // URL references have no local file to decode — show the panel with the
+  // numeric fields only, so a segment can still be chosen by hand.
+  const refUrlEl = document.getElementById("reference_url");
+  if (refUrlEl && refUrlEl.type !== "hidden") refUrlEl.addEventListener("input", (e) => {
+    if (files.reference) return; // file wins; its waveform is already shown
+    const hasUrl = !!e.target.value.trim();
+    refSel.el.classList.toggle("show", hasUrl);
+    refSel.canvas.style.display = hasUrl ? "none" : "block";
+    if (!hasUrl) { refSel.segS.value = ""; refSel.segE.value = ""; }
+  });
+})();
+
+/* ════ Input decks ════ */
+// Must match APP_MAX_DURATION_SECONDS on the API (processor/config.py).
+// Checked here too so an over-long file is rejected before it uploads.
+const MAX_DURATION_S = 240;
+function durationOf(file) {
+  return new Promise((resolve) => {
+    const el = document.createElement("audio");
+    el.preload = "metadata";
+    const url = URL.createObjectURL(file);
+    const done = (v) => { URL.revokeObjectURL(url); resolve(v); };
+    el.onloadedmetadata = () => done(isFinite(el.duration) ? el.duration : null);
+    el.onerror = () => done(null); // unreadable here — let the API decide
+    el.src = url;
+  });
+}
+
+const files = { reference: null, dry: null };
+let layersAnalyzed = false;
+let lastAnalysis = null;
+
+function hasReferenceSection() {
+  const segS = parseFloat(document.getElementById("seg-start").value);
+  const segE = parseFloat(document.getElementById("seg-end").value);
+  return isFinite(segS) && isFinite(segE) && segE > segS;
+}
+
+function clearLayerAnalysis() {
+  layersAnalyzed = false;
+  lastAnalysis = null;
+  const list = document.getElementById("layers-list");
+  if (list) list.innerHTML = "";
+}
+
+function wireZone(kind, zoneId) {
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(kind);
+  const nameEl = document.getElementById(kind === "reference" ? "ref-file" : "dry-file");
+  const clearEl = document.getElementById(kind === "reference" ? "ref-clear" : "dry-clear");
+  const setFile = async (f) => {
+    if (f) {
+      const secs = await durationOf(f);
+      if (secs !== null && secs > MAX_DURATION_S) {
+        toast(`"${f.name}" is ${(secs / 60).toFixed(1)} min — the limit is 4 min per file.`);
+        input.value = "";
+        f = null;
+      }
+    }
+    files[kind] = f || null;
+    zone.classList.toggle("filled", !!f);
+    nameEl.style.display = f ? "block" : "none";
+    clearEl.style.display = f ? "block" : "none";
+    nameEl.textContent = f ? `♪ ${f.name}` : "";
+    if (f) drawFileWave(f, kind === "reference" ? "ref-wave" : "dry-wave", kind === "reference" ? "#ffb454" : "#2ee6a8");
+    if (kind === "reference") { f ? refSel.load(f) : refSel.hide(); }
+    if (kind === "reference" || kind === "dry") clearLayerAnalysis();
+    refreshSubmit();
+  };
+  input.addEventListener("change", () => setFile(input.files[0]));
+  // iOS/Android: visible content sits over the invisible input, so taps on
+  // it never open the picker. Forward any zone tap to the input.
+  zone.addEventListener("click", (e) => {
+    if (e.target === input || e.target === clearEl) return;
+    input.click();
+  });
+  zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("drag"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
+  zone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    zone.classList.remove("drag");
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+  clearEl.addEventListener("click", (e) => { e.stopPropagation(); input.value = ""; setFile(null); });
+}
+wireZone("reference", "ref-zone");
+wireZone("dry", "dry-zone");
+const refUrlInput = document.getElementById("reference_url");
+if (refUrlInput && refUrlInput.type !== "hidden") refUrlInput.addEventListener("input", refreshSubmit);
+
+/* ════ Style presets ════ */
+let lastJobId = null;
+function selectedPreset() {
+  return document.getElementById("preset-select").value || null;
+}
+async function loadPresets() {
+  try {
+    const r = await fetch(apiUrl("/presets"));
+    if (!r.ok) return;
+    const { presets } = await r.json();
+    if (!presets.length) return;
+    const sel = document.getElementById("preset-select");
+    if (!sel || sel.hidden) return;
+    sel.innerHTML = '<option value="">— none (use reference above) —</option>' +
+      presets.map((p) => `<option value="${p.id}">${p.name}</option>`).join("");
+    const row = document.getElementById("preset-row");
+    if (row) row.style.display = "flex";
+  } catch {}
+}
+loadPresets();
+document.getElementById("preset-select")?.addEventListener("change", refreshSubmit);
+document.getElementById("save-preset").addEventListener("click", async () => {
+  if (!lastJobId) { toast("No finished job to save"); return; }
+  const name = prompt("Name this style preset:", "");
+  if (!name) return;
+  try {
+    const r = await fetch(apiUrl("/presets"), {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ job_id: lastJobId, name }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    toast(`Preset "${name}" saved ★`);
+    loadPresets();
+  } catch (e) { toast("Save failed: " + e.message); }
+});
+
+function hasReference() {
+  return !!files.reference || !!document.getElementById("reference_url").value.trim() || !!selectedPreset();
+}
+function refreshSubmit() {
+  const uploadsReady = hasReference() && !!files.dry;
+  const sectionReady = hasReferenceSection();
+  const ok = uploadsReady && sectionReady && layersAnalyzed;
+  document.getElementById("submit").disabled = !ok;
+  document.getElementById("status").textContent = !uploadsReady
+    ? "Need a reference track + your dry vocal."
+    : !sectionReady
+      ? "Select a reference section on the waveform (or set start/end times)."
+      : !layersAnalyzed
+        ? "Analyze layers first, then transform."
+        : "Armed. Ready to transform.";
+  if (uploadsReady && sectionReady) activateStep(2);
+}
+refreshSubmit();
+
+/* ════ Effects: replicated automatically; only autotune is user-facing ════ */
+document.querySelectorAll(".fx input").forEach((cb) =>
+  cb.addEventListener("change", () => cb.closest(".fx").classList.toggle("on", cb.checked))
+);
+
+/* ════ Layer analysis ════ */
+document.getElementById("analyze-btn").addEventListener("click", async () => {
+  if (!hasReference() || !files.dry) { toast("Add reference + dry vocal first"); return; }
+  if (!hasReferenceSection()) { toast("Select a reference section on the waveform first"); return; }
+  const st = document.getElementById("analyze-status");
+  // Separation is CPU-heavy and runs for a while — lock the UI and poll the
+  // server for genuine progress (percentage comes from the separator itself).
+  busy.open("Analyzing reference", "Separating the vocal from the mix on CPU. First run also downloads the 67 MB model. Keep this tab open.");
+  const progressToken = crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2);
+  const poll = setInterval(async () => {
+    try {
+      const pr = await fetch(apiUrl("/analyze-progress/" + progressToken));
+      if (pr.ok) { const p = await pr.json(); busy.set(p.progress, p.stage); }
+    } catch {}
+  }, 1000);
+  const done = () => { clearInterval(poll); busy.close(); };
+  const fd = new FormData();
+  fd.append("progress_token", progressToken);
+  if (files.reference) fd.append("reference", files.reference);
+  else fd.append("reference_url", document.getElementById("reference_url").value.trim());
+  fd.append("dry", files.dry);
+  fd.append("reference_is_vocal", document.getElementById("ref-is-vocal").checked ? "true" : "false");
+  const segS = document.getElementById("seg-start").value;
+  const segE = document.getElementById("seg-end").value;
+  if (segS !== "") fd.append("segment_start_s", segS);
+  if (segE !== "") fd.append("segment_end_s", segE);
+  try {
+    const r = await fetch(apiUrl("/analyze-layers"), { method: "POST", body: fd, headers: authHeaders() });
+    if (r.status === 401) { done(); handleAuthFail(); return; }
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    const data = await r.json();
+    busy.set(100, "done");
+    done();
+    lastAnalysis = data; // reuse as audio_features for AI tuning
+    layersAnalyzed = true;
+    const win = data.analyzed_window;
+    const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+    const winTxt = win
+      ? ` · analysed ${fmt(win.start_s)}–${fmt(win.end_s)}${win.auto ? " (loudest section)" : ""}`
+      : "";
+    const layers = data.layers || data.detected_layers || [];
+    const list = document.getElementById("layers-list");
+    if (!layers.length) {
+      st.textContent = "no distinct layers — full mix will be modeled." + winTxt;
+      layersAnalyzed = true;
+      refreshSubmit();
+      return;
+    }
+    list.innerHTML = layers
+      .map((l) => {
+        const id = typeof l === "string" ? l : l.id || l.name;
+        const label = typeof l === "string" ? l : l.label || l.id;
+        const type = (typeof l === "object" && l.type) || "";
+        const prev = (typeof l === "object" && l.preview_url) || "";
+        const on = l.selected !== false;
+        return `<label class="strip ${on ? "on" : ""}">
+          <span class="sled"></span>
+          <input type="checkbox" value="${id}" ${on ? "checked" : ""}>
+          <span class="sname">${label}</span>
+          ${type ? `<span class="stype">${type}</span>` : ""}
+          ${prev ? `<button type="button" class="splay" data-prev="${prev}" title="Audition this layer">▶</button>` : ""}
+        </label>`;
+      })
+      .join("");
+    document.getElementById("layers-box").style.display = "block";
+    document.querySelectorAll(".strip input").forEach((cb) =>
+      cb.addEventListener("change", () => cb.closest(".strip").classList.toggle("on", cb.checked))
+    );
+    wireLayerPreviews();
+    const summary = data.detected
+      ? `${layers.length} layers found — now pick which to apply below ↓`
+      : data.message || `${layers.length} layer(s) found.`;
+    st.textContent = summary + winTxt;
+    if (data.detected) toast("Layers detected — choose which ones to apply, then Transform 🎛️");
+    document.getElementById("layers-box").scrollIntoView({ behavior: "smooth", block: "center" });
+    refreshSubmit();
+  } catch (e) {
+    clearLayerAnalysis();
+    done();
+    st.textContent = "";
+    toast("Layer analysis failed: " + e.message);
+    refreshSubmit();
+  }
+});
+
+/* ════ Layer audition transport ════
+   One shared player with a seek bar. Switching layers preserves the playhead,
+   so you can A/B the same moment across layers instead of restarting each time. */
+const layerAudio = new Audio();
+let layerBtn = null, seeking = false;
+const ltName = document.getElementById("lt-name");
+const ltPlay = document.getElementById("lt-play");
+const ltSeek = document.getElementById("lt-seek");
+const ltTime = document.getElementById("lt-time");
+const fmtTime = (s) =>
+  isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00";
+
+function setLayerBtn(btn, playing) {
+  if (layerBtn && layerBtn !== btn) {
+    layerBtn.textContent = "▶";
+    layerBtn.classList.remove("playing");
+  }
+  layerBtn = btn;
+  if (btn) {
+    btn.textContent = playing ? "⏸" : "▶";
+    btn.classList.toggle("playing", playing);
+  }
+}
+layerAudio.addEventListener("timeupdate", () => {
+  if (seeking || !isFinite(layerAudio.duration)) return;
+  ltSeek.value = String((layerAudio.currentTime / layerAudio.duration) * 1000);
+  ltTime.textContent = `${fmtTime(layerAudio.currentTime)} / ${fmtTime(layerAudio.duration)}`;
+});
+layerAudio.addEventListener("ended", () => { ltPlay.textContent = "▶"; setLayerBtn(layerBtn, false); });
+ltSeek.addEventListener("input", () => { seeking = true; });
+ltSeek.addEventListener("change", () => {
+  if (isFinite(layerAudio.duration)) layerAudio.currentTime = (ltSeek.value / 1000) * layerAudio.duration;
+  seeking = false;
+});
+ltPlay.addEventListener("click", () => {
+  if (layerAudio.paused) { layerAudio.play(); ltPlay.textContent = "⏸"; setLayerBtn(layerBtn, true); }
+  else { layerAudio.pause(); ltPlay.textContent = "▶"; setLayerBtn(layerBtn, false); }
+});
+
+function wireLayerPreviews() {
+  document.getElementById("layer-transport").classList.remove("show");
+  document.querySelectorAll(".splay").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const url = apiUrl(btn.dataset.prev);
+      const label = btn.closest(".strip").querySelector(".sname").textContent.trim();
+
+      // Same layer → toggle play/pause.
+      if (layerBtn === btn) {
+        if (layerAudio.paused) { layerAudio.play(); ltPlay.textContent = "⏸"; setLayerBtn(btn, true); }
+        else { layerAudio.pause(); ltPlay.textContent = "▶"; setLayerBtn(btn, false); }
+        return;
+      }
+
+      // Different layer → keep the playhead where it is.
+      const pos = layerAudio.currentTime || 0;
+      const wasPlaying = !layerAudio.paused;
+      layerAudio.src = url;
+      layerAudio.addEventListener("loadedmetadata", function once() {
+        layerAudio.removeEventListener("loadedmetadata", once);
+        layerAudio.currentTime = Math.min(pos, layerAudio.duration - 0.05 || 0);
+        ltTime.textContent = `${fmtTime(layerAudio.currentTime)} / ${fmtTime(layerAudio.duration)}`;
+        layerAudio.play();
+      });
+      document.getElementById("layer-transport").classList.add("show");
+      ltName.textContent = label;
+      ltPlay.textContent = "⏸";
+      setLayerBtn(btn, true);
+      if (!wasPlaying) { /* still autoplays — auditioning is the point of the click */ }
+    });
+  });
+}
+
+/* ════ AI tuning ════ */
+let aiConfig = null;
+let sessionId = sget("dv_session") || crypto.randomUUID();
+sset("dv_session", sessionId);
+document.getElementById("ai-btn")?.addEventListener("click", async () => {
+  const promptText = document.getElementById("ai-prompt").value.trim();
+  if (!promptText) { toast("Describe the sound you want first"); return; }
+  const btn = document.getElementById("ai-btn");
+  btn.disabled = true;
+  btn.textContent = "…thinking";
+  try {
+    const r = await fetch(apiUrl("/api/ai-audio"), {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        prompt: promptText,
+        session_id: sessionId,
+        mode: "prompt",
+        previous_config: aiConfig,
+        audio_features: lastAnalysis, // measured features ride along when available
+      }),
+    });
+    if (!r.ok) throw new Error(r.statusText);
+    const data = await r.json();
+    aiConfig = data.config;
+    document.getElementById("ai-out").style.display = "block";
+    document.getElementById("ai-src").textContent = "config · source: " + data.source;
+    document.getElementById("ai-json").textContent = JSON.stringify(data.config, null, 2);
+    toast("AI config ready — it will ride along with the job ✨");
+  } catch (e) {
+    toast("AI tuning failed: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "✨ Generate";
+  }
+});
+
+/* ════ Submit + real progress ════ */
+let pollTimer = null;
+let sse = null;
+function logTerm(msg) {
+  const t = document.getElementById("term");
+  t.textContent += (t.textContent ? "\n" : "") + "> " + msg;
+  t.scrollTop = t.scrollHeight;
+}
+
+document.getElementById("submit").addEventListener("click", async () => {
+  if (!hasReferenceSection()) { toast("Select a reference section on the waveform first"); return; }
+  if (!layersAnalyzed) { toast("Analyze layers first"); return; }
+  const btn = document.getElementById("submit");
+  btn.disabled = true;
+  activateStep(3);
+  document.getElementById("progress-box").style.display = "block";
+  document.getElementById("term").textContent = "";
+  logTerm("uploading inputs…");
+
+  const fd = new FormData();
+  const preset = selectedPreset();
+  if (preset) fd.append("preset_id", preset);
+  else if (files.reference) fd.append("reference", files.reference);
+  else fd.append("reference_url", document.getElementById("reference_url").value.trim());
+  fd.append("dry", files.dry);
+  document.querySelectorAll("[data-opt]").forEach((cb) => fd.append(cb.dataset.opt, cb.checked ? "true" : "false"));
+  fd.append("reference_is_vocal", document.getElementById("ref-is-vocal").checked ? "true" : "false");
+  if (aiConfig) fd.append("ai_dsp_config", JSON.stringify(aiConfig));
+  const chosen = Array.from(document.querySelectorAll("#layers-list input:checked")).map((i) => i.value);
+  if (chosen.length) fd.append("selected_layers", JSON.stringify(chosen));
+  // Reuse the vocal already separated by "Analyze layers" — skips the slowest stage.
+  if (lastAnalysis && lastAnalysis.analysis_id) fd.append("analysis_id", lastAnalysis.analysis_id);
+
+  const reusing = !!(lastAnalysis && lastAnalysis.analysis_id);
+  busy.open("Transforming vocal", reusing
+    ? "Reusing the vocal separated during analysis — no re-extraction needed."
+    : "Separating the reference vocal, then applying the matched chain. Keep this tab open.");
+  if (reusing) logTerm("reusing separated vocal from layer analysis");
+
+  try {
+    const r = await fetch(apiUrl("/jobs"), { method: "POST", body: fd, headers: authHeaders() });
+    if (r.status === 401) { busy.close(); handleAuthFail(); btn.disabled = false; return; }
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    const { job_id } = await r.json();
+    lastJobId = job_id;
+    logTerm("job " + job_id.slice(0, 8) + " queued");
+    document.getElementById("progress-job").textContent = "JOB " + job_id.slice(0, 8).toUpperCase();
+    trackJob(job_id);
+  } catch (e) {
+    busy.close();
+    toast("Submit failed: " + e.message);
+    logTerm("ERROR: " + e.message);
+    btn.disabled = false;
+  }
+});
+
+function trackJob(jobId) {
+  const bar = document.getElementById("bar-fill");
+  const pct = document.getElementById("bar-pct");
+  const pstat = document.getElementById("progress-status");
+  let lastStage = "";
+  let finished = false;
+
+  const finish = async (data) => {
+    if (finished) return;
+    finished = true;
+    if (pollTimer) clearInterval(pollTimer);
+    if (sse) sse.close();
+    busy.close();
+    if (data.status === "finished") {
+      // SSE payloads don't carry URLs — grab them from the status endpoint.
+      if (!data.download_url) {
+        try { data = await (await fetch(apiUrl("/jobs/" + jobId))).json(); } catch {}
+      }
+      bar.style.width = "100%";
+      pct.textContent = "100%";
+      pstat.textContent = "finished";
+      logTerm("done. output ready ✔");
+      activateStep(4);
+      const out = document.getElementById("result-box");
+      out.style.display = "block";
+      setupResult(apiUrl(data.download_url));
+      document.getElementById("dl-out").href = apiUrl(data.download_url);
+      if (data.recipe_url) {
+        const rec = document.getElementById("dl-recipe");
+        rec.style.display = "inline-flex";
+        rec.href = apiUrl(data.recipe_url);
+        renderRecipe(apiUrl(data.recipe_url));
+      }
+      out.scrollIntoView({ behavior: "smooth" });
+    } else {
+      pstat.textContent = "failed";
+      logTerm("FAILED: " + (data.error || "unknown error"));
+      toast("Processing failed — check the log");
+      document.getElementById("submit").disabled = false;
+    }
+  };
+
+  const onUpdate = (data) => {
+    pstat.textContent = data.stage || data.status;
+    if (typeof data.progress === "number" && data.progress > 0) {
+      bar.style.width = data.progress + "%";
+      pct.textContent = data.progress + "%";
+      busy.set(data.progress, data.stage || data.status);
+    } else if (data.status === "queued") {
+      busy.set(1, "queued — waiting for a worker…");
+    }
+    if (data.stage && data.stage !== lastStage) {
+      lastStage = data.stage;
+      logTerm(data.stage);
+    }
+    if (data.status === "finished" || data.status === "failed") finish(data);
+  };
+
+  // SSE gives real progress + stage names from the worker; poll is a fallback.
+  try {
+    sse = new EventSource(apiUrl("/jobs/" + jobId + "/stream"));
+    sse.onmessage = (ev) => { try { onUpdate(JSON.parse(ev.data)); } catch {} };
+    sse.onerror = () => { sse.close(); sse = null; };
+  } catch { sse = null; }
+
+  pollTimer = setInterval(async () => {
+    try {
+      const r = await fetch(apiUrl("/jobs/" + jobId));
+      if (r.ok) {
+        const data = await r.json();
+        if (data.status === "finished" || data.status === "failed") finish(data);
+        else if (!sse) pstat.textContent = data.status;
+      }
+    } catch {}
+  }, 3000);
+}
+
+/* ════ Result: A/B monitor + waveforms + spectrum ════ */
+let outUrl = null, dryUrl = null, abMode = "out", analyserWired = false;
+function setupResult(url) {
+  outUrl = url;
+  dryUrl = files.dry ? URL.createObjectURL(files.dry) : null;
+  const player = document.getElementById("player");
+  player.src = outUrl;
+  const tryDraw = (src, id, color, attempt = 0) =>
+    peaksFrom(src)
+      .then((p) => drawWave(document.getElementById(id), p, color))
+      .catch(() => { if (attempt < 3) setTimeout(() => tryDraw(src, id, color, attempt + 1), 2000); });
+  tryDraw(files.dry, "wave-dry", "#8b95a3");
+  tryDraw(outUrl, "wave-out", "#2ee6a8");
+
+  const bDry = document.getElementById("ab-dry");
+  const bOut = document.getElementById("ab-out");
+  const bRef = document.getElementById("ab-ref");
+  const refUrl = files.reference ? URL.createObjectURL(files.reference) : null;
+  bRef.style.display = refUrl ? "" : "none";
+  const srcFor = { dry: dryUrl, out: outUrl, ref: refUrl };
+  const swap = (mode) => {
+    if (abMode === mode || !srcFor[mode]) return;
+    abMode = mode;
+    bDry.classList.toggle("on", mode === "dry");
+    bOut.classList.toggle("on", mode === "out");
+    bRef.classList.toggle("on", mode === "ref");
+    const t = player.currentTime, playing = !player.paused;
+    player.src = srcFor[mode];
+    // Seek only once the new source's metadata exists — seeking before that
+    // is silently discarded and playback restarted from 0.
+    player.addEventListener("loadedmetadata", function once() {
+      player.removeEventListener("loadedmetadata", once);
+      player.currentTime = Math.min(t, Math.max(0, (player.duration || t) - 0.05));
+      if (playing) player.play();
+    });
+    player.load();
+  };
+  bDry.onclick = () => swap("dry");
+  bOut.onclick = () => swap("out");
+  bRef.onclick = () => swap("ref");
+
+  // spectrum analyzer
+  if (!analyserWired) {
+    analyserWired = true;
+    try {
+      const srcNode = audioCtx.createMediaElementSource(player);
+      const an = audioCtx.createAnalyser();
+      an.fftSize = 128;
+      srcNode.connect(an);
+      an.connect(audioCtx.destination);
+      const canvas = document.getElementById("spectrum");
+      const bins = new Uint8Array(an.frequencyBinCount);
+      (function loop() {
+        requestAnimationFrame(loop);
+        const dpr = window.devicePixelRatio || 1;
+        const w = canvas.clientWidth || 600, h = 54;
+        if (canvas.width !== w * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        an.getByteFrequencyData(bins);
+        const bw = w / bins.length;
+        for (let i = 0; i < bins.length; i++) {
+          const bh = (bins[i] / 255) * (h - 4);
+          ctx.fillStyle = `rgba(46, 230, 168, ${0.35 + 0.65 * (bins[i] / 255)})`;
+          ctx.fillRect(i * bw + 1, h - bh, bw - 2, bh);
+        }
+      })();
+      player.addEventListener("play", () => audioCtx.resume());
+    } catch {}
+  }
+}
+
+/* ════ Engine report ════ */
+function rcard(k, v, s) {
+  return `<div class="rcard"><div class="rk">${k}</div><div class="rv">${v}</div><div class="rs">${s}</div></div>`;
+}
+async function renderRecipe(url) {
+  try {
+    const rec = await (await fetch(url)).json();
+    const cards = [];
+    const c = rec.compressor || rec.compression || {};
+    if (c.ratio != null)
+      cards.push(rcard("Compressor", `${(+c.ratio).toFixed(1)}:1`, `${(+c.threshold_db).toFixed(1)} dB thr · ${Math.round(c.attack_ms)} ms atk`));
+    const rv = rec.reverb || {};
+    if (rv.decay_s != null)
+      cards.push(rcard("Reverb", `${(+rv.decay_s).toFixed(1)}s`, `mix ${Math.round((rv.mix || 0) * 100)}% · pre ${Math.round(rv.pre_delay_ms || 0)} ms`));
+    const dl = rec.delay || {};
+    if (dl.delay_ms != null)
+      cards.push(rcard("Delay", `${Math.round(dl.delay_ms)} ms`, `${dl.type || "echo"} · tempo-synced`));
+    const wd = rec.width || {};
+    if (wd.mix != null)
+      cards.push(rcard("Stereo width", `${Math.round(wd.mix * 100)}%`, `${(+(wd.detune_cents || 0)).toFixed(1)} ct detune`));
+    const ch = rec.chorus || {};
+    if (ch.mix != null && ch.mix > 0)
+      cards.push(rcard("Chorus", `${(+ch.rate_hz).toFixed(2)} Hz`, `depth ${Math.round((ch.depth || 0) * 100)}%`));
+    const vl = rec.vocal_layers || {};
+    if (vl.total_layers != null)
+      cards.push(rcard("Vocal layers", `${vl.total_layers}`, `${vl.n_doublers || 0} doubles · ${(vl.harmony_intervals || []).length} harmonies`));
+    const m = rec.metrics || {};
+    if (m.spectral_distance != null)
+      cards.push(rcard("Match quality", (+m.spectral_distance).toFixed(3), `spectral distance · out ${(+m.lufs_output).toFixed(1)} LUFS`));
+    if (!cards.length) cards.push(rcard("Recipe", "saved", "full JSON via download"));
+    document.getElementById("recipe-grid").innerHTML = cards.join("");
+
+    // Match scorecard
+    const mr = rec.match_report;
+    // Stem downloads
+    if (rec.stems && Object.keys(rec.stems).length) {
+      const links = Object.entries(rec.stems)
+        .map(([k, u]) => `<a class="btn ghost" style="padding:8px 14px;font-size:12px" href="${apiUrl(u)}" download>⬇ ${k.replace(/_/g, " ")}</a>`)
+        .join(" ");
+      const grid = document.getElementById("recipe-grid");
+      grid.insertAdjacentHTML("afterend",
+        `<div style="margin-top:12px"><h3 style="font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">🎚 Layer stems — for your DAW</h3><div class="actions" style="margin:0">${links}</div></div>`);
+    }
+    if (mr) {
+      const sc = [];
+      if (mr.lufs_gap_db != null)
+        sc.push(rcard("Loudness", `${mr.lufs_gap_db > 0 ? "+" : ""}${mr.lufs_gap_db} dB`, "gap to reference · 0 = exact"));
+      if (mr.dynamic_spread_out_db != null && mr.dynamic_spread_ref_db != null)
+        sc.push(rcard("Density", `${mr.dynamic_spread_out_db} / ${mr.dynamic_spread_ref_db}`, "dynamic spread: out / ref (dB)"));
+      if (mr.dynamics_ride_gap_db != null)
+        sc.push(rcard("Volume ride", `${mr.dynamics_ride_gap_db} dB`, "envelope shape gap · lower = closer"));
+      if (mr.spectral_distance != null)
+        sc.push(rcard("Tone match", (+mr.spectral_distance).toFixed(3), "spectral distance · lower = closer"));
+      if (mr.ai_scales)
+        sc.push(rcard("AI trims", Object.keys(mr.ai_scales).length, Object.entries(mr.ai_scales).map(([k,v])=>`${k.replace(/_scale$/,"")} x${v}`).join(" · ").slice(0, 60)));
+      if (sc.length) {
+        document.getElementById("scorecard-grid").innerHTML = sc.join("");
+        document.getElementById("scorecard").style.display = "block";
+      }
+    }
+
+    // EQ curve — sum of parametric bands [{f, gain_db, q}] on a log-f axis
+    const bands = Array.isArray(rec.eq) ? rec.eq : [];
+    const canvas = document.getElementById("eq-curve");
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth || 700, h = 120;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = "rgba(139,149,163,0.25)";
+    ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+    if (bands.length) {
+      const fLo = Math.log10(40), fHi = Math.log10(20000);
+      const gainAt = (f) => bands.reduce((sum, b) => {
+        const bw = b.f / Math.max(0.4, b.q || 1);
+        const d = (f - b.f) / bw;
+        return sum + (b.gain_db || 0) * Math.exp(-d * d);
+      }, 0);
+      let maxAbs = 3;
+      const N = 160, pts = [];
+      for (let i = 0; i <= N; i++) {
+        const f = Math.pow(10, fLo + ((fHi - fLo) * i) / N);
+        const g = gainAt(f);
+        maxAbs = Math.max(maxAbs, Math.abs(g));
+        pts.push([ (w * i) / N, g ]);
+      }
+      ctx.strokeStyle = "#2ee6a8"; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
+      ctx.beginPath();
+      pts.forEach(([x, g], i) => {
+        const y = h / 2 - (g / maxAbs) * (h / 2 - 14);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.fillStyle = "rgba(46,230,168,0.10)";
+      ctx.lineTo(w, h / 2); ctx.lineTo(0, h / 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#8b95a3"; ctx.font = "11px 'JetBrains Mono', monospace"; ctx.textAlign = "center";
+      [100, 1000, 10000].forEach((f) => {
+        const x = (w * (Math.log10(f) - fLo)) / (fHi - fLo);
+        ctx.fillText(f >= 1000 ? f / 1000 + "k" : f, x, h - 6);
+      });
+      ctx.textAlign = "left";
+      ctx.fillText(`${bands.length}-band matched EQ · ±${maxAbs.toFixed(1)} dB`, 8, 14);
+    }
+    document.getElementById("recipe").style.display = "block";
+  } catch (e) { console.warn("recipe render:", e); }
+}
+
+function resetAll() {
+  location.reload();
+}
+</script>
+</body>
+</html>
