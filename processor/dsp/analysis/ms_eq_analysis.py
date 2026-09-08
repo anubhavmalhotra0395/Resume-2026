@@ -1,5 +1,5 @@
 """
-Mid-Side EQ analysis — compare mid and side spectral envelopes.
+Mid-Side EQ analysis - compare mid and side spectral envelopes.
 If they differ by > 2 dB in any band, M-S EQ was likely applied.
 Returns None for mono inputs or when mid/side spectra are similar.
 """

@@ -65,7 +65,7 @@ def apply_compressor(x: np.ndarray, sr: int, cfg: CompressorSettings) -> np.ndar
     gain applied to the full-rate signal.
 
     The previous per-sample implementation tracked |x| directly, so its
-    envelope pumped within each waveform cycle and undershot on transients —
+    envelope pumped within each waveform cycle and undershot on transients -
     measured on a burst signal it *raised* the crest factor from 8 dB to
     21 dB (a compressor must lower it) while running at 0.5x realtime.
     """
@@ -78,7 +78,7 @@ def apply_compressor(x: np.ndarray, sr: int, cfg: CompressorSettings) -> np.ndar
 
 
 def compressor_gain(sidechain: np.ndarray, sr: int, cfg: CompressorSettings) -> np.ndarray:
-    """The gain curve alone, computed from `sidechain` — for linked-stereo
+    """The gain curve alone, computed from `sidechain` - for linked-stereo
     use: detect on a mono downmix, apply the identical gain to each channel."""
     if len(sidechain) == 0:
         return np.ones(0)

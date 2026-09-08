@@ -1,5 +1,5 @@
 """
-Tape Emulation — soft saturation + high-frequency roll-off to mimic analogue tape warmth.
+Tape Emulation - soft saturation + high-frequency roll-off to mimic analogue tape warmth.
 """
 from dataclasses import dataclass
 

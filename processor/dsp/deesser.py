@@ -2,7 +2,7 @@
 Split-band de-esser: compresses ONLY the sibilance band and sums it back.
 
 The previous version computed a brightness-keyed gain and applied it to the
-FULL-BAND signal — any 5-10 kHz energy above -30 dB ducked the entire vocal
+FULL-BAND signal - any 5-10 kHz energy above -30 dB ducked the entire vocal
 by up to 4x. That is a pumping "dullness machine", not a de-esser; it was a
 major reason processed vocals lost the reference's presence.
 """

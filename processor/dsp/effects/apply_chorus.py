@@ -16,7 +16,7 @@ def _modulated_delay(signal: np.ndarray, sr: int, params: ChorusParams, phase_of
     """
     Single modulated delay line (feedforward tap, linear interpolation).
     Vectorised: the tap position is n - delay(n), so the whole line is one
-    np.interp over the signal — same math as the old per-sample loop,
+    np.interp over the signal - same math as the old per-sample loop,
     orders of magnitude faster.
     """
     n_samples = len(signal)

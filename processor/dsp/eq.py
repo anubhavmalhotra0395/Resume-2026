@@ -32,7 +32,7 @@ def apply_eq(x: np.ndarray, sr: int, bands: List[EqBand]) -> np.ndarray:
     """Apply a cascade of peaking EQ filters (RBJ biquads).
 
     Note: the previous implementation used scipy's `iirpeak` (a band-PASS
-    resonator) with a scaled numerator — each "band" replaced the signal
+    resonator) with a scaled numerator - each "band" replaced the signal
     with just that narrow band, so cascading bands destroyed the audio.
     A peaking EQ leaves the signal at unity everywhere except around f,
     which is what this now does.
@@ -119,6 +119,39 @@ def match_spectral_tilt(ref_mag: np.ndarray, freqs: np.ndarray) -> List[EqBand]:
         bands.append(EqBand(f=c, gain_db=gain_db, q=q))
     
     return bands
+
+
+# Above this, a measured spectral difference is not musical information.
+#
+# A vocal carries almost nothing in the top octave; what lives there is codec
+# and separation artefacts, and the reference and the dry vocal have DIFFERENT
+# artefacts. Matching that difference boosts our own noise: measured on the
+# Hide pair, the tone match applied +8.1 dB above 16 kHz, which is audible as
+# fizz on loud notes and invisible to every similarity dimension. Cuts are
+# still allowed in full -- removing noise up there is always safe; only
+# boosting is restrained.
+_HF_TRUST_HZ = 12000.0
+_HF_BOOST_CEILING_DB = 1.5
+_HF_TAPER_OCTAVES = 0.25      # ceiling is in force from ~14.3 kHz up
+
+
+def _limit_hf_boost(freq_hz: float, gain_db: float) -> float:
+    """Taper positive gain above _HF_TRUST_HZ; leave cuts untouched."""
+    if gain_db <= 0.0 or freq_hz <= _HF_TRUST_HZ:
+        return gain_db
+    # Full authority at the trust frequency, falling to the ceiling an octave up.
+    if gain_db <= _HF_BOOST_CEILING_DB:
+        return gain_db
+    # Interpolate from full authority at the trust frequency down to the
+    # ceiling one octave above it. (An earlier version took a max() here,
+    # which made the ceiling a FLOOR and let 4.6 dB through at 21 kHz.)
+    # Taper over a QUARTER octave, not a whole one. A full octave above
+    # 12 kHz lands at 24 kHz -- past Nyquist at 44.1 kHz -- so the ceiling
+    # never actually bound: a 24 dB request still yielded 5.8 dB at 21 kHz.
+    octaves = float(np.log2(freq_hz / _HF_TRUST_HZ))
+    taper = float(np.clip(1.0 - octaves / _HF_TAPER_OCTAVES, 0.0, 1.0))
+    allowed = _HF_BOOST_CEILING_DB + (gain_db - _HF_BOOST_CEILING_DB) * taper
+    return float(min(gain_db, allowed))
 
 
 def design_eq_from_mel_diff(
@@ -210,6 +243,7 @@ def design_eq_from_mel_diff(
         if f < 30 or f > sr / 2:
             continue
         gain_db = float(val * scale)
+        gain_db = _limit_hf_boost(f, gain_db)
         if abs(gain_db) < 0.25:          # skip negligible gains
             continue
         # Narrower Q at higher frequencies for surgical precision:

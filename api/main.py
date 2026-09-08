@@ -161,7 +161,7 @@ def _set_analysis_progress(token: str | None, pct: int, stage: str) -> None:
 
 @app.get("/analyze-progress/{token}")
 async def analyze_progress(token: str):
-    return JSONResponse(_analysis_progress.get(token, {"progress": 0, "stage": "starting…"}))
+    return JSONResponse(_analysis_progress.get(token, {"progress": 0, "stage": "starting..."}))
 
 
 def _presets_dir() -> Path:
@@ -197,7 +197,7 @@ async def save_preset(req: PresetSaveRequest):
     recipe = json.loads(src.read_text(encoding="utf-8"))
     if not recipe.get("style_targets"):
         raise HTTPException(status_code=400,
-                            detail="Job predates style presets — run it again to capture the style")
+                            detail="Job predates style presets - run it again to capture the style")
     import datetime
     pid = str(uuid.uuid4())[:8]
     recipe["_preset"] = {"name": req.name.strip()[:60] or pid,
@@ -222,6 +222,8 @@ async def create_job(
     enable_width: str | None = Form("true"),
     enable_deesser: str | None = Form("true"),
     enable_transient_shaper: str | None = Form("false"),
+    autotune_strength: str | None = Form(None),
+    compression_strength: str | None = Form(None),
     enable_multiband: str | None = Form("false"),
     adaptive_dsp: str | None = Form("false"),
     enable_harmony: str | None = Form("true"),
@@ -238,6 +240,7 @@ async def create_job(
     reference_is_vocal: str | None = Form("false"),
     analysis_id: str | None = Form(None),
     preset_id: str | None = Form(None),
+    preset_json: str | None = Form(None),
 ):
     preset_recipe = None
     if preset_id:
@@ -245,6 +248,18 @@ async def create_job(
         if not pf.exists():
             raise HTTPException(status_code=404, detail="Preset not found")
         preset_recipe = json.loads(pf.read_text(encoding="utf-8"))
+    elif preset_json:
+        # A style held by the client — kept in the browser's localStorage or
+        # imported from a downloaded .doctavox.json. Same shape as a stored
+        # preset; accepting it here means a user can reuse a style without it
+        # having to live on this server, and without a reference upload or a
+        # separation pass.
+        try:
+            preset_recipe = json.loads(preset_json)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="preset_json is not valid JSON")
+        if not isinstance(preset_recipe, dict):
+            raise HTTPException(status_code=400, detail="preset_json must be a recipe object")
     if not reference and not reference_url and not preset_recipe:
         raise HTTPException(status_code=400, detail="Provide a reference (file or URL) or a preset")
 
@@ -281,6 +296,12 @@ async def create_job(
         "enable_width": _strtobool(enable_width) if enable_width is not None else True,
         "enable_deesser": _strtobool(enable_deesser) if enable_deesser is not None else True,
         "enable_transient_shaper": _strtobool(enable_transient_shaper) if enable_transient_shaper is not None else False,
+        # 0..1 scale on the reference-matched tuning amount; 0 disables it.
+        "autotune_strength": (float(autotune_strength)
+                              if autotune_strength not in (None, "") else None),
+        # 0..1 manual compression amount; overrides the automatic crest match.
+        "compression_strength": (float(compression_strength)
+                                 if compression_strength not in (None, "") else None),
         "enable_multiband": _strtobool(enable_multiband) if enable_multiband is not None else False,
         "adaptive_dsp": _strtobool(adaptive_dsp) if adaptive_dsp is not None else False,
         "enable_harmony": _strtobool(enable_harmony) if enable_harmony is not None else True,
@@ -304,7 +325,7 @@ async def create_job(
         if cached.exists():
             options["ref_vocals_path"] = str(cached)
         else:
-            print(f"⚠ analysis_id {analysis_id} has no cached vocal — will separate")
+            print(f"! analysis_id {analysis_id} has no cached vocal - will separate")
 
     # Attach AI-generated DSP overrides if provided
     if ai_dsp_config:
@@ -361,7 +382,7 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
         ref_norm = settings.inputs_dir / f"{uuid.uuid4()}_ref_layer.wav"
         # Stereo for the reference: layer detection reads doubling from the
         # L/R image, which a mono downmix erases (the "only lead" bug).
-        _set_analysis_progress(progress_token, 3, "Normalising audio…")
+        _set_analysis_progress(progress_token, 3, "Normalising audio...")
         run_ffmpeg_normalize(ref_path, ref_norm, channels=2)
         # NOTE: the dry vocal is validated (duration/size) but not decoded here
         # — layer detection and the audition stems are built entirely from the
@@ -436,10 +457,10 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
                 # Separation is the bulk of the wait — give it 10-80%.
                 _set_analysis_progress(
                     progress_token, 10 + int(70 * done / max(total, 1)),
-                    f"Separating vocals from the mix… {int(100 * done / max(total, 1))}%",
+                    f"Separating vocals from the mix... {int(100 * done / max(total, 1))}%",
                 )
 
-            _set_analysis_progress(progress_token, 8, "Loading separation model…")
+            _set_analysis_progress(progress_token, 8, "Loading separation model...")
             extracted = extract_vocals(ref_for_separation, ref_vocals_path, progress_cb=_sep_progress)
             ref_for_analysis = extracted if extracted and extracted.exists() else ref_for_separation
 
@@ -450,11 +471,11 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
         try:
             shutil.copy2(ref_for_analysis, kept)
         except Exception as e:
-            print(f"⚠ Could not cache analysis vocal: {e}")
+            print(f"! Could not cache analysis vocal: {e}")
 
         ref_audio, sr = load_wav_stereo(ref_for_analysis)
 
-        _set_analysis_progress(progress_token, 82, "Detecting vocal layers…")
+        _set_analysis_progress(progress_token, 82, "Detecting vocal layers...")
         profile = detect_vocal_layers(ref_audio, sr)
         if not profile:
             lead_name = f"{analysis_id}_lead.wav"
@@ -477,7 +498,7 @@ def analyze_layers(  # sync on purpose: blocking DSP must not stall the event lo
 
         # Build audition stems from the analyzed reference vocal so users
         # hear reference-derived layering characteristics directly.
-        _set_analysis_progress(progress_token, 90, "Rendering layer previews…")
+        _set_analysis_progress(progress_token, 90, "Rendering layer previews...")
         stems = build_vocal_layer_stems(ref_audio, sr, profile)
         layers = []
         for idx, key in enumerate(stems.keys()):
@@ -566,7 +587,7 @@ async def get_status(job_id: str):
 
 @app.get("/jobs/{job_id}/stream")
 async def job_stream(job_id: str):
-    """SSE endpoint — pushes progress events until the job finishes or fails."""
+    """SSE endpoint - pushes progress events until the job finishes or fails."""
     async def event_generator():
         r = redis.from_url(settings.redis_url)
         last_pct = -1
@@ -575,7 +596,7 @@ async def job_stream(job_id: str):
                 job = Job.fetch(job_id, connection=r)
                 meta = job.meta or {}
                 pct   = int(meta.get("progress", 0))
-                stage = str(meta.get("stage", "Queued…"))
+                stage = str(meta.get("stage", "Queued..."))
                 status = str(job.get_status())
 
                 # Always push on status transitions; throttle identical pct repeats
@@ -587,7 +608,7 @@ async def job_stream(job_id: str):
                 if job.is_finished or job.is_failed:
                     break
             except Exception:
-                payload = json.dumps({"status": "queued", "progress": 0, "stage": "Waiting for worker…"})
+                payload = json.dumps({"status": "queued", "progress": 0, "stage": "Waiting for worker..."})
                 yield f"data: {payload}\n\n"
             await asyncio.sleep(0.5)
 
@@ -659,9 +680,9 @@ async def ai_audio(req: AiAudioRequest):
     Convert a natural language prompt (or audio features) into a DSP config.
 
     Modes:
-      - prompt          → translate req.prompt into a DSP config
-      - preset          → generate a preset from audio features
-      - reference_match → generate DSP to match reference track characteristics
+      - prompt          -> translate req.prompt into a DSP config
+      - preset          -> generate a preset from audio features
+      - reference_match -> generate DSP to match reference track characteristics
 
     The endpoint always returns a valid config; if GPT fails it falls back
     to safe defaults and sets source="fallback".

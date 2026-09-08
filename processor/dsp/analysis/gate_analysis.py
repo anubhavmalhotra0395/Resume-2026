@@ -1,5 +1,5 @@
 """
-Noise gate analysis — estimate threshold from the reference vocal noise floor.
+Noise gate analysis - estimate threshold from the reference vocal noise floor.
 Returns None if the reference is already very clean (floor < -55 dBFS).
 """
 from __future__ import annotations

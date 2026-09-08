@@ -1,5 +1,5 @@
 """
-Vocal Doubler — creates opposite-polarity pitch-shifted L/R copies for thick doubling.
+Vocal Doubler - creates opposite-polarity pitch-shifted L/R copies for thick doubling.
 Distinct from Width/ADT: uses real pitch shifting to simulate a second take.
 """
 from dataclasses import dataclass

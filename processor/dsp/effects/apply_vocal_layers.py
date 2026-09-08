@@ -1,9 +1,9 @@
 """
-Vocal Layer Replicator — applies exactly the number of layers detected from the reference.
+Vocal Layer Replicator - applies exactly the number of layers detected from the reference.
 
 Two layer types:
-  1. Doubling layers  — same pitch, tiny detune + delay + pan (ADT stack)
-  2. Harmony voices   — different pitch, mixed at the detected strength
+  1. Doubling layers  - same pitch, tiny detune + delay + pan (ADT stack)
+  2. Harmony voices   - different pitch, mixed at the detected strength
 
 The output is always stereo (2, N) so each layer can be independently panned.
 If the input is mono, it is first widened to stereo at centre (0 pan).
@@ -152,7 +152,7 @@ def apply_vocal_layers(
         dry          : input vocal, mono (N,) or stereo (2, N)
         sr           : sample rate
         profile      : VocalLayersProfile from detect_vocal_layers()
-        doubler_mix  : volume of each doubling copy (0–1)
+        doubler_mix  : volume of each doubling copy (0?1)
 
     Returns:
         stereo (2, N) array with all layers mixed together

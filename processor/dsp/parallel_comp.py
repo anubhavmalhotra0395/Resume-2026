@@ -1,5 +1,5 @@
 """
-Parallel Compression (New York compression) — compresses a duplicate of the signal
+Parallel Compression (New York compression) - compresses a duplicate of the signal
 heavily, then blends it back with the dry signal to preserve transients while
 adding density and perceived loudness.
 """
@@ -19,7 +19,7 @@ class ParallelCompSettings:
 
 def _compress(x: np.ndarray, sr: int, threshold_db: float, ratio: float,
               attack_ms: float, release_ms: float) -> np.ndarray:
-    """Heavy compression pass — delegates to the block-based compressor
+    """Heavy compression pass - delegates to the block-based compressor
     (the old per-sample Python loop here ran slower than realtime)."""
     from processor.dsp.compressor import CompressorSettings, apply_compressor
 
@@ -33,7 +33,7 @@ def _compress(x: np.ndarray, sr: int, threshold_db: float, ratio: float,
 def apply_parallel_comp(x: np.ndarray, sr: int, cfg: ParallelCompSettings) -> np.ndarray:
     """
     Sum compressed copy at `blend` ratio back to the dry signal.
-    Both copies are at unity — no wet/dry crossfade; they are additive.
+    Both copies are at unity - no wet/dry crossfade; they are additive.
     """
     if cfg.blend <= 0:
         return x

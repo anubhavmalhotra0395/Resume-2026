@@ -486,6 +486,10 @@
     background: rgba(46,230,168,.06); border: 1px solid rgba(46,230,168,.22);
   }
   .login-note a { color: var(--mint); font-weight: 600; }
+  .login-mark {
+    margin-top: 20px; font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: .22em; color: var(--faint); opacity: .7; user-select: none;
+  }
   #logout-btn { display: none; }
 
   .toast {
@@ -565,6 +569,27 @@
     </div>
     -->
     <select id="preset-select" hidden aria-hidden="true"><option value=""></option></select>
+
+    <!-- ONE place to reuse a saved style. Always visible, because a control
+         that only appears once you already have presets is undiscoverable --
+         you cannot tell the feature exists until after you have used it. -->
+    <div id="style-panel" style="margin-top:14px;padding:14px;border:1px solid var(--line-soft);border-radius:10px;background:rgba(255,255,255,.02)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <b style="color:#2ee6a8;font-size:13px">Use a saved style</b>
+        <span class="hint" style="margin:0">Applies a style you saved earlier straight to your vocal - no reference track, no separation, much faster.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <select id="local-preset-select" style="background:var(--rail);border:1px solid var(--line-soft);border-radius:8px;color:var(--text);padding:9px 12px;font-size:12.5px;font-family:var(--mono);min-width:260px">
+          <option value="">- no saved style: use the reference above -</option>
+        </select>
+        <label class="btn ghost" style="cursor:pointer;margin:0">
+          Import .json
+          <input type="file" id="import-preset" accept="application/json,.json" hidden>
+        </label>
+        <button class="btn ghost" type="button" id="local-preset-delete" disabled>Remove</button>
+      </div>
+      <p class="hint" id="style-panel-state" style="margin:8px 0 0">No saved styles yet - finish a job and hit "Download style JSON", or import one.</p>
+    </div>
     <!-- Reference is isolated vocal (disabled)
     <div class="io-row">
       <label class="chk">
@@ -595,8 +620,8 @@
         <span class="sub">step 2 of 3 — choose your layers</span></div>
       <div style="display:flex;align-items:center;gap:10px;margin:6px 0 12px;padding:12px 16px;border-radius:9px;background:rgba(46,230,168,.07);border:1px solid rgba(46,230,168,.25)">
         <span style="font-size:18px">👉</span>
-        <span style="font-size:13.5px;color:#c8d0da;line-height:1.5"><b style="color:#2ee6a8">Pick which layers to apply:</b>
-        tap a card to switch it on or off — <b>lit cards will be recreated on your vocal</b>. Tap ▶ to hear any layer alone. Then hit Transform.</span>
+        <span style="font-size:13.5px;color:#c8d0da;line-height:1.5"><b style="color:#2ee6a8">Pick the one layer to match:</b>
+        tap a card to choose it — <b>only one at a time</b>, and that layer's sound is what gets recreated on your vocal. Tap ▶ to hear any layer alone. Then hit Transform.</span>
       </div>
       <div class="mixer-strips" id="layers-list"></div>
       <div class="transport" id="layer-transport">
@@ -678,6 +703,7 @@
     <div class="actions" style="justify-content:center">
       <a class="btn" id="dl-out" download>⬇ Download WAV</a>
       <button class="btn ghost" id="save-preset">★ Save style as preset</button>
+      <button class="btn ghost" id="download-preset" title="Save this style on this device and download it as JSON">⬇ Download style JSON</button>
       <a class="btn ghost" id="dl-recipe" download style="display:none">📜 Recipe JSON</a>
       <button class="btn ghost" onclick="resetAll()">↺ Process another</button>
     </div>
@@ -706,9 +732,11 @@
     <input type="password" id="login-pass" placeholder="password" autocomplete="current-password">
     <button class="btn" id="login-btn">Sign in</button>
     <div id="login-err"></div>
-    <div class="login-note">🔒 Doctavox is in <b>private beta</b>. Want access?
-      Mail <a href="mailto:malhotraanubhav0395@gmail.com?subject=Doctavox%20beta%20access">malhotraanubhav0395@gmail.com</a>
-      and you&#39;ll get credentials.</div>
+    <div class="login-note">🔒 Access is invite-only while Doctavox is in <b>private beta</b>.
+      Don&#39;t have credentials yet? Request a login at
+      <a href="mailto:malhotraanubhav0395@gmail.com?subject=Doctavox%20beta%20access">malhotraanubhav0395@gmail.com</a>
+      &mdash; tell me a little about what you&#39;re mixing and I&#39;ll set you up.</div>
+    <div class="login-mark">~ Anubhav Malhotra</div>
   </div>
 </div>
 
@@ -1196,6 +1224,7 @@ async function loadPresets() {
     if (!sel || sel.hidden) return;
     sel.innerHTML = '<option value="">— none (use reference above) —</option>' +
       presets.map((p) => `<option value="${p.id}">${p.name}</option>`).join("");
+    renderLocalPresets();
     const row = document.getElementById("preset-row");
     if (row) row.style.display = "flex";
   } catch {}
@@ -1218,21 +1247,153 @@ document.getElementById("save-preset").addEventListener("click", async () => {
   } catch (e) { toast("Save failed: " + e.message); }
 });
 
+/* ════ Local presets: browser-stored + importable JSON ════
+   The server keeps presets too, but those need this API and this login. A
+   preset is just the recipe JSON, so keeping a copy in localStorage and
+   allowing a download/import makes a style portable: match once against a
+   reference, then reuse it on later vocals without re-uploading the track or
+   paying for separation again. */
+const LOCAL_PRESETS_KEY = "dv_local_presets";
+
+function localPresets() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_PRESETS_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveLocalPresets(list) {
+  try { localStorage.setItem(LOCAL_PRESETS_KEY, JSON.stringify(list)); }
+  catch (e) { toast("Could not save locally — storage full or blocked"); }
+}
+function addLocalPreset(name, recipe) {
+  const list = localPresets().filter((p) => p.name !== name);
+  list.unshift({ name, saved: new Date().toISOString(), recipe });
+  saveLocalPresets(list);
+  renderLocalPresets();
+}
+function renderLocalPresets() {
+  const sel = document.getElementById("local-preset-select");
+  if (!sel) return;
+  const list = localPresets();
+  const keep = sel.value;
+  // Server-saved styles and device-saved ones live in one list. Two separate
+  // pickers for the same concept is what made this confusing: a style saved
+  // with "Save style as preset" went to the server and then had nowhere to be
+  // chosen from, because that picker was hidden.
+  const server = Array.from(document.getElementById("preset-select").options)
+    .filter((o) => o.value)
+    .map((o) => `<option value="srv:${o.value}">${o.textContent} (account)</option>`)
+    .join("");
+  sel.innerHTML =
+    `<option value="">- no saved style: use the reference above -</option>` +
+    server +
+    list.map((p, i) => `<option value="loc:${i}">${p.name} (this device)</option>`).join("");
+  if (keep) sel.value = keep;
+  const n = list.length + server.split("<option").length - 1;
+  const state = document.getElementById("style-panel-state");
+  if (state) {
+    state.textContent = sel.value
+      ? "Style selected - just add your vocal and hit Transform. No reference needed."
+      : n > 0
+        ? `${n} saved style${n === 1 ? "" : "s"} available.`
+        : 'No saved styles yet - finish a job and hit "Download style JSON", or import one.';
+  }
+  const del = document.getElementById("local-preset-delete");
+  if (del) del.disabled = !sel.value.startsWith("loc:");
+}
+
+/* The recipe JSON for a finished job — the whole style, portable. */
+async function fetchRecipe(jobId) {
+  const r = await fetch(apiUrl(`/recipes/${jobId}.json`));
+  if (!r.ok) throw new Error("recipe not available — re-run the job");
+  return await r.json();
+}
+
+document.getElementById("download-preset")?.addEventListener("click", async () => {
+  if (!lastJobId) { toast("No finished job to export"); return; }
+  const name = prompt("Name this style:", "my-style");
+  if (!name) return;
+  try {
+    const recipe = await fetchRecipe(lastJobId);
+    addLocalPreset(name, recipe);
+    const blob = new Blob([JSON.stringify(recipe, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name.replace(/[^\w.-]+/g, "_")}.doctavox.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast(`Saved "${name}" to this device and downloaded it ⬇`);
+  } catch (e) { toast("Export failed: " + e.message); }
+});
+
+document.getElementById("import-preset")?.addEventListener("change", async (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  try {
+    const recipe = JSON.parse(await f.text());
+    const name = f.name.replace(/\.doctavox\.json$|\.json$/i, "");
+    addLocalPreset(name, recipe);
+    document.getElementById("local-preset-select").value = "0";
+    renderLocalPresets();
+    refreshSubmit();
+    toast(`Loaded "${name}" — no reference track needed, just hit Transform`);
+  } catch (e) { toast("That file isn't a Doctavox style JSON"); }
+  finally { ev.target.value = ""; }
+});
+
+document.getElementById("local-preset-select")?.addEventListener("change", () => {
+  renderLocalPresets();
+  refreshSubmit();
+});
+document.getElementById("local-preset-delete")?.addEventListener("click", () => {
+  const sel = document.getElementById("local-preset-select");
+  if (!sel.value.startsWith("loc:")) return;
+  const i = parseInt(sel.value.slice(4), 10);
+  if (isNaN(i)) return;
+  const list = localPresets();
+  const [gone] = list.splice(i, 1);
+  saveLocalPresets(list);
+  sel.value = "";
+  renderLocalPresets();
+  refreshSubmit();
+  toast(`Removed "${gone ? gone.name : "preset"}"`);
+});
+
+function selectedLocalPreset() {
+  const sel = document.getElementById("local-preset-select");
+  if (!sel || !sel.value.startsWith("loc:")) return null;
+  const p = localPresets()[parseInt(sel.value.slice(4), 10)];
+  return p ? p.recipe : null;
+}
+function selectedServerPreset() {
+  const sel = document.getElementById("local-preset-select");
+  return sel && sel.value.startsWith("srv:") ? sel.value.slice(4) : null;
+}
+renderLocalPresets();
+
 function hasReference() {
-  return !!files.reference || !!document.getElementById("reference_url").value.trim() || !!selectedPreset();
+  return !!files.reference || !!document.getElementById("reference_url").value.trim()
+    || !!selectedPreset() || !!selectedLocalPreset() || !!selectedServerPreset();
 }
 function refreshSubmit() {
+  // A preset already carries the whole style, so preset mode skips the
+  // reference-section pick and the layer analysis — that is the entire point
+  // of it: no separation pass, no reference upload, straight to processing.
+  const presetMode = !!selectedPreset() || !!selectedLocalPreset() || !!selectedServerPreset();
   const uploadsReady = hasReference() && !!files.dry;
-  const sectionReady = hasReferenceSection();
-  const ok = uploadsReady && sectionReady && layersAnalyzed;
+  const sectionReady = presetMode || hasReferenceSection();
+  const analysisReady = presetMode || layersAnalyzed;
+  const ok = uploadsReady && sectionReady && analysisReady;
   document.getElementById("submit").disabled = !ok;
   document.getElementById("status").textContent = !uploadsReady
-    ? "Need a reference track + your dry vocal."
+    ? (presetMode ? "Add your dry vocal." : "Need a reference track + your dry vocal.")
     : !sectionReady
       ? "Select a reference section on the waveform (or set start/end times)."
-      : !layersAnalyzed
+      : !analysisReady
         ? "Analyze layers first, then transform."
-        : "Armed. Ready to transform.";
+        : presetMode
+          ? "Armed with a saved style — no reference needed."
+          : "Armed. Ready to transform.";
   if (uploadsReady && sectionReady) activateStep(2);
 }
 refreshSubmit();
@@ -1307,9 +1468,29 @@ document.getElementById("analyze-btn").addEventListener("click", async () => {
       })
       .join("");
     document.getElementById("layers-box").style.display = "block";
+    // One layer only. Matching a single dry vocal onto a stacked bus is an
+    // ill-posed target — a chorus of four has different tone, crest and width
+    // from any single voice in it, so the measurements come out wrong for the
+    // one voice being processed. Selecting a layer clears the others.
     document.querySelectorAll(".strip input").forEach((cb) =>
-      cb.addEventListener("change", () => cb.closest(".strip").classList.toggle("on", cb.checked))
+      cb.addEventListener("change", () => {
+        if (cb.checked) {
+          document.querySelectorAll(".strip input").forEach((other) => {
+            if (other !== cb) {
+              other.checked = false;
+              other.closest(".strip").classList.remove("on");
+            }
+          });
+        }
+        cb.closest(".strip").classList.toggle("on", cb.checked);
+        refreshSubmit();
+      })
     );
+    // Start with only the first (lead) layer lit.
+    document.querySelectorAll(".strip input").forEach((cb, i) => {
+      cb.checked = i === 0;
+      cb.closest(".strip").classList.toggle("on", i === 0);
+    });
     wireLayerPreviews();
     const summary = data.detected
       ? `${layers.length} layers found — now pick which to apply below ↓`
@@ -1448,8 +1629,15 @@ function logTerm(msg) {
 }
 
 document.getElementById("submit").addEventListener("click", async () => {
-  if (!hasReferenceSection()) { toast("Select a reference section on the waveform first"); return; }
-  if (!layersAnalyzed) { toast("Analyze layers first"); return; }
+  // A saved style already contains the whole recipe, so there is no reference
+  // to select a section of and nothing to analyse. These two checks used to
+  // run unconditionally and rejected every preset job even though the button
+  // had correctly enabled itself.
+  const usingPreset = !!selectedPreset() || !!selectedLocalPreset() || !!selectedServerPreset();
+  if (!usingPreset) {
+    if (!hasReferenceSection()) { toast("Select a reference section on the waveform first"); return; }
+    if (!layersAnalyzed) { toast("Analyze layers first"); return; }
+  }
   const btn = document.getElementById("submit");
   btn.disabled = true;
   activateStep(3);
@@ -1459,7 +1647,11 @@ document.getElementById("submit").addEventListener("click", async () => {
 
   const fd = new FormData();
   const preset = selectedPreset();
-  if (preset) fd.append("preset_id", preset);
+  const localRecipe = selectedLocalPreset();
+  const srvPreset = selectedServerPreset();
+  if (srvPreset) fd.append("preset_id", srvPreset);
+  else if (preset) fd.append("preset_id", preset);
+  else if (localRecipe) fd.append("preset_json", JSON.stringify(localRecipe));
   else if (files.reference) fd.append("reference", files.reference);
   else fd.append("reference_url", document.getElementById("reference_url").value.trim());
   fd.append("dry", files.dry);
@@ -1671,8 +1863,12 @@ async function renderRecipe(url) {
     if (vl.total_layers != null)
       cards.push(rcard("Vocal layers", `${vl.total_layers}`, `${vl.n_doublers || 0} doubles · ${(vl.harmony_intervals || []).length} harmonies`));
     const m = rec.metrics || {};
-    if (m.spectral_distance != null)
-      cards.push(rcard("Match quality", (+m.spectral_distance).toFixed(3), `spectral distance · out ${(+m.lufs_output).toFixed(1)} LUFS`));
+    // Output level, not spectral distance again: the scorecard above already
+    // shows that exact number as "Tone match", and printing one metric twice
+    // under two names reads as two independent measurements.
+    if (m.lufs_output != null)
+      cards.push(rcard("Output level", `${(+m.lufs_output).toFixed(1)} LUFS`,
+        m.lufs_reference != null ? `reference ${(+m.lufs_reference).toFixed(1)} LUFS` : "integrated loudness"));
     if (!cards.length) cards.push(rcard("Recipe", "saved", "full JSON via download"));
     document.getElementById("recipe-grid").innerHTML = cards.join("");
 

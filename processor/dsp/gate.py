@@ -1,5 +1,5 @@
 """
-Noise Gate — removes room noise and breath between words.
+Noise Gate - removes room noise and breath between words.
 Applied as the first stage in the vocal chain.
 """
 from dataclasses import dataclass

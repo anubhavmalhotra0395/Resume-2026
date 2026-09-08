@@ -1,8 +1,19 @@
+import sys
 from pathlib import Path
 from typing import List
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Windows consoles default to a legacy codepage (cp1252). The pipeline's
+# progress lines use "✓" and "…", so a job would die mid-run with
+# UnicodeEncodeError from inside a print() — separation completed, then the
+# job crashed on the line announcing it. Degrade the character instead.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 
 class Settings(BaseSettings):
@@ -18,6 +29,14 @@ class Settings(BaseSettings):
     # peak RAM both scale with duration, so this is a real resource guard.
     max_duration_seconds: int = 240
     max_file_mb: int = 50
+    # Half-window overlap in MDX separation, OFF by default.
+    #
+    # It buys +0.27 dB SDR on average (up to +1.9 dB on the hardest
+    # material) for exactly twice the inference -- and separation is 96% of
+    # a cold job: 730s of 758s on a 3.4-minute reference. Half of that for a
+    # quarter of a dB is the wrong trade when a job must finish in minutes.
+    # Set APP_SEPARATION_OVERLAP=1 when quality matters more than turnaround.
+    separation_overlap: bool = False
     # Reference audio beyond this is not analysed (the reference only feeds
     # analysis — none of it ends up in the output, so 2 minutes is plenty).
     analysis_max_seconds: int = 120

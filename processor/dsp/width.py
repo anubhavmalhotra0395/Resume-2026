@@ -14,7 +14,7 @@ def apply_width(
     The detuned copy comes from a slowly *modulated* delay line (classic tape
     ADT), so the perceived detune is constant but the copy stays anchored to
     the lead. The previous implementation resampled the whole copy at the
-    detune ratio — a 4-cent detune is a 0.23% speed difference, so the copy
+    detune ratio - a 4-cent detune is a 0.23% speed difference, so the copy
     drifted ~140 ms per minute and turned into an audible second vocal by the
     end of the song ("sounds doubled after a while").
     """

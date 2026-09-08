@@ -21,7 +21,7 @@ def detect_delay(y: np.ndarray, sr: int, dry: np.ndarray | None = None):
     of signal length.  Only returns a non-zero result when the correlation peak
     is strong enough to indicate a real repeating echo.
 
-    Confidence threshold: 0.12  (empirically derived — natural room decay / chorus
+    Confidence threshold: 0.12  (empirically derived - natural room decay / chorus
     typically scores 0.04-0.08; genuine delay repeats score 0.12+).
 
     Returns:
@@ -123,7 +123,7 @@ def phrase_send_envelope(n_samples: int, sr: int, segments,
     """Delay-send automation for phrase throws: full send on each phrase's
     last `tail_s` seconds (and briefly into the following gap so the throw
     rings), `base` send during the body. This is how records use vocal
-    delay — constant full send is what makes renders feel cluttered."""
+    delay - constant full send is what makes renders feel cluttered."""
     env = np.full(n_samples, float(base))
     for (s0, e0) in segments:
         t0 = max(int(s0), int(e0) - int(tail_s * sr))
@@ -139,8 +139,8 @@ def apply_delay(y: np.ndarray, sr: int, delay_ms: float, feedback: float = 0.25,
     """
     Feedback delay. `mix` sets the first repeat's level relative to the dry
     signal (so a measured echo_level maps straight onto it); `feedback` sets
-    how much each repeat carries to the next; the wet path is low-passed —
-    like every studio vocal delay — so repeats sit behind the voice instead
+    how much each repeat carries to the next; the wet path is low-passed -
+    like every studio vocal delay - so repeats sit behind the voice instead
     of clashing with it.
     """
     if delay_ms <= 0:

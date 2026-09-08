@@ -5,7 +5,7 @@ Register for a free API token: https://www.football-data.org/client/register
 Set env: APP_FOOTBALL_DATA_API_TOKEN
 
 We call the API once per resource type and filter client-side to Chelsea (team id / TLA "CHE").
-Transfer rumours are not provided by this provider — use news/RSS separately.
+Transfer rumours are not provided by this provider - use news/RSS separately.
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def build_chelsea_demo_snapshot() -> dict[str, Any]:
             {"name": "Example Midfielder", "position": "Midfield"},
             {"name": "Example Forward", "position": "Offence"},
         ],
-        "coach": {"name": "—", "nationality": "—"},
+        "coach": {"name": "-", "nationality": "-"},
         "fixtures_upcoming": [
             {
                 "homeTeam": {"shortName": "CHE", "name": "Chelsea FC"},
@@ -84,7 +84,7 @@ def build_chelsea_demo_snapshot() -> dict[str, Any]:
                 "competition": "FAC",
                 "table_row": None,
                 "included": False,
-                "note": "—",
+                "note": "-",
             },
         ],
         "source": "demo",
@@ -159,7 +159,7 @@ async def build_chelsea_snapshot(token: str) -> dict[str, Any]:
             except httpx.HTTPStatusError as e:
                 note = e.response.text[:200] if e.response is not None else str(e)
                 if e.response is not None and e.response.status_code == 403:
-                    note = "403 — competition may need a higher football-data.org plan"
+                    note = "403 - competition may need a higher football-data.org plan"
                 cup_rows.append(
                     {
                         "competition": code,

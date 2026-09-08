@@ -1,19 +1,19 @@
 """
-Vocal Layer Analysis — detect exactly how many vocal layers are in the reference.
+Vocal Layer Analysis - detect exactly how many vocal layers are in the reference.
 
 Two types of layers are distinguished:
-  1. Doubling layers  — same melody, tiny pitch/timing variation (ADT / stack)
-  2. Harmony voices   — different pitch (musical interval: 3rd, 4th, 5th, octave)
+  1. Doubling layers  - same melody, tiny pitch/timing variation (ADT / stack)
+  2. Harmony voices   - different pitch (musical interval: 3rd, 4th, 5th, octave)
 
 Total detected layers drives the replication: if reference has N layers total,
 the output will have exactly N layers applied to the dry vocal.
 
 Detection approach
-──────────────────
+??????????????????
 Doublers:
   - Measure stereo decorrelation (side/mid energy ratio).
   - Measure pitch microvariation within voiced segments.
-  - Each 0.10–0.15 unit of side/mid ratio ≈ one additional doubling layer.
+  - Each 0.10?0.15 unit of side/mid ratio ~ one additional doubling layer.
   - Cross-correlation between L and R channel delayed copies also reveals
     the number of stacked copies by finding sub-peaks in the autocorrelation.
 

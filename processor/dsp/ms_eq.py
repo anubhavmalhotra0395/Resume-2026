@@ -1,5 +1,5 @@
 """
-Mid-Side EQ — apply separate EQ curves to the mid and side channels of a stereo signal.
+Mid-Side EQ - apply separate EQ curves to the mid and side channels of a stereo signal.
 Mono input is passed through unchanged (no side channel to process).
 """
 from dataclasses import dataclass, field

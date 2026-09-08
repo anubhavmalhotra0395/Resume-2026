@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+import os
 import numpy as np
 
 from processor.dsp.compressor import CompressorSettings, apply_compressor
@@ -44,6 +45,34 @@ def normalize_rms(x: np.ndarray, target_db: float = -18.0) -> np.ndarray:
         result = result / max_result * 0.95
     
     return result
+
+
+# Harmonic-generation probe. Set APP_THD_PROBE=1 to log, after every stage,
+# how much energy sits above 16 kHz relative to 1-4 kHz. A stage that raises
+# this is generating harmonics -- which is audible as fizz or crackle on loud
+# notes and is invisible to every similarity dimension.
+_THD_PROBE = os.environ.get("APP_THD_PROBE") == "1"
+_thd_last = {}
+
+
+def _thd_probe(tag: str, y: np.ndarray, sr: int) -> None:
+    if not _THD_PROBE:
+        return
+    try:
+        m = y if y.ndim == 1 else y.mean(axis=(0 if y.shape[0] <= 2 else 1))
+        m = np.ascontiguousarray(m[: sr * 30], dtype=np.float32)
+        if len(m) < sr:
+            return
+        S = np.abs(np.fft.rfft(m * np.hanning(len(m))))
+        f = np.fft.rfftfreq(len(m), 1.0 / sr)
+        b = lambda a, c: float(S[(f >= a) & (f < c)].sum())
+        v = 20 * np.log10((b(16000, sr / 2) + 1e-12) / (b(1000, 4000) + 1e-12))
+        prev = _thd_last.get("v")
+        delta = "" if prev is None else f"   ({v - prev:+.2f} dB)"
+        print(f"  THD {tag:<22} >16k/1-4k = {v:7.2f} dB{delta}")
+        _thd_last["v"] = v
+    except Exception:
+        pass
 
 
 def match_loudness(x: np.ndarray, reference: np.ndarray) -> np.ndarray:
@@ -118,6 +147,7 @@ def apply_chain(
         Processed audio
     """
     y = x
+    _thd_probe("input", y, sr)
 
     if segments is not None and len(segments) > 0:
         pass  # future: per-segment adaptive processing
@@ -132,17 +162,75 @@ def apply_chain(
             y = apply_gate(y, sr, gate)
             y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
             if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Gate produced silent output. Skipping gate.")
+                print("! WARNING: Gate produced silent output. Skipping gate.")
                 y = y_before
         except Exception as e:
-            print(f"⚠ WARNING: Gate failed ({e}). Skipping gate.")
+            print(f"! WARNING: Gate failed ({e}). Skipping gate.")
+            y = y_before
+
+    # -- Pitch correction FIRST ---------------------------------------------
+    # A tuner needs the cleanest signal it can get: it tracks a fundamental
+    # and resynthesises around it, so anything already smeared across the
+    # spectrum gets smeared further. This used to run LAST -- after reverb,
+    # chorus, doubling and saturation -- so the pitch shifter was operating on
+    # reverb tails and detuned copies rather than on a voice. Antares' own
+    # guidance is to handle pitch before EQ and compression.
+    # ── Autotune — key detected from the dry input (x), applied to processed ──
+    # We use x (original dry) for key detection so the key is accurate,
+    # then apply correction to the processed signal y.
+    if autotune is not None:
+        try:
+            y_before = y.copy()
+            # Chromatic snapping (Auto-Tune's own safe default): key detection
+            # on a solo vocal misfires easily, and a wrong scale audibly pulls
+            # correct notes to wrong pitches. Nearest-semitone can't.
+            scale_root, scale_mode = 0, "chromatic"
+            print(f"  Autotune: chromatic strength={autotune.strength:.2f} retune={autotune.retune_ms:.0f}ms")
+
+            mono_y = y if y.ndim == 1 else np.mean(y, axis=0)
+            tuned = apply_autotune(
+                mono_y, sr,
+                retune_ms=autotune.retune_ms,
+                strength=autotune.strength,
+                ref_cents=getattr(autotune, "ref_cents", None),
+                scale_root=scale_root,
+                scale_mode=scale_mode,
+            )
+            if y.ndim == 2:
+                y = np.stack([tuned, tuned], axis=0).astype(np.float32)
+            else:
+                y = tuned
+            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+            _thd_probe('autotune', y, sr)
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: Autotune produced silent output. Skipping.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: Autotune failed ({e}). Skipping.")
+
+    # Match loudness to reference if provided, otherwise normalize to -18 dBFS.
+    # IMPORTANT: the gain is *computed* on the overlapping segment but *applied*
+    # to the full-length signal. The old code assigned the truncated segment
+    # back to y — when the reference was shorter than the vocal (e.g. a 45 s
+    # analysis window vs a 3-minute take), everything past the reference's
+    # length was replaced with padded silence.
+
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: Gate produced silent output. Skipping gate.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: Gate failed ({e}). Skipping gate.")
 
     # EQ
     y_before = y.copy()
+    if _THD_PROBE and eq_bands:
+        for _b in sorted(eq_bands, key=lambda b: b.f):
+            print(f"  EQ band {_b.f:8.0f} Hz  {_b.gain_db:+6.2f} dB  Q={_b.q:.2f}")
     y = apply_eq(y, sr, eq_bands)
+    _thd_probe('eq', y, sr)
     y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
     if np.max(np.abs(y)) < 1e-9:
-        print("⚠ WARNING: EQ produced silent output. Skipping EQ.")
+        print("! WARNING: EQ produced silent output. Skipping EQ.")
         y = y_before
     
     # Compression (multiband or single-band) — skip if not detected in reference
@@ -152,9 +240,10 @@ def apply_chain(
             y = multiband_compress(y, sr)
         else:
             y = apply_compressor(y, sr, comp)
+            _thd_probe('compressor', y, sr)
         y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
         if np.max(np.abs(y)) < 1e-9:
-            print("⚠ WARNING: Compressor produced silent output. Skipping compression.")
+            print("! WARNING: Compressor produced silent output. Skipping compression.")
             y = y_before
 
     # ── Parallel Compression (after main compressor) ───────────────────────
@@ -162,12 +251,13 @@ def apply_chain(
         try:
             y_before = y.copy()
             y = apply_parallel_comp(y, sr, parallel_comp)
+            _thd_probe('parallel_comp', y, sr)
             y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
             if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Parallel comp produced silent output. Skipping.")
+                print("! WARNING: Parallel comp produced silent output. Skipping.")
                 y = y_before
         except Exception as e:
-            print(f"⚠ WARNING: Parallel comp failed ({e}). Skipping.")
+            print(f"! WARNING: Parallel comp failed ({e}). Skipping.")
 
     # De-esser (before reverb to reduce sibilance in reverb tail).
     # Depth matched to the reference's own sibilance when available.
@@ -181,11 +271,127 @@ def apply_chain(
         except Exception:
             _ref_sib = None
         y = apply_deesser(y, sr, ref_sibilance_db=_ref_sib)
+        _thd_probe('deesser', y, sr)
         y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
         if np.max(np.abs(y)) < 1e-9:
-            print("⚠ WARNING: De-esser produced silent output. Skipping de-esser.")
+            print("! WARNING: De-esser produced silent output. Skipping de-esser.")
             y = y_before
     
+    if enable_transient_shaper:
+        y_before = y.copy()
+        y = transient_shaper(y, sr, amount=0.3)
+        y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+        if np.max(np.abs(y)) < 1e-9:
+            print("! WARNING: Transient shaper produced silent output. Skipping transient shaper.")
+            y = y_before
+    
+    # Saturation — skip if not detected in reference
+    if saturation_drive is not None:
+        y_before = y.copy()
+        y = soft_clip(y, drive=saturation_drive)
+        _thd_probe('saturation', y, sr)
+        y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+        if np.max(np.abs(y)) < 1e-9:
+            print("! WARNING: Saturation produced silent output. Skipping saturation.")
+            y = y_before
+
+    # ── Tape Emulation (after saturation, before spatial effects) ─────────
+    if tape is not None:
+        try:
+            y_before = y.copy()
+            y = apply_tape(y, sr, tape)
+            _thd_probe('tape', y, sr)
+            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: Tape emulation produced silent output. Skipping.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: Tape emulation failed ({e}). Skipping.")
+
+    # ── Exciter (after tape, adds HF harmonics) ───────────────────────────
+    if exciter is not None:
+        try:
+            y_before = y.copy()
+            y = apply_exciter(y, sr, exciter)
+            _thd_probe('exciter', y, sr)
+            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: Exciter produced silent output. Skipping.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: Exciter failed ({e}). Skipping.")
+
+    # Width/ADT
+    if width and width.get("mix", 0) > 0:
+        y = apply_width(
+            y,
+            sr,
+            delay_ms=float(width.get("delay_ms", 12.0)),
+            detune_cents=float(width.get("detune_cents", 4.0)),
+            mix=float(width.get("mix", 0.35)),
+        )
+
+    # ── Vocal Doubler (after width, before modulation) ────────────────────
+    if doubler is not None and doubler.mix > 0:
+        try:
+            y_before = y.copy()
+            y = apply_doubler(y, sr, doubler)
+            _thd_probe('doubler', y, sr)
+            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: Doubler produced silent output. Skipping.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: Doubler failed ({e}). Skipping.")
+
+    # ── Mid-Side EQ (after doubler, before chorus/flanger) ───────────────
+    if ms_eq is not None and (ms_eq.mid_bands or ms_eq.side_bands):
+        try:
+            y_before = y.copy()
+            y = apply_ms_eq(y, sr, ms_eq)
+            _thd_probe('ms_eq', y, sr)
+            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: M-S EQ produced silent output. Skipping.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: M-S EQ failed ({e}). Skipping.")
+
+    # Chorus (after width / modulation effects) — skip if mix is zero
+    if chorus_profile is not None and chorus_profile.mix > 0:
+        try:
+            y_before = y.copy()
+            y = apply_chorus(
+                y,
+                sr,
+                rate_hz=chorus_profile.rate_hz,
+                depth=chorus_profile.depth,
+                mix=chorus_profile.mix,
+            )
+            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: Chorus produced silent output. Skipping chorus.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: Chorus failed ({e}). Skipping chorus.")
+
+    # Flanger (after chorus) — skip if mix is zero
+    if flanger_profile is not None and flanger_profile.mix > 0:
+        try:
+            y_before = y.copy()
+            y = apply_flanger(y, sr, flanger_profile)
+            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+            if np.max(np.abs(y)) < 1e-9:
+                print("! WARNING: Flanger produced silent output. Skipping flanger.")
+                y = y_before
+        except Exception as e:
+            print(f"! WARNING: Flanger failed ({e}). Skipping flanger.")
+    
+    # -- Reverb LAST --------------------------------------------------------
+    # Space goes on the end. Run earlier, every stage after it was processing
+    # the tails instead of the voice -- saturation, tape, exciter, width,
+    # doubler and chorus were all colouring reverb -- and compressing after
+    # reverb pumps the tail up in the gaps and squashes it under the words.
     # Reverb — convolution reverb first, algorithmic as fallback
     if reverb is not None:
         y_before = y.copy()
@@ -216,152 +422,11 @@ def apply_chain(
             y = apply_reverb(y, sr, reverb)
         y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
         if np.max(np.abs(y)) < 1e-9:
-            print("⚠ WARNING: Reverb produced silent output. Skipping reverb.")
+            print("! WARNING: Reverb produced silent output. Skipping reverb.")
             y = y_before
     
     # Transient shaper (optional)
-    if enable_transient_shaper:
-        y_before = y.copy()
-        y = transient_shaper(y, sr, amount=0.3)
-        y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-        if np.max(np.abs(y)) < 1e-9:
-            print("⚠ WARNING: Transient shaper produced silent output. Skipping transient shaper.")
-            y = y_before
-    
-    # Saturation — skip if not detected in reference
-    if saturation_drive is not None:
-        y_before = y.copy()
-        y = soft_clip(y, drive=saturation_drive)
-        y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-        if np.max(np.abs(y)) < 1e-9:
-            print("⚠ WARNING: Saturation produced silent output. Skipping saturation.")
-            y = y_before
 
-    # ── Tape Emulation (after saturation, before spatial effects) ─────────
-    if tape is not None:
-        try:
-            y_before = y.copy()
-            y = apply_tape(y, sr, tape)
-            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-            if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Tape emulation produced silent output. Skipping.")
-                y = y_before
-        except Exception as e:
-            print(f"⚠ WARNING: Tape emulation failed ({e}). Skipping.")
-
-    # ── Exciter (after tape, adds HF harmonics) ───────────────────────────
-    if exciter is not None:
-        try:
-            y_before = y.copy()
-            y = apply_exciter(y, sr, exciter)
-            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-            if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Exciter produced silent output. Skipping.")
-                y = y_before
-        except Exception as e:
-            print(f"⚠ WARNING: Exciter failed ({e}). Skipping.")
-
-    # Width/ADT
-    if width and width.get("mix", 0) > 0:
-        y = apply_width(
-            y,
-            sr,
-            delay_ms=float(width.get("delay_ms", 12.0)),
-            detune_cents=float(width.get("detune_cents", 4.0)),
-            mix=float(width.get("mix", 0.35)),
-        )
-
-    # ── Vocal Doubler (after width, before modulation) ────────────────────
-    if doubler is not None and doubler.mix > 0:
-        try:
-            y_before = y.copy()
-            y = apply_doubler(y, sr, doubler)
-            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-            if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Doubler produced silent output. Skipping.")
-                y = y_before
-        except Exception as e:
-            print(f"⚠ WARNING: Doubler failed ({e}). Skipping.")
-
-    # ── Mid-Side EQ (after doubler, before chorus/flanger) ───────────────
-    if ms_eq is not None and (ms_eq.mid_bands or ms_eq.side_bands):
-        try:
-            y_before = y.copy()
-            y = apply_ms_eq(y, sr, ms_eq)
-            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-            if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: M-S EQ produced silent output. Skipping.")
-                y = y_before
-        except Exception as e:
-            print(f"⚠ WARNING: M-S EQ failed ({e}). Skipping.")
-
-    # Chorus (after width / modulation effects) — skip if mix is zero
-    if chorus_profile is not None and chorus_profile.mix > 0:
-        try:
-            y_before = y.copy()
-            y = apply_chorus(
-                y,
-                sr,
-                rate_hz=chorus_profile.rate_hz,
-                depth=chorus_profile.depth,
-                mix=chorus_profile.mix,
-            )
-            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-            if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Chorus produced silent output. Skipping chorus.")
-                y = y_before
-        except Exception as e:
-            print(f"⚠ WARNING: Chorus failed ({e}). Skipping chorus.")
-
-    # Flanger (after chorus) — skip if mix is zero
-    if flanger_profile is not None and flanger_profile.mix > 0:
-        try:
-            y_before = y.copy()
-            y = apply_flanger(y, sr, flanger_profile)
-            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-            if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Flanger produced silent output. Skipping flanger.")
-                y = y_before
-        except Exception as e:
-            print(f"⚠ WARNING: Flanger failed ({e}). Skipping flanger.")
-    
-    # ── Autotune — key detected from the dry input (x), applied to processed ──
-    # We use x (original dry) for key detection so the key is accurate,
-    # then apply correction to the processed signal y.
-    if autotune is not None:
-        try:
-            y_before = y.copy()
-            # Chromatic snapping (Auto-Tune's own safe default): key detection
-            # on a solo vocal misfires easily, and a wrong scale audibly pulls
-            # correct notes to wrong pitches. Nearest-semitone can't.
-            scale_root, scale_mode = 0, "chromatic"
-            print(f"  Autotune: chromatic strength={autotune.strength:.2f} retune={autotune.retune_ms:.0f}ms")
-
-            mono_y = y if y.ndim == 1 else np.mean(y, axis=0)
-            tuned = apply_autotune(
-                mono_y, sr,
-                retune_ms=autotune.retune_ms,
-                strength=autotune.strength,
-                scale_root=scale_root,
-                scale_mode=scale_mode,
-            )
-            if y.ndim == 2:
-                y = np.stack([tuned, tuned], axis=0).astype(np.float32)
-            else:
-                y = tuned
-            y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
-            if np.max(np.abs(y)) < 1e-9:
-                print("⚠ WARNING: Autotune produced silent output. Skipping.")
-                y = y_before
-        except Exception as e:
-            print(f"⚠ WARNING: Autotune failed ({e}). Skipping.")
-
-    # Match loudness to reference if provided, otherwise normalize to -18 dBFS.
-    # IMPORTANT: the gain is *computed* on the overlapping segment but *applied*
-    # to the full-length signal. The old code assigned the truncated segment
-    # back to y — when the reference was shorter than the vocal (e.g. a 45 s
-    # analysis window vs a 3-minute take), everything past the reference's
-    # length was replaced with padded silence.
     if reference is not None and len(reference) > 0:
         min_len = min(len(y), len(reference))
         ref_seg = reference[:min_len]
@@ -392,14 +457,14 @@ def apply_chain(
     # Check both peak and RMS to ensure audio is audible
     if max_final < 0.01 or rms_final < 0.005:  # Very quiet threshold
         # If somehow we got zeros or very quiet audio, boost it
-        print(f"⚠ WARNING: DSP chain produced very quiet output (max={max_final:.6f}, rms={rms_final:.6f}). Boosting...")
+        print(f"! WARNING: DSP chain produced very quiet output (max={max_final:.6f}, rms={rms_final:.6f}). Boosting...")
         if max_final > 1e-9:
             # Boost to reasonable level
             target_max = 0.5
             y = y / max_final * target_max
         else:
             # If completely silent, return original input
-            print("⚠ WARNING: DSP chain produced silent output. Returning original input.")
+            print("! WARNING: DSP chain produced silent output. Returning original input.")
             return x.astype(np.float32)
     
     # Ensure final output has reasonable level (at least -30 dBFS RMS)

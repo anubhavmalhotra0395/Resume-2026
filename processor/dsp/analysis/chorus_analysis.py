@@ -55,11 +55,11 @@ def detect_chorus(reference: np.ndarray, sr: int) -> ChorusProfile:
     Detect chorus-like MODULATION from reference audio.
 
     Key distinction: chorus is a time-varying pitch/delay modulation effect.
-    Simple stereo width (L≠R) from a doubler or room is NOT chorus.
+    Simple stereo width (L?R) from a doubler or room is NOT chorus.
 
     Two-gate approach:
-      1. Side energy > 10% of mid  →  stereo spread exists (necessary but not sufficient)
-      2. Side energy envelope has a periodic modulation at 0.2–5 Hz  →  real chorus LFO
+      1. Side energy > 10% of mid  ->  stereo spread exists (necessary but not sufficient)
+      2. Side energy envelope has a periodic modulation at 0.2?5 Hz  ->  real chorus LFO
 
     Only if BOTH conditions are met do we report a non-zero mix.
     Mix is capped at 0.25 for vocals.

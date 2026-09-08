@@ -1,5 +1,5 @@
 """
-Tape emulation analysis — detect HF roll-off slope and harmonic signature
+Tape emulation analysis - detect HF roll-off slope and harmonic signature
 characteristic of tape saturation.
 Returns None if reference shows no tape-like characteristics.
 """
@@ -46,22 +46,39 @@ def detect_tape(reference_audio: np.ndarray, sr: int) -> Optional["TapeSettings"
     rolloff_12k = e_12k / e_8k
     rolloff_16k = e_16k / (e_12k + 1e-12)
 
-    # Tape typically rolls off 3-6 dB per octave above 14kHz → ratio < 0.5 at 12k→16k
-    has_hf_rolloff = rolloff_12k < 0.5 or rolloff_16k < 0.35
-
-    if not has_hf_rolloff:
+    # HF roll-off is a weak tape cue, because singing is naturally dark up
+    # here. Measured across six commercial vocal stems, untreated tracks span
+    # rolloff_12k 0.081-0.449 while the same tracks pushed through heavy tape
+    # span 0.047-0.260 — the two distributions overlap almost entirely, so no
+    # threshold on this feature cleanly separates "tape" from "dark singer".
+    #
+    # The old gate (rolloff_12k < 0.5 or rolloff_16k < 0.35) fired on 6 of 6
+    # untreated stems, and drive was clip(1 - rolloff_12k, 0.1, 0.8), which
+    # pins to 0.8 whenever the 12-16 kHz band is quiet — i.e. always. Every
+    # job therefore got near-maximum tape saturation no matter what the
+    # reference sounded like, which works directly against matching it.
+    #
+    # So: only claim tape when the reference is darker than any natural vocal
+    # in that sample (0 of 6 untreated stems pass both tests), and scale drive
+    # continuously from the measurement instead of pinning it.
+    if not (rolloff_12k < 0.09 and rolloff_16k < 0.05):
         return None
 
-    # Estimate drive from how steep the rolloff is
-    drive_est = float(np.clip(1.0 - rolloff_12k, 0.1, 0.8))
-    mix_est   = float(np.clip(drive_est * 0.5, 0.15, 0.5))
+    drive_est = float(np.clip((0.09 - rolloff_12k) / 0.09 * 0.5, 0.05, 0.5))
+    mix_est   = float(np.clip(0.20 + 0.40 * drive_est, 0.15, 0.45))
 
-    # Estimate rolloff start frequency
+    # Roll-off start: the frequency where the spectrum has fallen 12 dB below
+    # its own 2-6 kHz level. Continuous, rather than a three-way step that
+    # reported 10 kHz for practically every reference.
+    p_ref = _band_energy(2000, 6000)
     hf_rolloff_hz = 14000.0
-    if rolloff_12k < 0.25:
-        hf_rolloff_hz = 10000.0
-    elif rolloff_12k > 0.4:
-        hf_rolloff_hz = 16000.0
+    if p_ref > 1e-12:
+        thresh = p_ref * 10 ** (-12.0 / 10.0)
+        for lo in range(4000, 18000, 500):
+            if _band_energy(lo, lo + 1000) < thresh:
+                hf_rolloff_hz = float(lo)
+                break
+    hf_rolloff_hz = float(np.clip(hf_rolloff_hz, 6000.0, 18000.0))
 
     return TapeSettings(
         drive=drive_est,

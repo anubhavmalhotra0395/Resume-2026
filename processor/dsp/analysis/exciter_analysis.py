@@ -1,5 +1,5 @@
 """
-Exciter analysis — detect disproportionate HF harmonic energy in the reference vocal.
+Exciter analysis - detect disproportionate HF harmonic energy in the reference vocal.
 Returns None if no evidence of HF harmonic enhancement.
 """
 from __future__ import annotations
@@ -12,7 +12,7 @@ import librosa
 
 def detect_exciter(reference_audio: np.ndarray, sr: int) -> Optional["ExciterSettings"]:
     """
-    Compare high-frequency (8–16 kHz) energy to a smoothed low-frequency baseline.
+    Compare high-frequency (8?16 kHz) energy to a smoothed low-frequency baseline.
     If reference has significantly more HF energy than expected from the fundamentals
     alone, an exciter/harmonic enhancer was likely used.
     """

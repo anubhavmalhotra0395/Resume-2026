@@ -1,5 +1,5 @@
 """
-AI Audio module — translates natural language prompts into DSP configuration
+AI Audio module - translates natural language prompts into DSP configuration
 using GPT-4 (OpenAI).  Keeps state between iterative calls so users can
 refine their sound conversationally.
 
@@ -117,24 +117,24 @@ The JSON must strictly follow this schema:
 }
 
 Translate human descriptive terms to DSP values using this guide:
-- warm / warmer           → boost low_shelf (+2..+4), cut high_mid (-1..-2)
-- harsh / bright          → cut high_mid (-2..-4), cut high_shelf (-1..-2)
-- muddy                   → cut low_mid (-3..-5)
-- thin / weak             → boost low_shelf (+2..+3), boost mid (+1..+2)
-- punchy / tight          → lower threshold (-24..-28), ratio 4-6, fast attack (5-15ms)
-- airy / open             → boost high_shelf (+2..+3)
-- presence / forward      → boost mid (+1..+3), boost high_mid (+1..+2)
-- nasal                   → cut mid (-2..-4) around 1-2kHz
-- boxy                    → cut low_mid (-3) around 300-500Hz
-- echo / reverb           → increase reverb mix (0.2-0.3), increase decay
-- dry / less reverb       → decrease reverb mix (0.0-0.08)
-- wide / spacious         → increase width mix (0.4-0.6)
-- mono / centered         → decrease width mix (0.0-0.1)
-- grit / bite / edgy      → increase saturation drive (1.5-2.5)
-- clean / smooth          → saturation drive 1.0
-- more punch / transients → lower threshold, fast attack (1-5ms), ratio 4-8
+- warm / warmer           -> boost low_shelf (+2..+4), cut high_mid (-1..-2)
+- harsh / bright          -> cut high_mid (-2..-4), cut high_shelf (-1..-2)
+- muddy                   -> cut low_mid (-3..-5)
+- thin / weak             -> boost low_shelf (+2..+3), boost mid (+1..+2)
+- punchy / tight          -> lower threshold (-24..-28), ratio 4-6, fast attack (5-15ms)
+- airy / open             -> boost high_shelf (+2..+3)
+- presence / forward      -> boost mid (+1..+3), boost high_mid (+1..+2)
+- nasal                   -> cut mid (-2..-4) around 1-2kHz
+- boxy                    -> cut low_mid (-3) around 300-500Hz
+- echo / reverb           -> increase reverb mix (0.2-0.3), increase decay
+- dry / less reverb       -> decrease reverb mix (0.0-0.08)
+- wide / spacious         -> increase width mix (0.4-0.6)
+- mono / centered         -> decrease width mix (0.0-0.1)
+- grit / bite / edgy      -> increase saturation drive (1.5-2.5)
+- clean / smooth          -> saturation drive 1.0
+- more punch / transients -> lower threshold, fast attack (1-5ms), ratio 4-8
 
-Always keep reverb mix ≤ 0.30. Always keep saturation drive ≤ 3.0.
+Always keep reverb mix <= 0.30. Always keep saturation drive <= 3.0.
 When updating a previous config, only change the fields that the new prompt affects.
 Return ONLY the complete updated JSON object.
 """.strip()
@@ -235,7 +235,7 @@ def prompt_to_dsp_config(
     use_groq = bool(groq_key)
 
     if not api_key:
-        logger.warning("No API key set (GROQ_API_KEY or OPENAI_API_KEY) — returning defaults")
+        logger.warning("No API key set (GROQ_API_KEY or OPENAI_API_KEY) - returning defaults")
         base = previous_config or _DEFAULTS.copy()
         return validate_dsp_config(base)
 
@@ -251,7 +251,7 @@ def prompt_to_dsp_config(
             client = OpenAI(api_key=api_key)
             model = "gpt-4o"
     except ImportError:
-        logger.error("openai package not installed — returning defaults")
+        logger.error("openai package not installed - returning defaults")
         base = previous_config or _DEFAULTS.copy()
         return validate_dsp_config(base)
 
@@ -272,7 +272,7 @@ def prompt_to_dsp_config(
             f"{json.dumps(previous_config, indent=2)}"
         )
     else:
-        user_parts.append("No previous config — generate a fresh config.")
+        user_parts.append("No previous config - generate a fresh config.")
 
     user_message = "\n\n".join(user_parts)
 
@@ -390,7 +390,7 @@ Return ONLY a JSON object of scale factors (floats), each between 0.6 and 1.4,
 for any of these keys you want to adjust (omit = 1.0):
   reverb_mix_scale, delay_mix_scale, tape_mix_scale, parallel_blend_scale,
   harmony_strength_scale, density_scale, saturation_scale
-A scale multiplies the DETECTED amount — you cannot add or remove effects.
+A scale multiplies the DETECTED amount - you cannot add or remove effects.
 Judge from the band energies, tail ratio, crest/dynamics and the detected
 values which effects should be slightly stronger or weaker to make the
 processed vocal sit like the reference. Respond with the JSON only.

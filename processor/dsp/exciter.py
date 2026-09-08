@@ -1,5 +1,5 @@
 """
-Exciter / Harmonic Enhancer — adds synthetic high-frequency harmonics via soft saturation.
+Exciter / Harmonic Enhancer - adds synthetic high-frequency harmonics via soft saturation.
 Crossover-limited so it only acts above freq_hz to avoid muddying the mids.
 """
 from dataclasses import dataclass

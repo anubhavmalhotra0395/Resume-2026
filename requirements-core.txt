@@ -11,6 +11,11 @@ numpy==1.26.4
 scipy==1.13.1
 librosa>=0.11.0
 soundfile==0.12.1
+# WORLD vocoder -- the autotune path. Wheels exist for x86-64; on ARM (the
+# Oracle/AWS Graviton images) pip builds it from source, so those images need
+# Cython and a C++ toolchain present at install time. autotune.py falls back
+# to PSOLA if the import fails, so a missing build degrades rather than breaks.
+pyworld==0.3.5
 pydantic==2.8.2
 pydantic-settings==2.3.4
 ffmpeg-python==0.2.0

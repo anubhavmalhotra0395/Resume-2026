@@ -1,5 +1,5 @@
 """
-Vocal Doubler analysis — detect doubling from stereo spread and pitch modulation.
+Vocal Doubler analysis - detect doubling from stereo spread and pitch modulation.
 Returns None if reference appears mono or has minimal spread.
 """
 from __future__ import annotations

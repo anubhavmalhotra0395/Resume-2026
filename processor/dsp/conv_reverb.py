@@ -2,7 +2,7 @@
 Convolution reverb using pre-synthesised impulse responses (IRs).
 
 Four types bundled as synthesised IRs (no external files needed):
-  - plate    : bright, dense, fast-diffusing — classic vocal plate sound
+  - plate    : bright, dense, fast-diffusing - classic vocal plate sound
   - room     : small-medium live room
   - hall     : larger space, longer tail
   - chamber  : echo chamber, coloured mid density
@@ -50,12 +50,6 @@ class ConvReverbSettings:
 def _noise_burst(length: int, seed: int = 42) -> np.ndarray:
     rng = np.random.default_rng(seed)
     return rng.standard_normal(length).astype(np.float32)
-
-
-def _decay_envelope(length: int, sr: int, rt60: float) -> np.ndarray:
-    """Exponential decay envelope that reaches –60 dB at rt60 seconds."""
-    t = np.arange(length) / sr
-    return np.exp(-6.908 * t / max(rt60, 0.01)).astype(np.float32)  # 6.908 = ln(10^3)
 
 
 def _comb(sig: np.ndarray, delay: int, g: float) -> np.ndarray:
@@ -125,10 +119,22 @@ def _build_ir(
         hf_damping = 0.65        # darker character
         density_noise = 0.45
 
-    # Scale feedback to match rt60 (longer rt60 → higher feedback)
-    rt60_ref = 1.2
-    fb_scale = float(np.clip(rt60 / rt60_ref, 0.5, 1.5))
-    comb_feedbacks = [float(np.clip(g * fb_scale, 0.0, 0.97)) for g in comb_feedbacks]
+    # Feedback per comb solved from rt60, not scaled from a fixed table.
+    # A comb of delay D and gain g loses 20*log10(g) dB every D seconds, so
+    # g = 10**(-3*D/rt60) puts it exactly -60 dB down at t = rt60. Solving per
+    # comb (rather than one shared scale) keeps all four decaying together
+    # while their delays stay coprime for density.
+    #
+    # The old code scaled a fixed feedback table AND multiplied an exponential
+    # _decay_envelope on top. Decays multiply, so their dB slopes ADD: the
+    # plate bank alone ran ~0.64 s, the envelope added another 60 dB/rt60, and
+    # a requested 1.2 s IR measured 0.38 s. Every reverb came out 2-5x too
+    # short, so a detected tail could never be reproduced.
+    rt60_eff = max(float(rt60), 0.05)
+    comb_feedbacks = [
+        float(np.clip(10.0 ** (-3.0 * (ms * 0.001) / rt60_eff), 0.0, 0.97))
+        for ms in comb_delays_ms
+    ]
 
     # Start with impulse + white noise for early reflections
     ir = np.zeros(length, dtype=np.float32)
@@ -158,9 +164,13 @@ def _build_ir(
         d = max(1, int(ms * 0.001 * sr))
         ap = _allpass(ap, d, allpass_g)
 
-    # Apply decay envelope
-    env = _decay_envelope(len(ap), sr, rt60)
-    ap = ap * env
+    # No decay envelope here — the comb bank above already realises rt60.
+    # Multiplying an exponential on top is what made every IR far too short.
+    # Only taper the last 50 ms, so ending the buffer doesn't click.
+    tail = min(len(ap), int(0.05 * sr))
+    if tail > 1:
+        ap = ap.copy()
+        ap[-tail:] *= np.linspace(1.0, 0.0, tail, dtype=np.float32)
 
     # Pre-delay
     pre_samples = int(pre_delay_ms * 0.001 * sr)

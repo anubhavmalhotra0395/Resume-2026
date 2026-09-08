@@ -1,5 +1,5 @@
 """
-Parallel compression analysis — detect upward compression signature via crest factor.
+Parallel compression analysis - detect upward compression signature via crest factor.
 When quiet sections are louder than expected relative to loud sections, a parallel
 compressor (New York compression) was likely applied.
 Returns None if crest factor is normal.

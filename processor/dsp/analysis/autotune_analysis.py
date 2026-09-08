@@ -1,15 +1,15 @@
 """
-Autotune analysis — detect pitch correction from semitone clustering in the reference vocal.
+Autotune analysis - detect pitch correction from semitone clustering in the reference vocal.
 
 Detection logic:
   - Use librosa.pyin on the reference vocal to get voiced pitch frames.
   - Compute how tightly frames cluster to chromatic semitones (cents deviation).
-  - If median deviation < 15 cents → pitch correction was applied.
+  - If median deviation < 15 cents -> pitch correction was applied.
   - Estimate strength (how aggressive) and retune_ms (how fast).
   - Returns AutotuneSettings (auto-applied), or None if no correction detected.
 
 The KEY used for correction is detected from the dry vocal at apply time,
-not from the reference — so notes snap to the dry vocal's own scale.
+not from the reference - so notes snap to the dry vocal's own scale.
 """
 from __future__ import annotations
 from dataclasses import dataclass
@@ -23,6 +23,11 @@ import librosa
 class AutotuneSettings:
     strength: float = 0.7   # 0.0–1.0
     retune_ms: float = 20.0  # how fast correction applies (ms)
+    # How far off the grid the reference itself sits, in cents. This is the
+    # tightness to aim for: a hard-tuned lead measures under a cent, a lightly
+    # tuned one 10-15. Without it there is no way to tell 'snap everything'
+    # from 'nudge the worst notes', and the correction floor cannot adapt.
+    ref_cents: float = 10.0
 
 
 def detect_autotune(reference_audio: np.ndarray, sr: int) -> Optional[AutotuneSettings]:
@@ -33,14 +38,17 @@ def detect_autotune(reference_audio: np.ndarray, sr: int) -> Optional[AutotuneSe
     (median deviation from nearest semitone < 15 cents), None otherwise.
 
     The returned settings carry strength/speed derived from the reference.
-    The KEY is not stored here — it is detected from the dry vocal at apply time.
+    The KEY is not stored here - it is detected from the dry vocal at apply time.
     """
     if reference_audio.ndim == 2:
         mono = np.mean(reference_audio, axis=0)
     else:
         mono = reference_audio
 
-    # Limit to 30s for speed — pyin is very slow on long audio
+    # 30s window. Shortening this to 15s to save ~12s of detection time
+    # changed the ANSWER: on the same reference it reported strength 0.33
+    # instead of 1.00, and the chain then barely tuned at all. Pitch
+    # clustering needs enough voiced material to be stable.
     _MAX_SAMPLES = sr * 30
     if len(mono) > _MAX_SAMPLES:
         # Take from the middle of the track (more likely to have vocals)
@@ -98,4 +106,5 @@ def detect_autotune(reference_audio: np.ndarray, sr: int) -> Optional[AutotuneSe
     except Exception:
         pass
 
-    return AutotuneSettings(strength=strength, retune_ms=retune_ms)
+    return AutotuneSettings(strength=strength, retune_ms=retune_ms,
+                            ref_cents=median_dev)

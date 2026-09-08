@@ -1,12 +1,12 @@
 """
-Dynamics profile transfer — makes the processed vocal *ride* like the
+Dynamics profile transfer - makes the processed vocal *ride* like the
 reference rides.
 
 Global density matching (one glue ratio) matches the p90/p10 spread but not
 the shape between: a reference that hovers dense-and-loud with short dips is
 different from one that swings evenly, even at the same spread. This stage
 quantile-maps the short-term loudness envelope of the output onto the
-reference's envelope distribution — fader automation computed from the
+reference's envelope distribution - fader automation computed from the
 reference, applied smoothly, with silence left untouched.
 
 Timeline-free: distributions are matched, not timestamps, so the reference
@@ -15,6 +15,11 @@ and the dry vocal can be entirely different songs.
 from __future__ import annotations
 
 import numpy as np
+
+# How far below a signal's own loud passages still counts as programme.
+# Shared by every active-frame decision here so that a stored quantile
+# fingerprint and a live measurement are taken over the same window.
+ACTIVE_WINDOW_DB = 25.0
 
 
 def _frame_rms_db(mono: np.ndarray, sr: int, frame_s: float = 0.05):
@@ -27,13 +32,13 @@ def _frame_rms_db(mono: np.ndarray, sr: int, frame_s: float = 0.05):
 
 
 def loudness_quantiles_centered(mono: np.ndarray, sr: int) -> list | None:
-    """The 41-point centered loudness quantile curve — a reference's 'ride
+    """The 41-point centered loudness quantile curve - a reference's 'ride
     fingerprint'. Stored in recipes so presets can replay the dynamics feel
     without the reference audio."""
     db, _ = _frame_rms_db(np.asarray(mono, dtype=np.float64), sr)
     if db is None:
         return None
-    act = db > (np.percentile(db, 95) - 40.0)
+    act = db > (np.percentile(db, 95) - ACTIVE_WINDOW_DB)
     if act.sum() < 8:
         return None
     qs = np.linspace(0.0, 100.0, 41)
@@ -52,8 +57,8 @@ def match_dynamics(
     """
     Quantile-map y's active-frame loudness distribution onto ref_mono's.
 
-    strength: 0..1 — how far each frame moves toward its mapped target.
-    Gains are clipped to ±max_gain_db and smoothed (~300 ms) so the
+    strength: 0..1 - how far each frame moves toward its mapped target.
+    Gains are clipped to +/-max_gain_db and smoothed (~300 ms) so the
     automation is inaudible as such.
     """
     if len(y) == 0 or strength <= 0:
@@ -69,11 +74,18 @@ def match_dynamics(
     if ref_db is None and not ref_quantiles:
         return y
 
-    # Active = within 40 dB of each signal's own loud passages (relative
-    # gate, same reasoning as the density measurement: absolute gates count
-    # separation bleed as programme).
+    # Active = within ACTIVE_WINDOW_DB of each signal's own loud passages.
+    #
+    # This was 40 dB. References reach this stage after MDX separation, and
+    # separation bleed sits 25-40 dB down — inside that window, so it counted
+    # as programme and made the reference look far more dynamic than the real
+    # vocal. Measured against MUSDB18 ground-truth stems, the separated
+    # reference's p10-p90 spread was off by 4.4 dB at 40 dB, 2.7 dB at 25 dB.
+    # The chain then reproduced that inflation as over-expansion: on the
+    # densest track the output's loudness range came out ~14 dB wide of the
+    # target. Tighter than ~20 dB starts discarding genuinely quiet phrasing.
     def active_mask(db):
-        return db > (np.percentile(db, 95) - 40.0)
+        return db > (np.percentile(db, 95) - ACTIVE_WINDOW_DB)
 
     out_act = active_mask(out_db)
     if out_act.sum() < 8:
@@ -113,7 +125,7 @@ def match_dynamics(
 
 
 def dynamics_profile_gap_db(a_mono: np.ndarray, b_mono: np.ndarray, sr: int) -> float:
-    """Mean |gap| between two signals' centered loudness quantile curves —
+    """Mean |gap| between two signals' centered loudness quantile curves -
     0 means they ride identically. Used by the match report."""
     a_db, _ = _frame_rms_db(np.asarray(a_mono, dtype=np.float64), sr)
     b_db, _ = _frame_rms_db(np.asarray(b_mono, dtype=np.float64), sr)
@@ -122,7 +134,7 @@ def dynamics_profile_gap_db(a_mono: np.ndarray, b_mono: np.ndarray, sr: int) -> 
     qs = np.linspace(5.0, 95.0, 19)
 
     def centered(db):
-        act = db > (np.percentile(db, 95) - 40.0)
+        act = db > (np.percentile(db, 95) - ACTIVE_WINDOW_DB)
         if act.sum() < 8:
             return None
         q = np.percentile(db[act], qs)

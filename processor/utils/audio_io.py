@@ -12,7 +12,7 @@ def run_ffmpeg_normalize(src: Path, dst: Path, channels: int = 1) -> None:
     """Convert to target sample rate and loudness-normalized WAV.
 
     channels=1 (default) downmixes to mono for the processing chain;
-    channels=2 preserves the stereo image — required by layer analysis,
+    channels=2 preserves the stereo image - required by layer analysis,
     which reads doubling from L/R decorrelation.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -42,7 +42,7 @@ def load_wav(path: Path) -> Tuple[np.ndarray, int]:
 def load_wav_stereo(path: Path) -> Tuple[np.ndarray, int]:
     """Load preserving channels, shaped (2, N). Mono files are duplicated.
 
-    Layer analysis needs the true stereo image — the mono loader above
+    Layer analysis needs the true stereo image - the mono loader above
     silently destroys the L/R decorrelation that reveals vocal doubling.
     """
     audio, sr = sf.read(path)

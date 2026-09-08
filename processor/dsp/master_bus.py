@@ -1,11 +1,11 @@
 """
-Master bus — the final polish stage, applied after all vocal effects.
+Master bus - the final polish stage, applied after all vocal effects.
 
 Two units, in series:
-  1. Glue compressor — gentle 2:1 linked-stereo bus compression (slow attack,
+  1. Glue compressor - gentle 2:1 linked-stereo bus compression (slow attack,
      programme-dependent release). This is the "everything belongs together"
      density a mixed record has and a raw effects chain doesn't.
-  2. Lookahead limiter — transparent peak control to a fixed ceiling, so the
+  2. Lookahead limiter - transparent peak control to a fixed ceiling, so the
      output can sit at the reference's loudness without clipping.
 
 Both operate on (N,) mono or (N, 2) stereo (channels-last, like the rest of
@@ -75,7 +75,7 @@ def apply_master_bus(y: np.ndarray, sr: int,
                      cfg: MasterBusSettings | None = None,
                      target_spread_db: float | None = None) -> np.ndarray:
     """target_spread_db: the REFERENCE's measured dynamic spread. When given,
-    glue depth is set so the output lands near it — a crushed-dense reference
+    glue depth is set so the output lands near it - a crushed-dense reference
     gets matching density, an open dynamic reference stays open. Without it,
     gentle default glue."""
     cfg = cfg or MasterBusSettings()

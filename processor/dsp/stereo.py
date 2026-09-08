@@ -2,7 +2,7 @@
 Stereo image synthesis and matching.
 
 The vocal chain processes mono (one signal, one set of filters). Stereo used
-to appear only when panned vocal layers were added — so a lead-only render
+to appear only when panned vocal layers were added - so a lead-only render
 came out mono, and layered renders got their "width" from amplitude-panned
 copies of the *same* signal (L/R correlation 1.0), which headphones hear as
 off-centre rather than wide.
@@ -10,14 +10,14 @@ off-centre rather than wide.
 This module builds a genuine stereo image from a mono vocal:
 
     D = allpass_decorrelate(mono)      # same timbre, scrambled phase
-    L = mono + a·D
-    R = mono - a·D
+    L = mono + a?D
+    R = mono - a?D
 
 Properties that make this the right construction:
-  * side content is a·D, mid is exactly `mono` → the width knob `a` maps
+  * side content is a?D, mid is exactly `mono` -> the width knob `a` maps
     directly onto a measurable side/mid ratio, so it can be *matched* to a
     reference instead of guessed;
-  * L+R = 2·mono, so a mono fold-down is bit-for-bit the original — no
+  * L+R = 2?mono, so a mono fold-down is bit-for-bit the original - no
     phase cancellation on club systems or phone speakers;
   * `a` is applied per frequency band, because real records are narrow in
     the lows and wide up top, and that ratio is measurable per band.
@@ -36,7 +36,7 @@ _AP = ((6.7, 0.62), (11.3, -0.58), (17.9, 0.55), (26.3, -0.5))
 
 
 def _allpass(x: np.ndarray, sr: int, delay_ms: float, g: float) -> np.ndarray:
-    """y[n] = -g·x[n] + x[n-d] + g·y[n-d]  →  H(z) = (-g + z^-d)/(1 - g·z^-d)"""
+    """y[n] = -g?x[n] + x[n-d] + g?y[n-d]  ->  H(z) = (-g + z^-d)/(1 - g?z^-d)"""
     d = max(1, int(sr * delay_ms / 1000.0))
     b = np.zeros(d + 1); b[0], b[d] = -g, 1.0
     a = np.zeros(d + 1); a[0], a[d] = 1.0, -g
@@ -115,7 +115,7 @@ def apply_stereo_image(mono: np.ndarray, sr: int, target: dict | None = None,
     measure_stereo_profile). Without a target, applies a musical default
     (narrow lows, moderate mids, wide highs).
 
-    Returns (N, 2) channels-last, mono-compatible: L+R == 2·mono.
+    Returns (N, 2) channels-last, mono-compatible: L+R == 2?mono.
     """
     y_in = np.asarray(mono, dtype=np.float64)
     side_exist = None

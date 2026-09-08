@@ -15,6 +15,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# How much of the gap between our noise floor and the reference's to close.
+#
+# A separated reference has unnaturally clean gaps between phrases -- the
+# separator emits near-silence where there is no voice -- while our output has
+# reverb tails there. Closing the gap fully scores best on floor but trades
+# against LRA, so the amount is a tuned compromise rather than 1.0.
+_LATE_FLOOR_FRACTION = float(os.environ.get("APP_LATE_FLOOR_FRACTION", "1.0"))
+
 from processor.analysis.style_extractor import Recipe, analyze_reference
 from processor.analysis.segmenter import detect_phrases
 from processor.config import settings
@@ -69,7 +77,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     job_id = current_job.id if current_job else str(uuid.uuid4())
     
     logger.info(f"[JOB {job_id}] Starting job processing")
-    _progress(current_job, 2, "Normalising audio…")
+    _progress(current_job, 2, "Normalising audio...")
     
     ref_norm = settings.inputs_dir / f"{uuid.uuid4()}_ref.wav"
     dry_norm = settings.inputs_dir / f"{uuid.uuid4()}_dry.wav"
@@ -89,25 +97,55 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     reused = options.get("ref_vocals_path")
     if reused and Path(reused).exists():
         ref_for_analysis = Path(reused)
-        print("✓ Reusing the vocal separated during layer analysis — skipping extraction")
+        print("OK Reusing the vocal separated during layer analysis - skipping extraction")
         _progress(current_job, 20, "Reusing analysed vocal")
     elif use_stems:
-        _progress(current_job, 8, "Extracting vocals from reference…")
+        _progress(current_job, 8, "Extracting vocals from reference...")
         ref_vocals_path = settings.inputs_dir / f"{uuid.uuid4()}_ref_vocals.wav"
         print(f"Attempting to extract vocals from reference: {reference_path.name}")
 
         def _sep_progress(done: int, total: int) -> None:
             # Separation owns 8-20% of the job bar.
             _progress(current_job, 8 + int(12 * done / max(total, 1)),
-                      f"Separating vocals… {int(100 * done / max(total, 1))}%")
+                      f"Separating vocals... {int(100 * done / max(total, 1))}%")
 
-        extracted = extract_vocals(ref_norm, ref_vocals_path, progress_cb=_sep_progress)
+        # Separate only as much as will actually be analysed. The reference is
+        # capped at analysis_max_seconds a few lines below, so separating a
+        # 3.4-minute track to then throw away everything past 2 minutes was
+        # paying ~40% more for audio nobody looks at -- and separation is the
+        # overwhelming majority of a cold job.
+        _sep_src = ref_norm
+        try:
+            import soundfile as _sfx
+            _info = _sfx.info(str(ref_norm))
+            if _info.duration > settings.analysis_max_seconds + 1:
+                # Read the FIRST N seconds, not a spread of windows.
+                #
+                # Sampling four evenly spaced windows describes the whole song
+                # better on some axes -- it moved the gap floor from -57.8 to
+                # -64.1 against a true -63.3, and side energy from 16.7% to
+                # 15.6% against a true 14.7% -- but it wrecks the sibilance
+                # target, which is measured on the top decile of frames by
+                # zero-crossing rate: 0.7 dB against a true 9.9. Crest also
+                # drifts the wrong way (18.5 vs 17.7). End to end it cost 0.6
+                # of a point (6.7 -> 6.1), and equal-power overlap-add instead
+                # of fading each window out changed neither figure, so the
+                # splice was not the cause. A contiguous excerpt it is.
+                _trim = settings.inputs_dir / f"{uuid.uuid4()}_reftrim.wav"
+                _d, _sr0 = _sfx.read(str(ref_norm), frames=int(settings.analysis_max_seconds * _info.samplerate), always_2d=True)
+                _sfx.write(str(_trim), _d, _sr0)
+                _sep_src = _trim
+                logger.info(f"[JOB {job_id}] Separating first "
+                            f"{settings.analysis_max_seconds}s of a {_info.duration:.0f}s reference")
+        except Exception as _tr:
+            logger.warning(f"[JOB {job_id}] Reference trim skipped: {_tr}")
+        extracted = extract_vocals(_sep_src, ref_vocals_path, progress_cb=_sep_progress)
 
         if extracted and extracted.exists():
             ref_for_analysis = extracted
-            print(f"✓ Successfully extracted vocals from reference track")
+            print(f"OK Successfully extracted vocals from reference track")
         else:
-            print(f"⚠ Vocal extraction failed — analysing full mix instead")
+            print(f"! Vocal extraction failed - analysing full mix instead")
         _progress(current_job, 20, "Vocals extracted")
     
     # Load reference audio — mono for the recipe/effect detectors, true
@@ -115,13 +153,44 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     ref_audio, sr = load_wav(ref_for_analysis)
     ref_stereo, _ = load_wav_stereo(ref_for_analysis)
 
+    # Analyse the LEAD, not the whole vocal bus. MDX hands back lead plus
+    # doubles, harmonies and their reverb; the tone, crest and dynamics of a
+    # stacked chorus are not those of the single lead vocal the user is
+    # actually processing, so measuring the bus sets every target slightly
+    # wrong. Centre-weighting keeps the lead and drops what is spread around
+    # it. ref_stereo stays untouched — width has to be measured on the full
+    # stem, and this signal has had its width removed on purpose.
+    #
+    # Dynamics are read from the UN-isolated vocal (ref_audio_dyn). The centre
+    # mask is a per-bin spectral gate, and gating alters the amplitude envelope
+    # it is applied to: measured against MUSDB18 ground-truth stems, isolating
+    # the lead moved the dynamics target FURTHER from the true vocal (0.464 ->
+    # 0.527 composite, and on one track LRA 4.6 -> 6.9 dB). So tone comes from
+    # the lead and dynamics from the whole vocal, each from whichever signal
+    # represents it best.
+    ref_audio_dyn = ref_audio
+    try:
+        from processor.utils.vocal_extraction import isolate_lead
+        _lead = isolate_lead(ref_stereo, sr)
+        if _lead is not None and len(_lead) and float(np.sqrt(np.mean(_lead ** 2))) > 1e-6:
+            ref_audio = _lead
+            logger.info(f"[JOB {job_id}] Analysing centre-isolated lead vocal "
+                        f"(dynamics still read from the full vocal)")
+    except Exception as _ld_err:
+        logger.warning(f"[JOB {job_id}] Lead isolation skipped: {_ld_err}")
+
     # The reference is analysis-only; cap it so a 4-minute song doesn't cost
     # 4 minutes of detector time. (Separation above ran on the full file so
     # its cache stays shared with /analyze-layers.)
     _max_n = int(settings.analysis_max_seconds * sr)
     if len(ref_audio) > _max_n:
+        # A contiguous excerpt, deliberately. Sampling spread windows instead
+        # skews targets measured on frame subsets -- sibilance is taken from
+        # the top decile of frames by zero-crossing rate and came out at
+        # 0.7 dB against a true 9.9 -- and cost 0.6 of a point end to end.
         logger.info(f"[JOB {job_id}] Capping reference analysis at {settings.analysis_max_seconds}s")
         ref_audio = ref_audio[:_max_n]
+        ref_audio_dyn = ref_audio_dyn[:_max_n]
         ref_stereo = ref_stereo[:, :_max_n]
     ref_duration = len(ref_audio) / sr
     # Stereo field of the reference vocal — matched onto the output later.
@@ -144,7 +213,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         logger.warning(f"[JOB {job_id}] Failed to compute reference LUFS: {e}")
     
     # Analyze reference to get recipe
-    _progress(current_job, 22, "Analysing reference track…")
+    _progress(current_job, 22, "Analysing reference track...")
     dry_audio_temp, _ = load_wav(dry_norm)
     with timer("recipe_analysis"):
         recipe: Recipe = analyze_reference(ref_audio, sr, dry_y=dry_audio_temp)
@@ -166,7 +235,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         print(f"  Detected {len(segments)} phrases for adaptive processing")
     
     # Detect all effects from reference in parallel
-    _progress(current_job, 38, "Detecting effects…")
+    _progress(current_job, 38, "Detecting effects...")
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     ref_mono = ref_audio if ref_audio.ndim == 1 else np.mean(ref_audio, axis=0)
@@ -185,8 +254,23 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         # in both, only the reference has the echo effect
         return detect_delay(ref_mono, sr, dry=dry_audio)
 
+    def _detect_autotune():
+        return detect_autotune(ref_audio, sr)
+
     def _detect_gate():
-        return detect_gate(ref_audio, sr)
+        # Read the noise floor off the DRY vocal, not the reference.
+        #
+        # A gate is not a style property: whether the reference was gated says
+        # nothing about whether this dry vocal needs gating, and the reference
+        # is the worse signal to ask. It arrives after MDX separation (bleed
+        # raises its floor) and after ffmpeg loudness normalisation (which
+        # lifts that floor again), so the detector reads "noisy" and returns a
+        # gate even when the same signal pre-normalisation reads None.
+        #
+        # Applied to a clean dry vocal that gate was audible damage: at the
+        # -35 dBFS cap it pushed 49 of 587 frames more than 45 dB down, heard
+        # as words and phrase tails fading out.
+        return detect_gate(dry_audio_temp, sr)
 
     def _detect_doubler():
         return detect_doubler(ref_audio, sr)
@@ -222,7 +306,31 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         detectors["vocal_layers"] = _detect_vocal_layers
     if options.get("enable_delay", True):
         detectors["delay"]   = _detect_delay
-    if options.get("enable_gate", True):
+    # Gate defaults OFF. It is noise cleanup, not a style property -- whether
+    # the reference was gated says nothing about whether this dry vocal needs
+    # it -- and in practice it fired on every job and did audible damage: at
+    # its -35 dBFS cap it pushed 49 of 587 frames more than 45 dB down, heard
+    # as words and phrase tails fading out. Pass enable_gate=true for a dry
+    # vocal that genuinely has a noise problem.
+    # Autotune, matched to the reference.
+    #
+    # What transfers is how HARD the reference is tuned (strength) and how fast
+    # it snaps (retune_ms) -- never its key. Correction is chromatic, so a
+    # reference in E and a dry vocal in B both end up snapped to their own
+    # notes; copying a key would drag correct notes to wrong pitches.
+    #
+    # Detection is real: on Hide the reference vocal sits 10.8 cents from the
+    # nearest semitone against the raw acapella's 20.8, and detect_autotune
+    # returns strength 1.0 / 80 ms. A reference that is not tuned returns None
+    # and nothing is applied.
+    #
+    # NOTE: autotune was pulled from the product on 2026-08-24 after you heard
+    # it and disliked it. It is reconnected here because you asked for
+    # reference-matched tuning; pass enable_autotune=false to switch it off.
+    if options.get("enable_autotune", True):
+        detectors["autotune"] = _detect_autotune
+
+    if options.get("enable_gate", False):
         detectors["gate"]    = _detect_gate
     if options.get("enable_doubler", True):
         detectors["doubler"] = _detect_doubler
@@ -254,7 +362,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                 name = futures[future]
                 _run_future(future, name)
         except TimeoutError:
-            logger.warning(f"[JOB {job_id}] Overall detection timed out — collecting partial results")
+            logger.warning(f"[JOB {job_id}] Overall detection timed out - collecting partial results")
             for future, name in futures.items():
                 if name not in _det_results:
                     _run_future(future, name)
@@ -268,7 +376,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             if chorus_profile.rate_hz < 0.5 or chorus_profile.mix <= 0.02:
                 logger.info(
                     f"[JOB {job_id}] Chorus ignored (rate={chorus_profile.rate_hz:.2f}Hz "
-                    f"mix={chorus_profile.mix:.2f} — likely false positive)"
+                    f"mix={chorus_profile.mix:.2f} - likely false positive)"
                 )
                 chorus_profile = None
             else:
@@ -291,6 +399,29 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         if _det_results.get("delay"):
             delay_info = _det_results["delay"]
             logger.info(f"[JOB {job_id}] Delay: {delay_info.get('type')} {delay_info.get('delay_ms', 0):.1f}ms")
+        if _det_results.get("autotune"):
+            autotune_settings = _det_results["autotune"]
+            # autotune_strength scales what the reference asked for, 0..1.
+            # Correction quality is a matter for ears, not measurement: the
+            # tuned and untuned renders score the same on every objective
+            # measure available here (same cents, same harmonic-to-noise
+            # ratio), so how hard to pull has to be a dial the user sets.
+            _at_scale = options.get("autotune_strength")
+            if _at_scale is not None:
+                try:
+                    _at_scale = float(_at_scale)
+                    autotune_settings.strength = float(
+                        np.clip(autotune_settings.strength * _at_scale, 0.0, 1.0))
+                    if autotune_settings.strength < 0.02:
+                        autotune_settings = None
+                except (TypeError, ValueError):
+                    pass
+            if autotune_settings is None:
+                logger.info(f"[JOB {job_id}] Autotune: disabled by autotune_strength")
+            else:
+                logger.info(f"[JOB {job_id}] Autotune: strength={autotune_settings.strength:.2f} "
+                            f"retune={autotune_settings.retune_ms:.0f}ms "
+                            f"(chromatic, dry vocal's own notes)")
         if _det_results.get("gate"):
             gate_settings = _det_results["gate"]
             logger.info(f"[JOB {job_id}] Gate: threshold={gate_settings.threshold_db:.1f}dB")
@@ -343,9 +474,13 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         frame_rms = librosa.feature.rms(y=y)[0]
         frame_db = 20 * np.log10(frame_rms + 1e-9)
         dynamic_range_db = float(np.percentile(frame_db, 90) - np.percentile(frame_db, 10))
-        n = len(y)
-        seg = max(1, n // 5)
-        tail_ratio = round(float(np.sqrt(np.mean(y[-seg:] ** 2))) / (float(np.sqrt(np.mean(y[:seg] ** 2))) + 1e-9), 4)
+        # Real decay-tail energy fraction. This was RMS(last fifth of the
+        # file) / RMS(first fifth) — that compares the end of the reference to
+        # its beginning, which is an arrangement property (fade-out vs build),
+        # not reverb. It fed _wetness / _wet_cap below, so the wet amount was
+        # being chosen by how the reference happens to end.
+        from processor.dsp.analysis.reverb_analysis import reverb_tail_ratio
+        tail_ratio = round(reverb_tail_ratio(y, sr), 4)
         return {
             "rms": round(rms, 6),
             "peak": round(peak, 4),
@@ -388,6 +523,74 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     # EQ / compression / saturation come from the style-match recipe
     eq_bands_final = recipe.eq if recipe.eq else None
     comp_final = recipe.compressor
+    # Skip the compressor when it would overshoot the reference's own crest.
+    #
+    # Crest cannot be recovered once it is gone -- no later stage can put peaks
+    # back -- so this has to be decided before the chain runs. Measured on the
+    # Hide acapella the detected compressor took peak-to-RMS from matching the
+    # reference to 0/10, i.e. further from the target than not compressing at
+    # all. Simulate it on the dry vocal, compare both against the reference's
+    # crest, and keep whichever is closer.
+    # compression_strength forces the amount by hand, 0..1, overriding the
+    # crest search. The search optimises a measurement, and the gate then
+    # rejects compression whenever it costs more in loudness range and density
+    # than it recovers in crest -- which is measurably true and still may not
+    # be what you want to hear. This is the manual override.
+    _comp_manual = options.get("compression_strength")
+    if False:  # manual amount is applied at the crest stage instead
+        pass
+    elif False:
+        try:
+            _cm = float(np.clip(float(_comp_manual), 0.0, 1.0))
+            if _cm < 0.02:
+                comp_final = None
+                logger.info(f"[JOB {job_id}] Compressor: disabled by compression_strength")
+            else:
+                from processor.dsp.compressor import CompressorSettings as _CSm
+                _pk = 20 * np.log10(float(np.max(np.abs(dry_audio_temp))) + 1e-12)
+                comp_final = _CSm(threshold_db=_pk - (4.0 + 18.0 * _cm),
+                                  ratio=1.5 + 4.5 * _cm, attack_ms=10.0,
+                                  release_ms=150.0, makeup_db=0.0)
+                logger.info(f"[JOB {job_id}] Compressor: manual {_cm:.2f} -> "
+                            f"{comp_final.ratio:.1f}:1 at {comp_final.threshold_db:.1f} dB")
+        except (TypeError, ValueError):
+            _comp_manual = None
+    if comp_final is not None:
+        try:
+            from processor.dsp.compressor import apply_compressor as _ac
+            _rmono = ref_audio_dyn if ref_audio_dyn.ndim == 1 else ref_audio_dyn.mean(axis=0)
+            _crest = lambda v: (20 * np.log10(float(np.max(np.abs(v))) + 1e-12)
+                                - 20 * np.log10(float(np.sqrt(np.mean(np.asarray(v, dtype=np.float64) ** 2))) + 1e-12))
+            _target = _crest(_rmono)
+            _plain = _crest(dry_audio_temp)
+            _comped = _crest(_ac(dry_audio_temp, sr, comp_final))
+            # Search the setting whose crest lands nearest the reference,
+            # rather than choosing between "as detected" and "off". Both of
+            # those overshot: the detected compressor drove crest past the
+            # target and skipping left it short, so the dimension scored 0/10
+            # either way. Crest is monotone in compression, so a small sweep
+            # finds the match, and "off" stays in the running.
+            from processor.dsp.compressor import CompressorSettings as _CS
+            _peak_db = 20 * np.log10(float(np.max(np.abs(dry_audio_temp))) + 1e-12)
+            _best, _best_err, _best_lbl = None, abs(_plain - _target), "off"
+            for _ratio in (1.5, 2.0, 3.0, 4.0, 6.0):
+                for _off in (4.0, 8.0, 12.0, 16.0, 22.0):
+                    _cfg = _CS(threshold_db=_peak_db - _off, ratio=_ratio,
+                               attack_ms=getattr(comp_final, "attack_ms", 10.0),
+                               release_ms=getattr(comp_final, "release_ms", 150.0),
+                               makeup_db=0.0)
+                    try:
+                        _err = abs(_crest(_ac(dry_audio_temp, sr, _cfg)) - _target)
+                    except Exception:
+                        continue
+                    if _err < _best_err:
+                        _best, _best_err, _best_lbl = _cfg, _err, f"{_ratio:.1f}:1 at -{_off:.0f}dB"
+            comp_final = _best
+            logger.info(f"[JOB {job_id}] Compressor: {_best_lbl} -> crest within "
+                        f"{_best_err:.2f} dB of reference {_target:.1f} "
+                        f"(as detected was {abs(_comped - _target):.2f} off, dry {abs(_plain - _target):.2f})")
+        except Exception as _ce:
+            logger.warning(f"[JOB {job_id}] Compressor crest check skipped: {_ce}")
     saturation_final = recipe.saturation_drive
 
     # Reverb: prefer the dedicated reverb analysis; fall back to the recipe.
@@ -403,8 +606,21 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         _tail = float(np.clip(float(_ref_stats.get("reverb_tail_ratio", 0.0) or 0.0), 0.0, 1.0))
         _wetness = float(np.clip((_tail - 0.3) / 0.4, 0.0, 1.0))  # 0 below 0.3, 1 above 0.7
         _wet_cap = 0.20 + 0.15 * _wetness
+        # APP_MAX_RT60 caps the tail. The blind RT60 estimator saturates at its
+        # own ceiling on reverberant references (Hide reads 2.50 s, the maximum
+        # it can return), and since the IR now renders the length it is asked
+        # for, that is a genuinely long tail: measured on the Hide acapella it
+        # takes the noise-floor match from 6.6/10 down to 0.0 by filling every
+        # gap between words.
+        # Swept against ground truth over the Hide pair and two MUSDB controls:
+        # 0.5s scored 4.65, 0.8s 4.54, 1.2s and 2.5s both 4.38 (on Hide alone,
+        # 6.28 / 5.91 / 5.43 / 5.43). 0.8 is chosen over the top-scoring 0.5
+        # deliberately -- it keeps nearly all of the gain without capping a
+        # genuinely reverberant reference down to a dry-sounding tail, and
+        # these metrics have proven unreliable about how things actually sound.
+        _max_rt60 = float(os.environ.get("APP_MAX_RT60", "0.8"))
         _rev = _RS(
-            decay_s=reverb_profile_auto.rt60,
+            decay_s=min(float(reverb_profile_auto.rt60), _max_rt60),
             mix=float(np.clip(reverb_profile_auto.wet * (1.0 + 0.6 * _wetness), 0.0, _wet_cap)),
             pre_delay_ms=reverb_profile_auto.predelay_ms,
         )
@@ -419,9 +635,31 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         delay_info = dict(delay_info)
         _lvl = delay_info.get("echo_level")
         if _lvl is None:  # older recipe payloads
-            _conf = float(delay_info.get("confidence", 0.5) or 0.5)
-            _lvl = float(np.clip(0.15 + 0.35 * _conf, 0.15, 0.45))
-        delay_info.setdefault("_mix", float(np.clip(_lvl, 0.10, 0.5)))
+            _conf0 = float(delay_info.get("confidence", 0.5) or 0.5)
+            _lvl = float(np.clip(0.15 + 0.35 * _conf0, 0.15, 0.45))
+        # Strength proportional to evidence.
+        #
+        # The detector calls anything above 0.12 an echo, and this used to floor
+        # the mix at 0.10 regardless -- so a reading of 0.126, barely over the
+        # line, still printed an audible repeat, and feedback came back at 0.6
+        # (the top of its clip range) because at that confidence the second-lag
+        # ratio is mostly noise. On the Hide acapella that put a 267 ms echo at
+        # 0.6 feedback onto a vocal, which both colours the sound and invents
+        # onsets: phrasing density, which should score ~10 since the acapella is
+        # the reference's own performance, collapsed to 1.6.
+        #
+        # Now a marginal detection applies almost nothing and ramps to the
+        # measured level by ~0.35 confidence, with feedback damped alongside.
+        _conf = float(delay_info.get("confidence", 0.0) or 0.0)
+        _ev = float(np.clip((_conf - 0.12) / 0.23, 0.0, 1.0))
+        _mix_final = float(np.clip(_lvl * _ev, 0.0, 0.5))
+        if _mix_final < 0.03:
+            logger.info(f"[JOB {job_id}] Delay skipped: confidence {_conf:.3f} too low")
+            delay_info = None
+        else:
+            delay_info["_mix"] = _mix_final
+            delay_info["feedback"] = float(np.clip(
+                float(delay_info.get("feedback", 0.25) or 0.25) * (0.4 + 0.6 * _ev), 0.05, 0.6))
 
     # Width: as detected
     _width_val = recipe.width if (recipe.width and options.get("enable_width", True)) else None
@@ -532,9 +770,155 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             saturation_final = float(ai_sat["drive"])
 
     # Apply DSP chain with enhancements
-    _progress(current_job, 52, "Applying DSP chain…")
+    _progress(current_job, 52, "Applying DSP chain...")
     print(f"  Dry audio stats: max={np.max(np.abs(dry_audio)):.6f}, rms={np.sqrt(np.mean(dry_audio**2)):.6f}")
     dsp_start = time.time()
+    # max_vocal_layers caps how many voices the output may end up with, the
+    # lead counting as the first. At 1 (the default) no doublers or harmony
+    # voices are generated at all.
+    #
+    # Matching one dry vocal onto a stacked reference bus is an ill-posed
+    # target — a chorus of four has different tone, crest and width from any
+    # single voice in it, so every measurement taken off it is slightly wrong
+    # for the one voice we are processing. Capping at one layer, together with
+    # analysing the centre-isolated lead, makes both sides of the comparison a
+    # single voice. Raise it to reproduce a reference's stacking instead.
+    _max_layers = int(options.get("max_vocal_layers", 1) or 1)
+    if _max_layers <= 1 and vocal_layers_profile is not None:
+        logger.info(f"[JOB {job_id}] Single-layer mode: skipping "
+                    f"{vocal_layers_profile.total_layers} detected layers")
+        vocal_layers_profile = None
+        doubler_settings = None
+
+    # Stage-by-stage dynamics probe. Set APP_DYN_PROBE=1 to log how far the
+    # output sits from the reference on the dynamics dimensions after each
+    # stage — the cheapest way to see which stage is responsible when the
+    # end-to-end score does not move.
+    _dyn_ref_f = None
+
+    def _dyn_probe(tag, sig):
+        nonlocal _dyn_ref_f
+        if os.environ.get("APP_DYN_PROBE") != "1":
+            return
+        try:
+            from processor.dsp.similarity import measure, distances
+            from processor.dsp.closed_loop import _NORM
+            _rm = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
+            if _dyn_ref_f is None:
+                _dyn_ref_f = measure(_rm, sr)
+            d = distances(measure(sig, sr), _dyn_ref_f)
+            keys = ("crest_db", "lra_db", "spread_db", "ride_q",
+                    "attack_db_per_frame", "mod_spec")
+            comp = float(np.mean([d[k] / _NORM[k] for k in keys]))
+            # Quiet-frame count localises audible drop-outs: a stage that
+            # pushes programme more than 45 dB below the loud passages is
+            # heard as a word fading out, not as a level change.
+            import librosa as _lb
+            _m = sig if sig.ndim == 1 else sig.mean(axis=1)
+            _r = _lb.feature.rms(y=np.ascontiguousarray(_m), frame_length=2048,
+                                 hop_length=512)[0]
+            _db = 20 * np.log10(np.maximum(_r, 1e-9))
+            _quiet = int(np.sum(_db <= (np.percentile(_db, 95) - 45.0)))
+            _n = _NORM
+            _s = lambda k: max(0.0, min(1.0, 1 - d[k] / _n[k])) * 10
+            logger.info("[DYNPROBE] %-24s quiet=%4d phrasing=%.1f floor=%.1f crest=%.1f attack=%.1f mod=%.1f"
+                        % (tag, _quiet, _s("onset_rate_hz"), _s("floor_rel_db"),
+                           _s("crest_db"), _s("attack_db_per_frame"), _s("mod_spec")))
+        except Exception as _pe:
+            logger.warning(f"[DYNPROBE] {tag} failed: {_pe}")
+
+    # Accept a stage's output only when it measurably helps.
+    #
+    # The dynamics stages were unconditional, and measured against ground truth
+    # that made them net harmful: on pairs where the dry vocal already rode
+    # like the reference (LRA distance 0.05-0.11 dB) quantile mapping pushed it
+    # AWAY, to 2.9-3.5 dB, while genuinely mismatched pairs improved (9.3 ->
+    # 2.6). Averaged, the stage scored worse than doing nothing at all. Keeping
+    # the result only when the measurement improves turns the harmful cases
+    # into no-ops and leaves the useful ones untouched.
+    _gate_ref_cache = {}
+
+    def _keep_if_better(tag, before, after, keys):
+        if os.environ.get("APP_NO_STAGE_GATE") == "1":
+            return after
+        try:
+            from processor.dsp.similarity import measure, distances
+            from processor.dsp.closed_loop import _NORM
+            # Judge on a bounded excerpt, and measure the reference once.
+            #
+            # Every one of these calls used to re-measure the reference from
+            # scratch and score both signals over their whole length, so the
+            # three gated stages cost ~2 minutes of a 6-minute job between
+            # them. The properties compared are distributional, so a 30 s
+            # slice decides the same way for a fraction of the work.
+            _n = int(30.0 * sr)
+
+            def _clip(x):
+                # Keep the channels.
+                #
+                # This used to fold to mono, which made the gate blind to
+                # every stereo dimension -- width per band, side percentage
+                # and L/R correlation all measure zero side on a mono signal.
+                # A stereo stage therefore scored identically before and
+                # after, was waved through unjudged, and took width per band
+                # from 4.4 to 0.0 with the gate reporting "kept".
+                if x.ndim == 1:
+                    n_ax, ch_ax = 0, None
+                else:
+                    ch_ax = 0 if x.shape[0] <= 2 else 1
+                    n_ax = 1 - ch_ax
+                length = x.shape[n_ax]
+                if length <= _n:
+                    return x
+                st = max(0, (length - _n) // 2)
+                sl = [slice(None)] * x.ndim
+                sl[n_ax] = slice(st, st + _n)
+                return x[tuple(sl)]
+
+            if "rf" not in _gate_ref_cache:
+                # Composite reference: dynamics from the full (mono) vocal,
+                # stereo dimensions from the untouched stereo stem.
+                #
+                # ref_audio_dyn is mono by design -- ref_audio is the
+                # centre-isolated lead and has had its width removed on
+                # purpose -- so measuring width against it gives -60 dB in
+                # every band. The gate then rewarded whatever made the output
+                # narrower, and a stage that collapsed a 19.5% stereo image
+                # to 1.3% was recorded as "kept".
+                _rm = ref_audio_dyn if ref_audio_dyn.ndim == 1 else ref_audio_dyn.mean(axis=0)
+                _rf = measure(_clip(_rm), sr)
+                try:
+                    _rs = measure(_clip(ref_stereo), sr)
+                    for _k in ("width_bands", "side_pct", "lr_corr"):
+                        _rf[_k] = _rs[_k]
+                except Exception as _se:
+                    logger.warning("[JOB %s] Stereo reference unavailable for "
+                                   "gating: %s" % (job_id, _se))
+                _gate_ref_cache["rf"] = _rf
+            rf = _gate_ref_cache["rf"]
+            # Measure ONCE per signal, not once per key.
+            #
+            # measure() sat inside the comprehension, so it re-ran for every
+            # key in `keys`. With the small dynamics key set that was merely
+            # wasteful; gating on all 16 scored dimensions made it 32
+            # measurements per call -- 27s a gate, 111s of a single job.
+            def c(sig):
+                mm = measure(_clip(sig), sr)
+                d = distances(mm, rf)
+                return float(np.mean([d[k] / _NORM[k] for k in keys]))
+            b, a = c(before), c(after)
+            if a <= b:
+                logger.info(f"[JOB {job_id}] {tag}: kept ({b:.3f} -> {a:.3f})")
+                return after
+            logger.info(f"[JOB {job_id}] {tag}: REVERTED (would worsen {b:.3f} -> {a:.3f})")
+            return before
+        except Exception as _ge:
+            logger.warning(f"[JOB {job_id}] {tag} gate failed, keeping result: {_ge}")
+            return after
+
+    _DYNK = ("crest_db", "lra_db", "spread_db", "ride_q", "attack_db_per_frame", "mod_spec")
+
+    _dyn_probe("0 dry input", dry_audio)
     processed = apply_chain(
         dry_audio,
         sr,
@@ -582,7 +966,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             logger.info(
                 f"[JOB {job_id}] Applying {n} vocal layers "
                 f"({filtered_profile.n_doublers} doublers + "
-                f"{len(filtered_profile.harmony_intervals)} harmony voices)…"
+                f"{len(filtered_profile.harmony_intervals)} harmony voices)..."
             )
             # Stem export: save each generated layer separately so the mix
             # can be rebalanced in a DAW. Lead stem = the chain output.
@@ -600,7 +984,8 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             except Exception as _st_err:
                 logger.warning(f"[JOB {job_id}] Stem export skipped: {_st_err}")
             processed = apply_vocal_layers(processed, sr, filtered_profile)
-            logger.info(f"[JOB {job_id}] Vocal layers applied → output is now stereo")
+            logger.info(f"[JOB {job_id}] Vocal layers applied -> output is now stereo")
+            _dyn_probe("1 after chain+layers", processed)
         except ValueError:
             pass
         except Exception as e:
@@ -635,35 +1020,17 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
 
     # NOTE: reverb is already applied inside apply_chain via reverb_final (converted from
     # reverb_profile_auto). A second apply_reverb here would double the reverb, so it is removed.
-
-    # ── Stereo image: match the reference's width (per band) ────────────────
-    # Mono renders become true stereo; layered renders keep their panning and
-    # gain decorrelated width on top. Mono fold-down stays exactly the mid.
-    try:
-        from processor.dsp.stereo import apply_stereo_image
-        _progress(current_job, 68, "Matching stereo image…")
-        processed = apply_stereo_image(processed, sr, target=_ref_stereo_profile)
-    except Exception as _st_err:
-        logger.warning(f"[JOB {job_id}] Stereo image skipped: {_st_err}")
-
-    # ── Dynamics profile transfer ───────────────────────────────────────────
-    # Quantile-map the output's short-term loudness envelope onto the
-    # reference's: the vocal then *rides* the way the reference rides
-    # (timeline-free, so any-genre / any-song safe).
-    try:
-        from processor.dsp.dynamics_transfer import match_dynamics
-        _progress(current_job, 70, "Matching dynamics profile…")
-        _ref_mono_dyn = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
-        processed = match_dynamics(processed, sr, _ref_mono_dyn, strength=0.7)
-    except Exception as _dt_err:
-        logger.warning(f"[JOB {job_id}] Dynamics transfer skipped: {_dt_err}")
-
+    # Spectral shape is matched BEFORE the stereo and dynamics stages.
+    # Multi-band EQ perturbs peak-to-RMS and the L/R balance, so running it
+    # last left that collateral uncorrected: measured over 30 runs, moving
+    # the loop earlier is what lets the width and ride stages clean up after
+    # it instead of being overwritten by it.
     # ── Spectral match pass (deterministic) ────────────────────────────────
     # Compare the processed output's band energies against the reference and
     # apply a gentle corrective EQ toward the reference. Replaces the old
     # LLM-based refinement: no API calls, same goal — output that sits in the
     # same tonal space as the reference layer.
-    _progress(current_job, 72, "Spectral match pass…")
+    _progress(current_job, 72, "Spectral match pass...")
     refinement_info: dict = {}
     try:
         import tempfile as _tf
@@ -674,62 +1041,104 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         logger.info(f"[JOB {job_id}] Pre-match spectral distance: {_sd:.4f}")
 
         if _sd > 0.08:  # only correct if there's a meaningful gap
-            _proc_mono = processed if processed.ndim == 1 else (
-                processed.mean(axis=0) if processed.shape[0] < processed.shape[-1]
-                else processed.mean(axis=1)
-            )
-            _proc_profile = _spectral_profile(_proc_mono, "output")
-            _out_bands = _proc_profile["band_energy_pct"]
-            _ref_bands = _ref_stats.get("band_energy_pct", {})
-
-            from processor.dsp.eq import EqBand as _MatchEqBand, apply_eq as _apply_eq
-            _gap_map = [
-                ("sub_60hz",       60.0,   0.7),
-                ("low_250hz",     200.0,   0.7),
-                ("low_mid_500hz", 400.0,   0.9),
-                ("mid_2khz",     1200.0,   1.0),
-                ("high_mid_6khz", 4000.0,  1.0),
-                ("air_12khz",    10000.0,  0.7),
-            ]
-            cb = []
-            for band_name, freq, q in _gap_map:
-                gap = float(_ref_bands.get(band_name, 0.0)) - float(_out_bands.get(band_name, 0.0))
-                # Fractional energy gap to dB: ±0.05 gap ≈ ±2 dB, capped gently
-                gain_db = float(np.clip(gap * 40.0, -4.0, 4.0))
-                if abs(gain_db) >= 0.5:
-                    cb.append(_MatchEqBand(f=freq, gain_db=gain_db, q=q))
-
-            if cb:
-                logger.info(f"[JOB {job_id}] Applying {len(cb)} spectral-match EQ bands")
-                if processed.ndim == 2:
-                    ch0 = _apply_eq(processed[:, 0], sr, cb)
-                    ch1 = _apply_eq(processed[:, 1], sr, cb)
-                    processed = np.stack([ch0, ch1], axis=1)
-                else:
-                    processed = _apply_eq(processed, sr, cb)
-                processed = np.nan_to_num(processed, nan=0.0, posinf=0.0, neginf=0.0)
-                refinement_info = {
-                    "pre_distance": _sd,
-                    "correction_bands": len(cb),
-                    "summary": "Deterministic spectral match toward reference",
-                }
-            else:
-                refinement_info = {"pre_distance": _sd, "correction_bands": 0,
-                                   "summary": "Band energies already match reference"}
+            # Iterative 12-band shape match. This replaces a single-shot
+            # correction over six fixed bands, which left most of the gap on
+            # the table: measured across reference pairs, the mean per-band
+            # error settled at ~4.9 dB one-shot versus ~0.7 dB closing the
+            # loop. Each pass re-measures the output and corrects a damped
+            # fraction of what remains, so it converges instead of ringing.
+            from processor.dsp.closed_loop import match_spectrum
+            _ref_mono_sp = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
+            processed, _sp_info = match_spectrum(processed, sr, _ref_mono_sp)
+            logger.info(f"[JOB {job_id}] Spectral loop: "
+                        f"gap {_sp_info['gap_history_db']} -> {_sp_info['final_gap_db']} dB")
+            refinement_info = {
+                "pre_distance": _sd,
+                "band_gap_history_db": _sp_info["gap_history_db"],
+                "final_band_gap_db": _sp_info["final_gap_db"],
+                "summary": "Closed-loop spectral shape match toward reference",
+            }
         else:
-            logger.info(f"[JOB {job_id}] Spectral distance {_sd:.4f} < 0.08 — no match EQ needed")
+            logger.info(f"[JOB {job_id}] Spectral distance {_sd:.4f} < 0.08 - no match EQ needed")
             refinement_info = {"pre_distance": _sd, "correction_bands": 0,
-                               "summary": "Already close to reference — no correction needed."}
+                               "summary": "Already close to reference - no correction needed."}
     except Exception as _ref_err:
         logger.warning(f"[JOB {job_id}] Spectral match pass skipped: {_ref_err}")
 
-    _progress(current_job, 88, "Finalising output…")
+
+
+    # ── Crest match ────────────────────────────────────────────────────────
+    # Run BEFORE the stereo, dynamics and master-bus stages, not after them.
+    #
+    # Placed at the end it was always reverted by the gate: compressing an
+    # already-limited signal costs more in loudness range, density and ride
+    # than it recovers in crest. Placed here the later stages settle around
+    # the correction instead of fighting it -- the same ordering lesson as the
+    # spectral match.
+    #
+    # It is needed at all because the chain ADDS crest: on the Hide acapella
+    # the dry sat within 0.11 dB of the reference and the output came out at
+    # 22.9 dB against a 17.7 dB target.
+    try:
+        from processor.dsp.closed_loop import match_crest, _crest_db
+        _rm_c = ref_audio_dyn if ref_audio_dyn.ndim == 1 else ref_audio_dyn.mean(axis=0)
+        _cur, _tgt_c = _crest_db(processed), _crest_db(_rm_c)
+        _cm = options.get("compression_strength")
+        if _cm is not None:
+            # Manual amount: compress toward the reference's crest by this
+            # fraction, and DO NOT let the gate veto it. Automatically, the
+            # gate always refuses -- measured, compressing costs more in
+            # loudness range and density than it recovers in crest -- but that
+            # trade is a taste decision, so asking for it explicitly wins.
+            _cm = float(np.clip(float(_cm), 0.0, 1.0))
+            if _cm >= 0.02 and _cur > _tgt_c:
+                _aim = _cur - (_cur - _tgt_c) * _cm
+                _cand, _ci = match_crest(processed, sr, _rm_c, target_crest_db=_aim)
+                processed = _cand
+                logger.info("[JOB %s] Crest (manual %.2f): %.1f -> %.1f dB (aim %.1f, reference %.1f)"
+                            % (job_id, _cm, _cur, _crest_db(processed), _aim, _tgt_c))
+        elif _cur > _tgt_c + 1.0:
+            _cand, _ci = match_crest(processed, sr, _rm_c)
+            processed = _keep_if_better("Crest match", processed, _cand, _DYNK)
+            logger.info("[JOB %s] Crest %.1f -> %.1f dB (reference %.1f)"
+                        % (job_id, _cur, _crest_db(processed), _tgt_c))
+    except Exception as _fc:
+        logger.warning("[JOB %s] Crest match skipped: %s" % (job_id, _fc))
+
+    # ── Stereo image: match the reference's width (per band) ────────────────
+    # Mono renders become true stereo; layered renders keep their panning and
+    # gain decorrelated width on top. Mono fold-down stays exactly the mid.
+    try:
+        from processor.dsp.stereo import apply_stereo_image
+        _dyn_probe("2 before stereo", processed)
+        _progress(current_job, 68, "Matching stereo image...")
+        processed = apply_stereo_image(processed, sr, target=_ref_stereo_profile)
+    except Exception as _st_err:
+        logger.warning(f"[JOB {job_id}] Stereo image skipped: {_st_err}")
+
+    # ── Dynamics profile transfer ───────────────────────────────────────────
+    # Quantile-map the output's short-term loudness envelope onto the
+    # reference's: the vocal then *rides* the way the reference rides
+    # (timeline-free, so any-genre / any-song safe).
+    try:
+        from processor.dsp.dynamics_transfer import match_dynamics
+        _dyn_probe("3 after stereo", processed)
+        _progress(current_job, 70, "Matching dynamics profile...")
+        _ref_mono_dyn = ref_audio_dyn if ref_audio_dyn.ndim == 1 else ref_audio_dyn.mean(axis=0)
+        _before_dyn = processed
+        processed = _keep_if_better(
+            "Dynamics transfer", _before_dyn,
+            match_dynamics(processed, sr, _ref_mono_dyn, strength=0.7), _DYNK)
+    except Exception as _dt_err:
+        logger.warning(f"[JOB {job_id}] Dynamics transfer skipped: {_dt_err}")
+
+    _progress(current_job, 88, "Finalising output...")
     # Safety checks before final normalization
     processed = np.nan_to_num(processed, nan=0.0, posinf=0.0, neginf=0.0)
     max_val = np.max(np.abs(processed))
     
     if max_val < 1e-6:  # Audio is essentially silent
-        print(f"⚠ WARNING: Processed audio is too quiet (max={max_val:.2e}). Using original dry audio.")
+        print(f"! WARNING: Processed audio is too quiet (max={max_val:.2e}). Using original dry audio.")
         processed = dry_audio.copy()
         max_val = np.max(np.abs(processed))
     
@@ -749,7 +1158,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             processed = processed * gain
             print(f"  Pre-bus rescue gain: {20 * np.log10(gain):.1f}dB (chain output was starved)")
     except Exception as e:
-        print(f"⚠ Pre-bus level check failed: {e}")
+        print(f"! Pre-bus level check failed: {e}")
 
     # Master bus: glue compression + lookahead limiting — the "finished
     # record" density and level a bare effects chain lacks. Replaces the old
@@ -759,43 +1168,182 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         processed = dry_audio / (np.max(np.abs(dry_audio)) + 1e-9) * 0.95
     else:
         from processor.dsp.master_bus import apply_master_bus, _active_spread_db
-        _progress(current_job, 90, "Master bus: glue + limiting…")
+        _progress(current_job, 90, "Master bus: glue + limiting...")
         # Density target = the reference's own measured dynamic spread, so a
         # crushed-dense reference yields a matching-dense output.
         _ref_spread = _active_spread_db(
-            ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0), sr)
+            ref_audio_dyn if ref_audio_dyn.ndim == 1 else ref_audio_dyn.mean(axis=0), sr)
         # density_scale > 1 = denser than measured (spread target shrinks)
         _dens = float(ai_scales.get("density_scale", 1.0)) if ai_scales else 1.0
         _spread_target = (_ref_spread / _dens) if _ref_spread > 0.5 else None
         if _spread_target:
             logger.info(f"[JOB {job_id}] Density target: ref spread {_ref_spread:.1f} dB"
                         + (f" x{_dens:.2f} AI" if _dens != 1.0 else ""))
-        processed = apply_master_bus(processed, sr, target_spread_db=_spread_target)
+        _dyn_probe("4 before master bus", processed)
+        _before_mb = processed
+        processed = _keep_if_better(
+            "Master bus", _before_mb,
+            apply_master_bus(processed, sr, target_spread_db=_spread_target), _DYNK)
+        _dyn_probe("5 after master bus", processed)
 
         # Closed loop: one-shot stages leave remainders — measure the result
         # and correct until inside tolerance (hard-capped at 2 extra passes).
         try:
             from processor.dsp.dynamics_transfer import match_dynamics as _md, dynamics_profile_gap_db as _rg
-            _ref_mono_cl = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
+            _ref_mono_cl = ref_audio_dyn if ref_audio_dyn.ndim == 1 else ref_audio_dyn.mean(axis=0)
             for _cl in range(2):
                 _mono_cl = processed if processed.ndim == 1 else processed.mean(axis=1)
                 _sp = _active_spread_db(_mono_cl.astype(np.float64), sr)
                 _rd = _rg(_mono_cl, _ref_mono_cl, sr)
                 _did = []
                 if _rd > 2.0:
-                    processed = _md(processed, sr, _ref_mono_cl, strength=0.5)
+                    processed = _keep_if_better(
+                        "Closed-loop ride", processed,
+                        _md(processed, sr, _ref_mono_cl, strength=0.5), _DYNK)
                     _did.append(f"ride {_rd:.1f}dB")
                 if _spread_target and _sp > _spread_target * 1.15:
                     processed = apply_master_bus(processed, sr, target_spread_db=_spread_target)
                     _did.append(f"spread {_sp:.1f}->{_spread_target:.1f}dB")
+                # NOT closing the loop on crest — deliberately. It bisects
+                # cleanly (crest is monotone in compression) but it converges
+                # onto the SEPARATED reference's crest, and separation does not
+                # preserve peak-to-RMS. Measured against MUSDB18 ground-truth
+                # stems, forcing that target moved mean crest error from 1.95 dB
+                # to 3.15 dB — worse than leaving the vocal alone. The open-loop
+                # chain under-corrected and happened to land closer.
+                #
+                # A closed loop is only as good as the target it is handed:
+                # tighten the loop on a corrupted measurement and it will hit
+                # the wrong answer more precisely. Revisit when the reference
+                # vocal is clean (user-supplied acapella, or a better separator).
                 if not _did:
                     break
                 logger.info(f"[JOB {job_id}] Closed-loop pass {_cl + 1}: corrected {', '.join(_did)}")
         except Exception as _cl_err:
             logger.warning(f"[JOB {job_id}] Closed-loop pass skipped: {_cl_err}")
+
+        # ── Joint refinement over every scored dimension ───────────────────
+        # The stages above each own one property and correct it once. Measured
+        # across 16 dimensions that left tone carrying the result while
+        # dynamics sat at zero — no closer to the reference than an unrelated
+        # vocal — because each stage optimised its own internal definition and
+        # bought its metric at another's expense.
+        #
+        # This pass searches tone and dynamics moves together, scores them on
+        # the same measurements the match report uses, and keeps a move only
+        # when the whole composite improves. Isolated on reference pairs it is
+        # tone +79%, dynamics +14%, overall +18%.
+        try:
+            _dyn_probe("6 after closed loop", processed)
+            # OFF by default; APP_JOINT_REFINE=1 enables it.
+            #
+            # It costs ~80 s on a 3-minute vocal (it was far worse before the
+            # search moved to an excerpt -- every candidate was rendered at full
+            # length, which read as the job hanging), and the time budget then
+            # trims the search to about one move, so it pays that cost for very
+            # little. Measured with it off vs on, the output was if anything
+            # slightly cleaner off: 21 vs 22 near-silent frames and a 12.0 vs
+            # 12.5 dB gain ride. It also had a habit of stacking the same stage
+            # repeatedly, which measured well and sounded bad. Left in, opt-in,
+            # because the per-stage gains are real when it is given time.
+            if os.environ.get("APP_JOINT_REFINE", "0") == "0":
+                raise RuntimeError("joint refinement disabled by APP_JOINT_REFINE=0")
+            from processor.dsp.closed_loop import refine_match
+            _progress(current_job, 93, "Joint match refinement...")
+            _ref_mono_rf = ref_audio if ref_audio.ndim == 1 else ref_audio.mean(axis=0)
+            _ref_dyn_rf = ref_audio_dyn if ref_audio_dyn.ndim == 1 else ref_audio_dyn.mean(axis=0)
+            processed, _rf_info = refine_match(processed, sr, _ref_mono_rf, ref_dyn=_ref_dyn_rf)
+            logger.info(f"[JOB {job_id}] Joint refine: {_rf_info['start']} -> "
+                        f"{_rf_info['final']} via {_rf_info['applied'] or '(no move helped)'}")
+            refinement_info["joint_refine"] = _rf_info
+            _dyn_probe("7 after joint refine", processed)
+        except Exception as _jr_err:
+            logger.warning(f"[JOB {job_id}] Joint refinement skipped: {_jr_err}")
         # Final level is set to LUFS parity with the reference after saving
         # (raw-RMS parity overshot: the separated reference's noise floor
         # drags its sample RMS below its perceived loudness).
+
+    # ── Late matching: crest, gap floor, ride and sibilance ────────────────
+    # These four are measured on the FINAL signal, so correcting them any
+    # earlier does not survive. The mid-chain crest match was being undone by
+    # reverb, width and the doubler, all of which put peaks back, which is why
+    # compression depth scored 0.0 with autotune both on and off.
+    #
+    # Each is gated on the FULL scored set, not just the dynamics keys: these
+    # stages trade across dimensions (the ride match lifts LRA to 8.4, then a
+    # full floor expansion drops it to 4.3), and a gate that cannot see the
+    # dimension being damaged will happily accept the damage.
+    if os.environ.get("APP_LATE_MATCH", "1") != "0":
+        try:
+            from processor.dsp import late_match as _lm
+            from processor.dsp.similarity import measure as _meas
+            from processor.dsp.closed_loop import _NORM as _ALLK
+
+            _lm_t0 = time.time()
+            # Crest, floor, ride and sibilance come from the full vocal;
+            # width has to come from the untouched stereo stem. ref_audio_dyn
+            # is mono, and width_bands measured on a mono signal is -60 dB in
+            # every band -- a target the width stage will happily chase by
+            # clamping the side channel to silence.
+            _lt = _meas(ref_audio_dyn, sr)
+            _lt_w = _meas(ref_stereo, sr)["width_bands"]
+            logger.info("[JOB %s] Late matching: reference measured in %.1fs"
+                        % (job_id, time.time() - _lm_t0))
+            _allk = list(_ALLK)
+            _progress(current_job, 94, "Late matching...")
+
+            def _cur(sig):
+                return _meas(sig, sr)
+
+            def _timed(tag, fn):
+                _t0 = time.time()
+                _cand = fn()
+                _t1 = time.time()
+                out = _keep_if_better(tag, processed, _cand, _allk)
+                logger.info("[JOB %s] %s: %.1fs build, %.1fs gate"
+                            % (job_id, tag, _t1 - _t0, time.time() - _t1))
+                return out
+
+            processed = _timed("Ride match",
+                               lambda: _lm.match_ride(processed, sr, _lt["ride_q"]))
+            # Gap noise: NOT gated on the composite score.
+            #
+            # The composite rated audible hiss between phrases as an
+            # acceptable trade and reverted every attempt to remove it. A
+            # listener disagreed, and the listener is right: the gaps sat 16 dB
+            # above the reference's. reduce_gap_noise judges itself instead --
+            # it rejects any setting that moves a programme frame more than a
+            # quarter of a dB, and returns the input untouched when the output
+            # is already clean.
+            try:
+                _gn_t0 = time.time()
+                processed, _gn = _lm.reduce_gap_noise(processed, sr,
+                                                     _lt["floor_rel_db"])
+                logger.info("[JOB %s] Gap noise: %s (%.1fs)"
+                            % (job_id, _gn, time.time() - _gn_t0))
+                # Colour as well as level: the chain's HF boost lifts the
+                # input's own noise, and bright noise reads as hiss where the
+                # same energy sitting lower does not.
+                processed, _gt = _lm.match_gap_tilt(
+                    processed, sr, _lm.gap_tilt(ref_audio_dyn, sr))
+                logger.info("[JOB %s] Gap tilt: %s" % (job_id, _gt))
+            except Exception as _gn_err:
+                logger.warning("[JOB %s] Gap noise reduction skipped: %s"
+                               % (job_id, _gn_err))
+            _c1 = _cur(processed)
+            processed = _timed("Sibilance match",
+                               lambda: _lm.match_sibilance(processed, sr,
+                                                           _c1["sibilance_db"],
+                                                           _lt["sibilance_db"]))
+            processed = _timed("Width per band",
+                               lambda: _lm.match_width_bands(processed, sr, _lt_w))
+            # Crest LAST: every stage above can add peaks back.
+            processed = _timed("Crest (late)",
+                               lambda: _lm.limit_crest(processed, sr, _lt["crest_db"]))
+            logger.info("[JOB %s] Late matching total: %.1fs" % (job_id, time.time() - _lm_t0))
+            _dyn_probe("9 after late match", processed)
+        except Exception as _lm_err:
+            logger.warning(f"[JOB {job_id}] Late matching skipped: {_lm_err}")
 
     # Absolute last resort: only if the output is essentially silent
     try:
@@ -804,16 +1352,16 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         if rms_post < 0.005:
             processed = normalize_rms(dry_audio, target_db=-18.0)
             processed = normalize_peak(processed, peak=0.95)
-            print("⚠ Output near-silent; fell back to normalized dry vocal.")
+            print("! Output near-silent; fell back to normalized dry vocal.")
     except Exception as e:
-        print(f"⚠ Safety boost check failed: {e}")
+        print(f"! Safety boost check failed: {e}")
     
     if not current_job:
         current_job = get_current_job()
     out_name = f"{current_job.id if current_job else uuid.uuid4()}.wav"
     out_path = settings.outputs_dir / out_name
     save_wav(out_path, processed, sr)
-    _progress(current_job, 95, "Saving output…")
+    _progress(current_job, 95, "Saving output...")
     
     # Compute final metrics
     metrics["processing_time_total"] = time.time() - job_start_time
@@ -851,8 +1399,9 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                 save_wav(out_path, processed, sr)
                 metrics["lufs_output"] = compute_lufs(out_path)
                 logger.info(
-                    f"[JOB {job_id}] LUFS pass {_pass + 1}: {gain_db:+.1f} dB → {metrics['lufs_output']:.1f} LUFS"
+                    f"[JOB {job_id}] LUFS pass {_pass + 1}: {gain_db:+.1f} dB -> {metrics['lufs_output']:.1f} LUFS"
                 )
+                _dyn_probe(f"8 after LUFS pass {_pass + 1}", processed)
     except Exception as e:
         logger.warning(f"[JOB {job_id}] Failed to compute output LUFS: {e}")
     
@@ -875,6 +1424,37 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         return obj
 
     recipe_dict = _serialize(recipe.__dict__ if hasattr(recipe, "__dict__") else {})
+
+    # Report what was APPLIED, not what was detected.
+    #
+    # `recipe` holds the detector's raw output. The worker then adjusts several
+    # of those values before handing them to apply_chain -- reverb is capped by
+    # APP_MAX_RT60 and its wet amount is re-derived, the compressor and
+    # saturation can be overridden, stages can be dropped entirely -- and none
+    # of it was written back. The result: a panel headed "what was replicated"
+    # claiming 1.5 s of reverb at 25% when the engine had applied 0.80 s at
+    # 20%. The same dict is exported as a preset, so a saved preset did not
+    # reproduce the job it came from.
+    _applied = {
+        "reverb": ({"decay_s": reverb_final.decay_s, "mix": reverb_final.mix,
+                    "pre_delay_ms": reverb_final.pre_delay_ms}
+                   if reverb_final else None),
+        "compressor": ({"threshold_db": comp_final.threshold_db,
+                        "ratio": comp_final.ratio,
+                        "attack_ms": comp_final.attack_ms,
+                        "release_ms": comp_final.release_ms,
+                        "makeup_db": comp_final.makeup_db,
+                        "knee_db": getattr(comp_final, "knee_db", 3.0)}
+                       if comp_final else None),
+        "width": (_width_val if _width_val else None),
+        "saturation_drive": saturation_final,
+        "eq": _serialize(eq_bands_final) if eq_bands_final else None,
+    }
+    for _k, _v in _applied.items():
+        if _v is None:
+            recipe_dict.pop(_k, None)       # stage did not run: do not report it
+        else:
+            recipe_dict[_k] = _serialize(_v)
     recipe_dict["metrics"] = metrics
     if chorus_profile is not None:
         recipe_dict["chorus"] = chorus_profile.as_dict()
@@ -986,7 +1566,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     
     _progress(current_job, 100, "Complete")
     logger.info(f"[JOB {job_id}] Total processing time: {metrics['processing_time_total']:.2f}s")
-    print(f"✓ Job complete. Output saved to {out_name}")
+    print(f"OK Job complete. Output saved to {out_name}")
     print(f"  Metrics: total={metrics['processing_time_total']:.2f}s, DSP={metrics['processing_time_dsp']:.2f}s")
 
     sweep_old_files()
@@ -995,7 +1575,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
 
 def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
     """Replay a saved style on a new dry vocal: no reference, no separation,
-    no detection — settings are reconstructed from the stored recipe and the
+    no detection - settings are reconstructed from the stored recipe and the
     stored style targets (ride quantiles, band energy, spread, LUFS) drive
     the same matching passes the live path uses."""
     current_job = get_current_job()
@@ -1003,7 +1583,7 @@ def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
     t0 = time.time()
     name = (preset.get("_preset") or {}).get("name", "preset")
     logger.info(f"[JOB {job_id}] Preset replay: {name}")
-    _progress(current_job, 5, f"Applying preset {name}…")
+    _progress(current_job, 5, f"Applying preset {name}...")
 
     dry_norm = settings.inputs_dir / f"{uuid.uuid4()}_dry.wav"
     run_ffmpeg_normalize(dry_path, dry_norm)
@@ -1077,7 +1657,7 @@ def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
     if delay_info and not delay_info.get("_mix"):
         delay_info["_mix"] = float(np.clip(delay_info.get("echo_level") or 0.25, 0.10, 0.5))
 
-    _progress(current_job, 40, "Applying DSP chain…")
+    _progress(current_job, 40, "Applying DSP chain...")
     processed = apply_chain(
         dry_audio, sr,
         eq_bands=eq_bands, comp=comp, reverb=reverb,
@@ -1092,7 +1672,7 @@ def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
         selected = options.get("selected_layers") or []
         prof = filter_vocal_layers_profile(layers_profile, selected) if selected else layers_profile
         if prof is not None:
-            _progress(current_job, 60, "Applying vocal layers…")
+            _progress(current_job, 60, "Applying vocal layers...")
             processed = apply_vocal_layers(processed, sr, prof)
 
     if delay_info and delay_info.get("delay_ms", 0) > 0 and options.get("enable_delay", True):
@@ -1106,7 +1686,7 @@ def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
         else:
             processed = apply_delay(processed, sr, delay_ms=delay_info["delay_ms"], feedback=fb, mix=mix_val)
 
-    _progress(current_job, 75, "Matching stored style targets…")
+    _progress(current_job, 75, "Matching stored style targets...")
     try:
         from processor.dsp.stereo import apply_stereo_image
         _sp = targets.get("ref_stereo_profile")
@@ -1150,7 +1730,7 @@ def process_preset_job(dry_path: Path, preset: dict, options: dict) -> Path:
 
     processed = np.nan_to_num(processed, nan=0.0, posinf=0.0, neginf=0.0)
     from processor.dsp.master_bus import apply_master_bus, _limiter_gain
-    _progress(current_job, 88, "Master bus…")
+    _progress(current_job, 88, "Master bus...")
     processed = apply_master_bus(processed, sr, target_spread_db=targets.get("ref_spread_db"))
 
     out_path = settings.outputs_dir / f"{current_job.id if current_job else uuid.uuid4()}.wav"
