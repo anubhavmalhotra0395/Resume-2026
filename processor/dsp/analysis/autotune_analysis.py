@@ -28,6 +28,10 @@ class AutotuneSettings:
     # tuned one 10-15. Without it there is no way to tell 'snap everything'
     # from 'nudge the worst notes', and the correction floor cannot adapt.
     ref_cents: float = 10.0
+    # Pitch classes (0-11) the REFERENCE actually sings, measured rather than
+    # inferred from a key template — see scale_from_reference. None means snap
+    # chromatically, which is safe but keeps notes that are wrong for the song.
+    scale_pcs: Optional[list] = None
 
 
 def detect_autotune(reference_audio: np.ndarray, sr: int) -> Optional[AutotuneSettings]:
@@ -108,3 +112,59 @@ def detect_autotune(reference_audio: np.ndarray, sr: int) -> Optional[AutotuneSe
 
     return AutotuneSettings(strength=strength, retune_ms=retune_ms,
                             ref_cents=median_dev)
+
+
+def scale_from_reference(ref_vocal, sr, coverage: float = 0.85,
+                         max_notes: int = 8):
+    """The note set the reference actually SINGS, as pitch classes 0-11.
+
+    Key detection from a chord template was tried and is not safe here: on the
+    Hide reference the mix scored C# major over G# major by a margin of 0.003
+    -- a coin flip -- while the vocal alone said D# and the dry said G#.
+    Snapping to a wrongly chosen key pulls correct notes to wrong pitches,
+    which is why chromatic snapping became the default.
+
+    Measuring which notes the reference uses avoids the guess entirely. Its
+    top 7 pitch classes cover 92.1% of all sung frames, so the scale is not
+    ambiguous at all -- only the label for it is.
+
+    Returns (pitch_classes, coverage_fraction), or (None, 0.0) when the
+    distribution is too flat to call a scale.
+    """
+    import librosa
+
+    m = np.asarray(ref_vocal, dtype=np.float32)
+    if m.ndim > 1:
+        m = m.mean(axis=0 if m.shape[0] <= 2 else 1)
+    if len(m) < sr:
+        return None, 0.0
+    try:
+        mm = librosa.resample(np.asarray(m, dtype=float), orig_sr=sr,
+                              target_sr=16000)
+        f0, _, _ = librosa.pyin(mm, fmin=65, fmax=1000, sr=16000,
+                                frame_length=2048)
+    except Exception:
+        return None, 0.0
+    f = f0[np.isfinite(f0)]
+    if len(f) < 100:
+        return None, 0.0
+
+    midi = 69 + 12 * np.log2(f / 440.0)
+    hist = np.bincount(np.round(midi).astype(int) % 12, minlength=12).astype(float)
+    total = hist.sum()
+    if total <= 0:
+        return None, 0.0
+    hist /= total
+
+    # Take notes in descending use until they explain `coverage` of the singing.
+    order = np.argsort(hist)[::-1]
+    chosen, acc = [], 0.0
+    for idx in order:
+        chosen.append(int(idx))
+        acc += hist[idx]
+        if acc >= coverage or len(chosen) >= max_notes:
+            break
+    # A flat distribution means chromatic singing (or a bad f0 track): no scale.
+    if acc < coverage or len(chosen) >= 11:
+        return None, float(acc)
+    return sorted(chosen), float(acc)

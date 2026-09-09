@@ -185,7 +185,10 @@ def apply_chain(
             # on a solo vocal misfires easily, and a wrong scale audibly pulls
             # correct notes to wrong pitches. Nearest-semitone can't.
             scale_root, scale_mode = 0, "chromatic"
-            print(f"  Autotune: chromatic strength={autotune.strength:.2f} retune={autotune.retune_ms:.0f}ms")
+            _pcs = getattr(autotune, "scale_pcs", None)
+            _names = "C C# D D# E F F# G G# A A# B".split()
+            print(f"  Autotune: {'scale ' + '/'.join(_names[p] for p in _pcs) if _pcs else 'chromatic'}"
+                  f" strength={autotune.strength:.2f} retune={autotune.retune_ms:.0f}ms")
 
             mono_y = y if y.ndim == 1 else np.mean(y, axis=0)
             tuned = apply_autotune(
@@ -195,6 +198,7 @@ def apply_chain(
                 ref_cents=getattr(autotune, "ref_cents", None),
                 scale_root=scale_root,
                 scale_mode=scale_mode,
+                scale_pcs=_pcs,
             )
             if y.ndim == 2:
                 y = np.stack([tuned, tuned], axis=0).astype(np.float32)

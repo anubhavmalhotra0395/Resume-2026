@@ -5,11 +5,23 @@ from processor.dsp.delay import detect_delay, apply_delay
 def test_delay_detection():
     """Echo detection needs transients — a continuous sine has no onsets, so
     the old version of this test could never pass. Use a bursty signal with a
-    planted 420 ms echo and verify the *measured* lag is close."""
+    planted 420 ms echo and verify the *measured* lag is close.
+
+    30 s, not 12: detection now requires the lag to hold across segments of
+    the take (a periodic waveform cancels against itself at multiples of its
+    pitch period, so a single window cannot tell an echo from a sustained
+    note). Judging that needs several seconds per segment.
+    """
     sr = 44100
-    t = np.arange(sr * 12) / sr
+    t = np.arange(sr * 30) / sr
     bursts = (np.sin(2 * np.pi * 1.1 * t) > 0.55).astype(float)
-    dry = (np.sin(2 * np.pi * 300 * t) * bursts * 0.5).astype(np.float32)
+    # Each burst differs slightly. Detection works by cancelling a delayed
+    # copy, and a bit-exactly repeating waveform IS an echo by that
+    # definition -- no method can tell them apart, and no recording repeats
+    # exactly anyway. Vary the tone so the control is realistic.
+    rng = np.random.RandomState(0)
+    wobble = np.interp(t, np.linspace(0, t[-1], 40), 300 + rng.randn(40) * 25)
+    dry = (np.sin(2 * np.pi * np.cumsum(wobble) / sr) * bursts * 0.5).astype(np.float32)
     d = int(0.420 * sr)
     ref = dry.copy()
     ref[d:] += dry[:-d] * 0.45

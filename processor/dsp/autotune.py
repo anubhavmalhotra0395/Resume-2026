@@ -64,6 +64,20 @@ def _scale_notes_in_range(root: int, mode: str, lo_midi: int = 36, hi_midi: int 
     return notes
 
 
+def _notes_from_pitch_classes(pcs, lo_midi: int = 36, hi_midi: int = 96):
+    """Every octave of the given pitch classes, as MIDI numbers.
+
+    Used to snap a take to the notes the REFERENCE sings. Chromatic snapping
+    cannot fix a note that is in tune but wrong for the song; this can, without
+    the risk of a mis-detected key, because the note set is measured from the
+    reference rather than inferred from a template.
+    """
+    keep = {int(p) % 12 for p in (pcs or [])}
+    if not keep:
+        return []
+    return [float(m) for m in range(lo_midi, hi_midi + 1) if (m % 12) in keep]
+
+
 def _nearest_scale_note(midi: float, scale_notes: List[float]) -> float:
     """Snap a MIDI pitch to the nearest note in the scale."""
     arr = np.array(scale_notes)
@@ -122,6 +136,7 @@ def apply_autotune(
     ref_cents: Optional[float] = None,
     scale_root: Optional[int] = None,
     scale_mode: Optional[str] = None,
+    scale_pcs: Optional[List[int]] = None,
 ) -> np.ndarray:
     """
     Key-aware autotune.
@@ -153,9 +168,10 @@ def apply_autotune(
     # shift than PSOLA's (0.68 dB vs 1.86 dB).
     if _USE_WORLD:
         try:
-            _sr_notes = _scale_notes_in_range(
-                0 if scale_root is None else scale_root,
-                "chromatic" if scale_mode is None else scale_mode)
+            _sr_notes = (_notes_from_pitch_classes(scale_pcs) if scale_pcs
+                         else _scale_notes_in_range(
+                             0 if scale_root is None else scale_root,
+                             "chromatic" if scale_mode is None else scale_mode))
             _w = _world_correct(y, sr, strength=float(np.clip(strength, 0.0, 1.0)),
                                 scale_notes=_sr_notes)
             if _w is not None:

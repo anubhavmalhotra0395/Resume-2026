@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 # reverb tails there. Closing the gap fully scores best on floor but trades
 # against LRA, so the amount is a tuned compromise rather than 1.0.
 _LATE_FLOOR_FRACTION = float(os.environ.get("APP_LATE_FLOOR_FRACTION", "1.0"))
+# Echo repeats fill the gaps between phrases; one clear repeat is the effect,
+# a tail is the artefact. See the delay block for the measured cost.
+_MAX_DELAY_FEEDBACK = float(os.environ.get("APP_MAX_DELAY_FEEDBACK", "0.12"))
 
 from processor.analysis.style_extractor import Recipe, analyze_reference
 from processor.analysis.segmenter import detect_phrases
@@ -419,9 +422,26 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             if autotune_settings is None:
                 logger.info(f"[JOB {job_id}] Autotune: disabled by autotune_strength")
             else:
+                # Snap to the notes the REFERENCE sings, when it uses a clear
+                # scale. Chromatic snapping puts every note in tune but cannot
+                # fix a note that is wrong for the song; the reference's own
+                # note histogram says which notes belong, without the
+                # key-detection guess that made this unsafe before (the Hide
+                # mix scored C# major over G# by 0.003 -- a coin flip).
+                _scale_desc = "chromatic"
+                try:
+                    from processor.dsp.analysis.autotune_analysis import (
+                        scale_from_reference)
+                    _pcs, _cov = scale_from_reference(ref_audio, sr)
+                    if _pcs:
+                        autotune_settings.scale_pcs = _pcs
+                        _nm = "C C# D D# E F F# G G# A A# B".split()
+                        _scale_desc = ("scale " + "/".join(_nm[p] for p in _pcs)
+                                       + f" ({_cov*100:.0f}% of the reference)")
+                except Exception as _sc_err:
+                    logger.warning(f"[JOB {job_id}] Scale detection skipped: {_sc_err}")
                 logger.info(f"[JOB {job_id}] Autotune: strength={autotune_settings.strength:.2f} "
-                            f"retune={autotune_settings.retune_ms:.0f}ms "
-                            f"(chromatic, dry vocal's own notes)")
+                            f"retune={autotune_settings.retune_ms:.0f}ms  {_scale_desc}")
         if _det_results.get("gate"):
             gate_settings = _det_results["gate"]
             logger.info(f"[JOB {job_id}] Gate: threshold={gate_settings.threshold_db:.1f}dB")
@@ -658,8 +678,15 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
             delay_info = None
         else:
             delay_info["_mix"] = _mix_final
+            # Feedback capped hard: repeats are what fill the gaps between
+            # phrases and smear attacks. At 0.33 feedback a 3.9% echo took the
+            # noise-floor match from 7.0 to 0.0 and transient fidelity from
+            # 9.8 to 3.6 -- the gaps went 8 dB louder than the reference's,
+            # which is the "bit of noise" complaint returning by another route.
+            # One clear repeat gives the effect without the tail.
             delay_info["feedback"] = float(np.clip(
-                float(delay_info.get("feedback", 0.25) or 0.25) * (0.4 + 0.6 * _ev), 0.05, 0.6))
+                float(delay_info.get("feedback", 0.25) or 0.25) * (0.4 + 0.6 * _ev),
+                0.0, _MAX_DELAY_FEEDBACK))
 
     # Width: as detected
     _width_val = recipe.width if (recipe.width and options.get("enable_width", True)) else None
