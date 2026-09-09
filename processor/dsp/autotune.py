@@ -477,7 +477,20 @@ def _world_correct(y, sr, strength=1.0, scale_notes=None, note_ms=150.0):
     target = np.array([_nearest_scale_note(v, notes) for v in smooth])
 
     st = float(np.clip(strength, 0.0, 1.0))
-    new_midi = midi * (1.0 - st) + target * st
+    # Correct the note's CENTRE; keep the singer's motion around it.
+    #
+    # `midi * (1-st) + target * st` writes the median-filtered target straight
+    # out, so at full strength the pitch is piecewise constant -- dead flat
+    # inside every note. That is the robot sound, and it is not what a tuned
+    # record does: measured against Hide's lead, this output sat at 0.8 cents
+    # from the grid with 62% of frames repeating the previous frame's pitch
+    # exactly, where the reference is 9.2 cents and 47%.
+    #
+    # Splitting the contour into a note centre (`smooth`) and everything
+    # faster than a note (vibrato, scoops, micro-variation) lets the centre be
+    # snapped while the expression rides on top untouched.
+    residual = midi - smooth
+    new_midi = smooth + (target - smooth) * st + residual
     f0_new = np.zeros_like(f0)
     f0_new[voiced] = 440.0 * (2.0 ** ((new_midi[voiced] - 69.0) / 12.0))
 

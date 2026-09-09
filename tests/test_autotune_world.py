@@ -118,3 +118,55 @@ def test_does_not_add_noise_to_the_gaps():
     # Allow a whisker of leakage from the phrase tails, not a noise bed.
     assert quiet_out <= max(quiet_in * 2.0, 1e-4), (
         f"gap noise rose from {quiet_in:.2e} to {quiet_out:.2e}")
+
+
+def _f0_flatness(y, sr):
+    """Fraction of frames whose pitch exactly repeats the previous frame.
+
+    A human never does this; a vocoder writing a piecewise-constant contour
+    does it constantly.
+    """
+    import librosa
+    f0, _, _ = librosa.pyin(y.astype(float), fmin=80, fmax=800, sr=sr,
+                            frame_length=2048)
+    f = f0[np.isfinite(f0)]
+    assert len(f) > 20
+    midi = 69 + 12 * np.log2(f / 440.0)
+    return float(np.mean(np.abs(np.diff(midi)) < 0.005))
+
+
+def _vibrato(seconds=3.0, sr=SR, rate_hz=5.5, depth_cents=45.0, detune_st=0.35):
+    """A detuned note WITH vibrato -- the expression that must survive."""
+    n = int(seconds * sr)
+    t = np.arange(n) / sr
+    cents = depth_cents * np.sin(2 * np.pi * rate_hz * t)
+    f0 = 220.0 * 2 ** ((detune_st + cents / 100.0) / 12.0)
+    phase = 2 * np.pi * np.cumsum(f0) / sr
+    y = sum(np.sin(k * phase) / k for k in range(1, 12))
+    env = np.ones(n)
+    ramp = int(0.05 * sr)
+    env[:ramp] = np.linspace(0, 1, ramp)
+    env[-ramp:] = np.linspace(1, 0, ramp)
+    return (y * env / np.max(np.abs(y * env)) * 0.7).astype(np.float32)
+
+
+def test_correction_keeps_the_singers_vibrato():
+    """Reported by ear: "too robotic when autotune is there".
+
+    Writing the median-filtered target straight out makes pitch piecewise
+    constant -- flat inside every note. The note CENTRE should be snapped and
+    the motion around it preserved.
+    """
+    y = _vibrato()
+    out = _world_correct(y, SR, strength=1.0, scale_notes=CHROMATIC)
+    assert out is not None
+    assert _f0_flatness(out, SR) < _f0_flatness(y, SR) + 0.20, \
+        "pitch contour went flat -- vibrato was discarded"
+
+
+def test_correction_still_moves_the_note_onto_the_grid():
+    """The vibrato fix must not stop it correcting: centre still snaps."""
+    y = _vibrato(detune_st=0.35, depth_cents=20.0)
+    out = _world_correct(y, SR, strength=1.0, scale_notes=CHROMATIC)
+    assert out is not None
+    assert _cents_off(out) < _cents_off(y)
