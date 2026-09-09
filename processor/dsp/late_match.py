@@ -277,7 +277,14 @@ def match_width_bands(y: np.ndarray, sr: int, target_width_bands) -> np.ndarray:
     ps = np.abs(Ss) ** 2
 
     tgt = np.asarray(target_width_bands, dtype=float)
-    gains = np.ones(Ss.shape[0])
+    # Build a SMOOTH gain curve across frequency.
+    #
+    # Setting a constant gain per band steps the curve at every band edge, and
+    # an STFT multiplied by a stepped curve is a brick-wall filter: its impulse
+    # response rings, which is heard as a metallic or robotic edge. Solve each
+    # band's correction at its centre frequency, then interpolate between the
+    # centres in log-frequency so the filter stays gentle.
+    centres, corrections = [], []
     for i in range(len(_EDGES_W) - 1):
         msk = (freqs >= _EDGES_W[i]) & (freqs < _EDGES_W[i + 1])
         if not msk.any() or i >= len(tgt):
@@ -285,9 +292,15 @@ def match_width_bands(y: np.ndarray, sr: int, target_width_bands) -> np.ndarray:
         s_e = float(np.sum(ps[msk])) + 1e-20
         m_e = float(np.sum(pm[msk])) + 1e-20
         cur = 10 * np.log10(s_e / m_e)
-        if cur <= -59.0:            # no side content to shape
-            continue
-        gains[msk] = 10 ** (float(np.clip(tgt[i] - cur, -24.0, 24.0)) / 20.0)
+        centres.append(np.sqrt(_EDGES_W[i] * _EDGES_W[i + 1]))
+        # A band with no side content cannot be widened by gain; ask for none.
+        corrections.append(0.0 if cur <= -59.0
+                           else float(np.clip(tgt[i] - cur, -24.0, 24.0)))
+    if not centres:
+        return y
+    lf = np.log(np.maximum(freqs, 1.0))
+    g_db = np.interp(lf, np.log(np.asarray(centres)), np.asarray(corrections))
+    gains = 10 ** (g_db / 20.0)
 
     side_new = librosa.istft(Ss * gains[:, None], hop_length=_HOP,
                              n_fft=_WIN, length=len(side))

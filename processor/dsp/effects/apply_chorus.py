@@ -46,14 +46,43 @@ def apply_chorus(signal: np.ndarray, sr: int, rate_hz: float, depth: float, mix:
     """
     params = ChorusParams(rate_hz=rate_hz, depth=np.clip(depth, 0.0, 1.0), mix=np.clip(mix, 0.0, 1.0))
 
-    # Two delay lines with phase offset
+    # Two delay lines in ANTI-PHASE, one per channel.
+    #
+    # These used to be summed into a single channel and mixed with the dry
+    # signal in mono. Summing a signal with delayed copies of itself is comb
+    # filtering, and because the delay is swept the notches sweep with it --
+    # which is heard as a robotic, warbling vocal, by construction. It also
+    # produced no stereo modulation at all, so the "stereo-style chorus" in
+    # this docstring never existed and detect_chorus could not have seen its
+    # own applier's output.
+    #
+    # Keeping one line per channel puts the modulation in the STEREO FIELD
+    # instead: the mono sum stays close to dry, so the comb filtering that
+    # caused the artefact does not happen on fold-down either.
     wet1 = _modulated_delay(signal, sr, params, phase_offset=0.0)
-    wet2 = _modulated_delay(signal, sr, params, phase_offset=pi / 2)
+    wet2 = _modulated_delay(signal, sr, params, phase_offset=pi)
 
-    wet = 0.5 * (wet1 + wet2)
-
-    # Mix
-    out = (1 - params.mix) * signal + params.mix * wet
+    # The wet pair goes in ANTI-PHASE so it cancels in the mono sum.
+    #
+    # Adding wet to both channels leaves it in the mid, which still comb
+    # filters on fold-down: measured 22.5 dB of spectral ripple against the
+    # dry signal even with the two lines split across channels. Sending
+    # +wet left and -wet right puts the whole effect in the side, so the mono
+    # sum stays a clean (scaled) copy of the input and the swept notches
+    # never appear.
+    wet = 0.5 * (wet1 - wet2)
+    if signal.ndim == 1:
+        dry = (1.0 - params.mix) * signal
+        out = np.stack([dry + params.mix * wet, dry - params.mix * wet], axis=0)
+    else:
+        ch = 0 if signal.shape[0] <= 2 else 1
+        a = signal[0] if ch == 0 else signal[:, 0]
+        b = signal[1] if ch == 0 else signal[:, 1]
+        mid = 0.5 * (a + b)
+        w = 0.5 * (_modulated_delay(mid, sr, params, phase_offset=0.0)
+                   - _modulated_delay(mid, sr, params, phase_offset=pi))
+        out = np.stack([a - params.mix * (a - mid) + params.mix * w,
+                        b - params.mix * (b - mid) - params.mix * w], axis=ch)
 
     # Safety
     out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)

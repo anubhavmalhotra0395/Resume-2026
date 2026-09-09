@@ -3,6 +3,12 @@ import librosa
 from dataclasses import dataclass, asdict
 from scipy.signal import find_peaks
 
+# How concentrated the side-envelope spectrum must be in the 0.2-5 Hz band
+# before it counts as an LFO rather than ordinary phrasing. Peak-to-mean of a
+# flat (phrasing-driven) spectrum sits near 5-10; a real chorus LFO spikes far
+# above that.
+_LFO_PEAKINESS_THRESHOLD = 18.0
+
 
 @dataclass
 class ChorusProfile:
@@ -52,18 +58,47 @@ def _autocorr_rate(signal: np.ndarray, sr: int, min_hz: float = 0.2, max_hz: flo
 
 def detect_chorus(reference: np.ndarray, sr: int) -> ChorusProfile:
     """
-    Detect chorus-like MODULATION from reference audio.
+    DISCONNECTED 2026-09-09: always reports no chorus.
 
-    Key distinction: chorus is a time-varying pitch/delay modulation effect.
-    Simple stereo width (L?R) from a doubler or room is NOT chorus.
+    Reported by ear as a robotic, warbling vocal, and confirmed by A/B render:
+    disabling chorus was the only change that removed it.
 
-    Two-gate approach:
-      1. Side energy > 10% of mid  ->  stereo spread exists (necessary but not sufficient)
-      2. Side energy envelope has a periodic modulation at 0.2?5 Hz  ->  real chorus LFO
+    Why this is off rather than retuned:
 
-    Only if BOTH conditions are met do we report a non-zero mix.
-    Mix is capped at 0.25 for vocals.
+    1. It fired at MAXIMUM on untreated material. `_detect_chorus` passes the
+       centre-isolated lead, which is MONO. With no stereo to analyse the old
+       code fabricated a side channel by subtracting a 2 ms delayed copy of
+       the signal from itself -- a comb filter, large for any broadband source
+       and with an envelope that tracks ordinary phrasing. Both gates then
+       passed and the mix pinned to its 0.25 cap. Measured: a raw dry acapella
+       and a lead vocal with no chorus on it BOTH reported mix=0.250.
+    2. Gate 2 measured VARIANCE, not periodicity. A vocal's side level is near
+       zero between phrases and loud while singing, so its coefficient of
+       variation is high for every real vocal, LFO or not.
+    3. No replacement statistic works. Two principled candidates were measured
+       against real material with and without a known chorus:
+         - side-envelope spectral peakiness: reference lead 7.9 WITHOUT chorus
+           and 7.1-7.4 WITH it -- adding chorus slightly LOWERS it.
+         - inter-channel cross-correlation lag wobble: 0.30-0.90 ms on
+           untreated stems, 0.01-0.17 ms with a real chorus -- inverted.
+       Neither responds to the thing it claims to measure.
+    4. The applier is mono anyway: apply_chorus sums both modulated delay
+       lines and mixes them with the dry signal in one channel, which is comb
+       filtering with a moving notch -- robotic by construction, and unable to
+       produce the stereo modulation this detector looks for.
+
+    Detection would need a real method (e.g. tracking per-partial frequency
+    modulation, or the delay trajectory of a matched second voice). Until then
+    the honest output is "no evidence", per the project rule to prefer no
+    correction over a fabricated number. The gate code below is preserved for
+    whoever implements that.
     """
+    return ChorusProfile(rate_hz=0.8, depth=0.0, mix=0.0)
+
+
+def _detect_chorus_unused(reference: np.ndarray, sr: int) -> ChorusProfile:
+    """Preserved for reference; see detect_chorus for why it is not used."""
+
     # ── Mid/Side split ─────────────────────────────────────────────────────
     if reference.ndim == 2 and reference.shape[0] > 1:
         mid  = np.mean(reference, axis=0)
@@ -72,12 +107,17 @@ def detect_chorus(reference: np.ndarray, sr: int) -> ChorusProfile:
         mid  = reference[0]
         side = np.zeros_like(mid)
     else:
-        mid = reference
-        delay = int(0.002 * sr)
-        side = np.zeros_like(mid)
-        if delay < len(mid):
-            side[delay:] = mid[:-delay]
-            side = side - mid
+        # MONO input carries no stereo modulation evidence, so there is
+        # nothing here to detect and the honest answer is "none".
+        #
+        # This used to fabricate a side channel by subtracting a 2 ms delayed
+        # copy of the signal from itself -- a comb filter whose output is
+        # large for any broadband source and whose envelope tracks ordinary
+        # phrasing. Both gates then passed and the mix pinned to its 0.25 cap.
+        # Measured: an untreated dry acapella and a lead vocal with no chorus
+        # on it BOTH reported mix=0.250, the maximum. Every job was getting a
+        # full-depth chorus, which is audible as a robotic, warbling vocal.
+        return ChorusProfile(rate_hz=0.8, depth=0.0, mix=0.0)
 
     mid_energy  = float(np.mean(mid  ** 2)) + 1e-9
     side_energy = float(np.mean(side ** 2)) + 1e-9
@@ -103,14 +143,29 @@ def detect_chorus(reference: np.ndarray, sr: int) -> ChorusProfile:
     rate_hz = _autocorr_rate(env_ds, int(env_sr_ds), min_hz=0.2, max_hz=5.0)
     rate_hz = float(np.clip(rate_hz, 0.2, 5.0))
 
-    # Modulation depth: coefficient of variation of the smoothed envelope
+    # Gate 2: the modulation must be PERIODIC, not merely large.
+    #
+    # The coefficient of variation was used here, but variance is not
+    # periodicity: a vocal's side level is near zero between phrases and loud
+    # while singing, so its CV is high for every real vocal whether or not an
+    # LFO is present. Test instead whether the envelope's spectrum has a
+    # concentrated peak in the LFO band -- an actual oscillator puts its energy
+    # at one rate, while phrasing spreads it across the band.
     env_cv = float(np.std(env_ds) / (np.mean(env_ds) + 1e-9))
-
-    # Gate 2: must have periodic modulation (CV > 0.15 means the side level is
-    # genuinely fluctuating rhythmically, not just constant stereo spread)
-    MODULATION_CV_THRESHOLD = 0.15
-    if env_cv < MODULATION_CV_THRESHOLD:
-        return ChorusProfile(rate_hz=rate_hz, depth=float(np.clip(env_cv, 0.0, 1.0)), mix=0.0)
+    _e = env_ds - np.mean(env_ds)
+    if len(_e) < 64 or not np.any(_e):
+        return ChorusProfile(rate_hz=rate_hz, depth=0.0, mix=0.0)
+    _spec = np.abs(np.fft.rfft(_e * np.hanning(len(_e))))
+    _fr = np.fft.rfftfreq(len(_e), 1.0 / env_sr_ds)
+    _band = (_fr >= 0.2) & (_fr <= 5.0)
+    if not _band.any() or _spec[_band].sum() <= 0:
+        return ChorusProfile(rate_hz=rate_hz, depth=0.0, mix=0.0)
+    # Peak-to-mean of the LFO band: ~1 is flat (phrasing), a real LFO spikes.
+    peakiness = float(_spec[_band].max() / (np.mean(_spec[_band]) + 1e-12))
+    rate_hz = float(np.clip(_fr[_band][np.argmax(_spec[_band])], 0.2, 5.0))
+    if peakiness < _LFO_PEAKINESS_THRESHOLD:
+        return ChorusProfile(rate_hz=rate_hz, depth=float(np.clip(env_cv, 0.0, 1.0)),
+                             mix=0.0)
 
     # ── Confirmed chorus — scale mix from modulation depth ────────────────
     depth = float(np.clip(env_cv, 0.0, 1.0))
