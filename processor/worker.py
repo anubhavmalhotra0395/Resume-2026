@@ -25,6 +25,10 @@ _LATE_FLOOR_FRACTION = float(os.environ.get("APP_LATE_FLOOR_FRACTION", "1.0"))
 # Echo repeats fill the gaps between phrases; one clear repeat is the effect,
 # a tail is the artefact. See the delay block for the measured cost.
 _MAX_DELAY_FEEDBACK = float(os.environ.get("APP_MAX_DELAY_FEEDBACK", "0.12"))
+# Floor under the confidence scaling of the echo level: even a marginal
+# detection applies most of what was measured, because the measurement is now
+# the echo's real gain rather than a correlation score.
+_DELAY_MIN_EVIDENCE_SCALE = float(os.environ.get("APP_DELAY_MIN_EVIDENCE", "0.6"))
 
 from processor.analysis.style_extractor import Recipe, analyze_reference
 from processor.analysis.segmenter import detect_phrases
@@ -672,7 +676,19 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
         # measured level by ~0.35 confidence, with feedback damped alongside.
         _conf = float(delay_info.get("confidence", 0.0) or 0.0)
         _ev = float(np.clip((_conf - 0.12) / 0.23, 0.0, 1.0))
-        _mix_final = float(np.clip(_lvl * _ev, 0.0, 0.5))
+        # Trust the MEASURED echo level.
+        #
+        # This scaling dates from the onset-autocorrelation detector, whose
+        # "level" was a correlation score rather than an amount, so discounting
+        # it by confidence was the only protection against a bad reading. The
+        # cancellation detector measures the echo's actual gain -- a known
+        # 0.30 echo comes back as 0.318 -- so cutting it to a third just makes
+        # the effect inaudible: the reference's 0.117 was being applied at
+        # 0.039, which cannot be heard. Keep a floor under the evidence scaling
+        # so a marginal detection is still restrained, but let a confident one
+        # through at close to the level actually present.
+        _ev_mix = _DELAY_MIN_EVIDENCE_SCALE + (1.0 - _DELAY_MIN_EVIDENCE_SCALE) * _ev
+        _mix_final = float(np.clip(_lvl * _ev_mix, 0.0, 0.5))
         if _mix_final < 0.03:
             logger.info(f"[JOB {job_id}] Delay skipped: confidence {_conf:.3f} too low")
             delay_info = None
@@ -1132,6 +1148,11 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     except Exception as _fc:
         logger.warning("[JOB %s] Crest match skipped: %s" % (job_id, _fc))
 
+    try:
+        from processor.dsp.chain import _thd_probe as _p
+        _p('after chain+layers', processed, sr)
+    except Exception:
+        pass
     # ── Stereo image: match the reference's width (per band) ────────────────
     # Mono renders become true stereo; layered renders keep their panning and
     # gain decorrelated width on top. Mono fold-down stays exactly the mid.
@@ -1143,6 +1164,11 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
     except Exception as _st_err:
         logger.warning(f"[JOB {job_id}] Stereo image skipped: {_st_err}")
 
+    try:
+        from processor.dsp.chain import _thd_probe as _p
+        _p('after stereo image', processed, sr)
+    except Exception:
+        pass
     # ── Dynamics profile transfer ───────────────────────────────────────────
     # Quantile-map the output's short-term loudness envelope onto the
     # reference's: the vocal then *rides* the way the reference rides
@@ -1284,6 +1310,12 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                         f"{_rf_info['final']} via {_rf_info['applied'] or '(no move helped)'}")
             refinement_info["joint_refine"] = _rf_info
             _dyn_probe("7 after joint refine", processed)
+            try:
+                from processor.dsp.chain import _thd_probe as _p
+                _p('after refine', processed, sr)
+            except Exception:
+                pass
+
         except Exception as _jr_err:
             logger.warning(f"[JOB {job_id}] Joint refinement skipped: {_jr_err}")
         # Final level is set to LUFS parity with the reference after saving
@@ -1362,12 +1394,44 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                                lambda: _lm.match_sibilance(processed, sr,
                                                            _c1["sibilance_db"],
                                                            _lt["sibilance_db"]))
+            # Tone, corrected where it ends up rather than where it starts.
+            #
+            # The EQ is designed from dry-vs-reference and applied early, but
+            # reverb, tape and width recolour the signal afterwards and nothing
+            # re-checks. Measured against the reference, the finished output
+            # was +3.2 dB at 250-350 Hz (boxy) and 1.5 dB short at 700-1000 Hz
+            # (where a vocal's definition lives) -- the EQ was even cutting
+            # 534/660/786/1110 Hz, the region already lacking. Reported by ear
+            # as "the vocals clarity is not there".
+            #
+            # match_spectrum assumes samples-first and returns a 2x2 array if
+            # handed channels-first, so the orientation is normalised here.
+            def _spectral():
+                from processor.dsp.closed_loop import match_spectrum
+                _y = processed
+                _flip = _y.ndim == 2 and _y.shape[0] <= 2
+                if _flip:
+                    _y = _y.T
+                _o, _i = match_spectrum(np.array(_y), sr, _ref_mono_sp)
+                _o = np.asarray(_o)
+                logger.info("[JOB %s] Tone match: gap %s dB" % (job_id, _i.get("final_gap_db")))
+                return _o.T if _flip else _o
+
+            _ref_mono_sp = (ref_audio if ref_audio.ndim == 1
+                            else ref_audio.mean(axis=0 if ref_audio.shape[0] <= 2 else 1))
+            processed = _timed("Tone match (late)", _spectral)
+
             processed = _timed("Width per band",
                                lambda: _lm.match_width_bands(processed, sr, _lt_w))
             # Crest LAST: every stage above can add peaks back.
             processed = _timed("Crest (late)",
                                lambda: _lm.limit_crest(processed, sr, _lt["crest_db"]))
             logger.info("[JOB %s] Late matching total: %.1fs" % (job_id, time.time() - _lm_t0))
+            try:
+                from processor.dsp.chain import _thd_probe as _p
+                _p('after late match', processed, sr)
+            except Exception:
+                pass
             _dyn_probe("9 after late match", processed)
         except Exception as _lm_err:
             logger.warning(f"[JOB {job_id}] Late matching skipped: {_lm_err}")

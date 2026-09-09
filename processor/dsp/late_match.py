@@ -503,3 +503,53 @@ def match_gap_tilt(y: np.ndarray, sr: int, target_tilt_db: float,
     return out, {"applied": passes > 0, "gap_tilt_db": cur,
                  "final_tilt_db": gap_tilt(out, sr, gap_below_db),
                  "target_tilt_db": float(target_tilt_db), "passes": passes}
+
+
+# Harmonics 2-8 against the fundamental, measured on voiced frames. This is
+# what "rich" means for a voice: a thin vocal has the fundamental and little
+# else, a rich one has a stack of overtones above it.
+_HARM_NFFT = 4096
+_HARM_TOLERANCE = 0.15
+# Drive amounts searched, gentlest first: this should be the least saturation
+# that reaches the reference, not the most the curve can produce.
+_HARM_DRIVES = (0.6, 0.9, 1.3, 1.8, 2.5, 3.5, 5.0)
+
+
+def harmonic_richness(y: np.ndarray, sr: int) -> float:
+    """Energy in harmonics 2-8 relative to the fundamental."""
+    m = _mono(y)
+    m = np.ascontiguousarray(np.asarray(m, dtype=np.float32))
+    if len(m) < sr:
+        return float("nan")
+    r = librosa.feature.rms(y=m, frame_length=_NFFT, hop_length=_HOP)[0]
+    db = 20 * np.log10(np.maximum(r, 1e-9))
+    voiced = db > (np.percentile(db, 95) - 15.0)
+    S = np.abs(librosa.stft(m, n_fft=_HARM_NFFT, hop_length=_HOP))
+    n = min(S.shape[1], len(voiced))
+    V = S[:, :n][:, voiced[:n]]
+    if V.shape[1] < 4:
+        return float("nan")
+    # Track the fundamental rather than assuming one: a fixed f0 makes the
+    # measure move when the singer's range differs from the reference's.
+    try:
+        f0, _, _ = librosa.pyin(m[: sr * 45].astype(float), fmin=65, fmax=600,
+                                sr=sr, frame_length=2048)
+        f0m = float(np.nanmedian(f0))
+    except Exception:
+        f0m = float("nan")
+    if not np.isfinite(f0m) or f0m <= 0:
+        return float("nan")
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=_HARM_NFFT)
+    band = lambda a, b: float(V[(freqs >= a) & (freqs < b)].sum())
+    fund = band(f0m * 0.8, f0m * 1.3) + 1e-12
+    return (band(f0m * 1.7, f0m * 8.5) + 1e-12) / fund
+
+
+# NOTE: a match_harmonics() corrector was written here and REMOVED. The
+# measure above does not respond to the thing that adds harmonics: pushing the
+# output through asymmetric soft clipping at drives from 0.6 to 20 moved
+# richness 4.87 -> 4.86 -> 4.82 -> 4.73 -> 4.63, i.e. DOWN, because saturation
+# also fills the fundamental band and compresses the peaks the measure is
+# taken over. Driving a correction from it would optimise the wrong thing --
+# the same trap as the chorus detector. Richness is exposed as a user control
+# instead, until a measure exists that rises when overtones are added.

@@ -67,10 +67,25 @@ def _thd_probe(tag: str, y: np.ndarray, sr: int) -> None:
         f = np.fft.rfftfreq(len(m), 1.0 / sr)
         b = lambda a, c: float(S[(f >= a) & (f < c)].sum())
         v = 20 * np.log10((b(16000, sr / 2) + 1e-12) / (b(1000, 4000) + 1e-12))
+        # Harmonic richness: overtones 2-8 against the fundamental. A chain
+        # that thins the voice shows up here and nowhere else.
+        f0 = 233.0
+        rich = (b(f0 * 1.7, f0 * 8.5) + 1e-12) / (b(f0 * 0.8, f0 * 1.3) + 1e-12)
         prev = _thd_last.get("v")
-        delta = "" if prev is None else f"   ({v - prev:+.2f} dB)"
-        print(f"  THD {tag:<22} >16k/1-4k = {v:7.2f} dB{delta}")
+        prevr = _thd_last.get("rich")
+        delta = "" if prev is None else f" ({v - prev:+.2f})"
+        dr = "" if prevr is None else f" ({rich - prevr:+.2f})"
+        # Crest too: the chain was raising peak-to-RMS from 15.9 dB on the dry
+        # to 24.3, and the crest match then limited 6 dB back off. That round
+        # trip is where harmonic density goes.
+        cr = (20 * np.log10(float(np.max(np.abs(m))) + 1e-12)
+              - 20 * np.log10(float(np.sqrt(np.mean(m ** 2))) + 1e-12))
+        prevc = _thd_last.get("crest")
+        dc = "" if prevc is None else f" ({cr - prevc:+.2f})"
+        print(f"  PROBE {tag:<20} >16k={v:7.2f}{delta:<9} harm={rich:5.2f}{dr:<9} crest={cr:5.1f}{dc}")
         _thd_last["v"] = v
+        _thd_last["rich"] = rich
+        _thd_last["crest"] = cr
     except Exception:
         pass
 
@@ -361,6 +376,7 @@ def apply_chain(
         except Exception as e:
             print(f"! WARNING: M-S EQ failed ({e}). Skipping.")
 
+    _thd_probe('width+doubler+mseq', y, sr)
     # Chorus (after width / modulation effects) — skip if mix is zero
     if chorus_profile is not None and chorus_profile.mix > 0:
         try:
@@ -428,6 +444,7 @@ def apply_chain(
         if np.max(np.abs(y)) < 1e-9:
             print("! WARNING: Reverb produced silent output. Skipping reverb.")
             y = y_before
+        _thd_probe('reverb', y, sr)
     
     # Transient shaper (optional)
 
