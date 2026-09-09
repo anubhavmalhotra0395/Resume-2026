@@ -22,6 +22,7 @@ accept-if-better gate the rest of the chain uses rather than unconditionally.
 """
 from __future__ import annotations
 
+import os
 import numpy as np
 import librosa
 from scipy.signal import butter, sosfilt
@@ -32,6 +33,9 @@ _NFFT = 2048
 # not programme. Keep in sync or the ride match optimises a different set of
 # frames from the one being scored.
 _LIVE_WINDOW_DB = 45.0
+# How quickly the ride gain recovers. Long releases hold the gain down into the
+# next phrase entry and cost transient fidelity.
+_RIDE_RELEASE_MS = float(os.environ.get("APP_RIDE_RELEASE_MS", "60"))
 
 
 def _frame_db(m: np.ndarray) -> np.ndarray:
@@ -111,6 +115,10 @@ def match_ride(y: np.ndarray, sr: int, ref_ride_q) -> np.ndarray:
     src_q = np.maximum.accumulate(src_q)
     dst_q = np.maximum.accumulate(dst_q)
     gdb = np.clip(np.interp(db, src_q, dst_q) - db, -12.0, 12.0)
+    # Sparing the gaps and releasing faster were both tried, to stop this
+    # undoing the gap ducking and blunting attacks. Measured through the chain
+    # they cost more than they gained (Hide 6.89 -> 6.74), so the plain
+    # quantile map stands.
     g = _smooth_gain(10 ** (gdb / 20.0), sr, atk_ms=30.0, rel_ms=200.0)
     return _apply_frame_gain(y, g)
 

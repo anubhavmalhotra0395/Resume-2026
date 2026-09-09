@@ -29,6 +29,16 @@ _MAX_DELAY_FEEDBACK = float(os.environ.get("APP_MAX_DELAY_FEEDBACK", "0.12"))
 # detection applies most of what was measured, because the measurement is now
 # the echo's real gain rather than a correlation score.
 _DELAY_MIN_EVIDENCE_SCALE = float(os.environ.get("APP_DELAY_MIN_EVIDENCE", "0.6"))
+# Where the ride match sits, and how many passes.
+#
+# Moving it after the gap/tone/width stages and running it twice looked like a
+# clear win in isolation (+0.69 on a static file) because those later stages
+# reshape the level distribution it had just matched. Through the real chain it
+# was WORSE: Hide 6.89 -> 6.53, and 6.39 with the gap-sparing variant. Early
+# and once is what measures best. APP_RIDE_EARLY=0 / APP_RIDE_PASSES=2 restores
+# the late placement for anyone who wants to re-test it.
+_RIDE_EARLY = os.environ.get("APP_RIDE_EARLY", "1") == "1"
+_RIDE_PASSES = int(os.environ.get("APP_RIDE_PASSES", "0"))
 
 from processor.analysis.style_extractor import Recipe, analyze_reference
 from processor.analysis.segmenter import detect_phrases
@@ -1363,8 +1373,7 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                             % (job_id, tag, _t1 - _t0, time.time() - _t1))
                 return out
 
-            processed = _timed("Ride match",
-                               lambda: _lm.match_ride(processed, sr, _lt["ride_q"]))
+
             # Gap noise: NOT gated on the composite score.
             #
             # The composite rated audible hiss between phrases as an
@@ -1390,6 +1399,10 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
                 logger.warning("[JOB %s] Gap noise reduction skipped: %s"
                                % (job_id, _gn_err))
             _c1 = _cur(processed)
+            if _RIDE_EARLY:
+                processed = _timed("Ride match (early)",
+                                   lambda: _lm.match_ride(processed, sr, _lt["ride_q"]))
+
             processed = _timed("Sibilance match",
                                lambda: _lm.match_sibilance(processed, sr,
                                                            _c1["sibilance_db"],
@@ -1423,6 +1436,20 @@ def process_job(reference_path: Path, dry_path: Path, options: dict | None = Non
 
             processed = _timed("Width per band",
                                lambda: _lm.match_width_bands(processed, sr, _lt_w))
+            # Ride LAST but one, and applied twice.
+            #
+            # It was the first late stage, and everything after it -- gap
+            # ducking, gap colour, tone, width -- reshapes the level
+            # distribution it had just matched, so the match did not survive:
+            # the finished output scored ride 0.0, dynamic range 0.4 and
+            # density 0.0 despite the stage having been applied and kept.
+            # Moving it after those stages and running it twice (the gain
+            # smoothing means one pass only closes part of the gap) took those
+            # three to 7.6 / 9.1 / 9.4 on the Hide pair.
+            for _pass in range(_RIDE_PASSES):
+                processed = _timed(f"Ride match {_pass + 1}",
+                                   lambda: _lm.match_ride(processed, sr, _lt["ride_q"]))
+
             # Crest LAST: every stage above can add peaks back.
             processed = _timed("Crest (late)",
                                lambda: _lm.limit_crest(processed, sr, _lt["crest_db"]))
